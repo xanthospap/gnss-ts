@@ -1,5 +1,5 @@
-#ifndef _CARTESIAN_TO_ELLIPSOIDAL_
-#define _CARTESIAN_TO_ELLIPSOIDAL_
+#ifndef __CARTESIAN_TO_ELLIPSOIDAL__
+#define __CARTESIAN_TO_ELLIPSOIDAL__
 
 #include "ellipsoid.hpp"
 #include "geoconst.hpp"
@@ -27,12 +27,13 @@ namespace geodesy {
 template<ELLIPSOID E>
 void
 car2ell(const double& x,const double& y, const double& z,
-        double& phi,double& lambda,double& h) noexcept
+        double& phi,double& lambda,double& h)
+noexcept
 {
-
+    constexpr double a { EllipsoidTraits<E>::a };
+    constexpr double f { EllipsoidTraits<E>::f };
+    
     // Functions of ellipsoid parameters.
-    constexpr double a     { EllipsoidTraits<E>::a };
-    constexpr double f     { EllipsoidTraits<E>::f };
     constexpr double aeps2 { a*a*1e-32 };
     constexpr double e2    { (2.0e0-f)*f };
     constexpr double e4t   { e2*e2*1.5e0 };
@@ -50,8 +51,11 @@ car2ell(const double& x,const double& y, const double& z,
     double p2 { x*x + y*y };
 
     // Compute longitude lambda.
-    if (p2) lambda = std::atan2(y,x);
-    else lambda = .0e0;
+    if (p2) {
+        lambda = std::atan2(y,x);
+    } else { 
+        lambda = .0e0;
+    }
 
     // Ensure that Z-coordinate is unsigned.
     double absz { std::abs(z) };
@@ -83,7 +87,8 @@ car2ell(const double& x,const double& y, const double& z,
         phi = ::atan(s1/cp);
         double s12 { s1*s1 };
         double cp2 { cp*cp };
-        h = (p*cp+absz*s1-a*std::sqrt(ep2*s12+cp2))/std::sqrt(s12+cp2);
+        h = (p*cp+absz*s1-a*std::sqrt(ep2*s12+cp2))
+            /std::sqrt(s12+cp2);
 
       } else { // Special case: pole.
 
@@ -92,7 +97,9 @@ car2ell(const double& x,const double& y, const double& z,
     }
 
     // Restore sign of latitude.
-    if (z < 0.e0) phi = -phi;
+    if (z < 0.e0) {
+        phi = -phi;
+    }
 
     // Finished.
     return;

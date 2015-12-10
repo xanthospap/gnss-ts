@@ -35,12 +35,14 @@ geodesy::top2daz(const double& north,const double& east,const double& up,
 
   // normalize to range [0-2pi)
   azimouth  = std::fmod (a,geodesy::D2PI);
-  while (azimouth<.0) azimouth += geodesy::D2PI;
+  while (azimouth < .0) {
+      azimouth += geodesy::D2PI;
+  }
 
   // zenith angle [0-pi)
   zenith = std::acos (up / distance);
 
   // finished
-  return 0;
+  return;
 
 }

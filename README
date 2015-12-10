@@ -1,0 +1,5 @@
+Go to the top level dir.
+
+$> autoreconf -i ## Needed only the first time
+$> ./configure   ##
+$> make          ##

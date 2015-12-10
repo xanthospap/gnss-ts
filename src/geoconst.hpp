@@ -1,5 +1,5 @@
-#ifndef _GEO_CONST_HPP_
-#define _GEO_CONST_HPP_
+#ifndef __GEO_CONST_HPP__
+#define __GEO_CONST_HPP__
 
 namespace geodesy {
 

@@ -1,12 +1,12 @@
-#ifndef _GEODESY_
-#define _GEODESY_
+#ifndef __GEODESY__
+#define __GEODESY__
 
 #include "geoconst.hpp"
 
 namespace geodesy {
 
-void top2daz(const double& north,const double& east,const double& up,
-    double& distance, double& azimouth, double& zenith);
+void top2daz(const double&,const double&,const double&,
+  double&, double&, double&);
 
 } // end namespace geodesy
 

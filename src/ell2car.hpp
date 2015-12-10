@@ -1,5 +1,5 @@
-#ifndef _ELLIPSOIDAL_TO_CARTESIAN_
-#define _ELLIPSOIDAL_TO_CARTESIAN_
+#ifndef __ELLIPSOIDAL_TO_CARTESIAN__
+#define __ELLIPSOIDAL_TO_CARTESIAN__
 
 #include "ellipsoid.hpp"
 #include <cmath>
@@ -22,10 +22,11 @@ namespace geodesy {
 template<ELLIPSOID E>
 void 
 ell2car(const double& phi,const double& lambda,const double& h,
-        double& x,double& y,double& z) noexcept
+        double& x,double& y,double& z)
+noexcept
 {
     // Eccentricity squared.
-    constexpr double e2 { EllipsoidTraits<E>::eccentricitySquared() };
+    constexpr double e2 { eccentricity_squared<E>() };
 
     // Trigonometric numbers.
     double sinf { std::sin(phi) };
@@ -34,7 +35,8 @@ ell2car(const double& phi,const double& lambda,const double& h,
     double cosl { std::cos(lambda) };
 
     // Radius of curvature in the prime vertical.
-    const double N { EllipsoidTraits<E>::a / std::sqrt(1.0e0-(e2*sinf)*sinf) };
+    const double N { EllipsoidTraits<E>::a / 
+                      std::sqrt(1.0e0-(e2*sinf)*sinf) };
 
     // Compute geocentric rectangular coordinates.
     x = (N+h) * cosf * cosl;

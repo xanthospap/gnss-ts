@@ -32,7 +32,8 @@ template<ELLIPSOID E>
 void
 car2top(const double& xi,const double& yi, const double& zi,
         const double& xj,const double& yj, const double& zj,
-        double& north, double& east, double& up) noexcept
+        double& north, double& east, double& up)
+noexcept
 {
 
     // Ellipsoidal coordinates of reference point.
@@ -61,6 +62,6 @@ car2top(const double& xi,const double& yi, const double& zi,
     return;
 }
 
-}
+} // end namespace
 
 #endif
