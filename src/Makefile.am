@@ -18,7 +18,8 @@ dist_include_HEADERS = geodesy.hpp \
 	car2ell.hpp \
 	car2top.hpp \
 	ell2car.hpp \
-	datetime.hpp
+	datetime.hpp \
+	flags.hpp
 
 dist_libgnssts_a_SOURCES = top2daz.cpp \
 	datetime.cpp
