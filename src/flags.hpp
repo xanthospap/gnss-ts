@@ -51,16 +51,14 @@ enum class ts_flag : flag_type {
 /// Underlying type of ts_flag enumeration.
 using UT = typename std::underlying_type<ts_flag>::type;
 
-/// Check if a flag is set.
 inline
-flag_type
+/*flag_type*/bool
 check_flag(flag_type& lhs, ts_flag rhs)
 noexcept
 {
     return ( lhs >> static_cast<UT>(rhs) ) & 1;
 }
 
-/// Overload operator bitwise 'OR'.
 inline 
 flag_type& operator|=(flag_type& lhs, ts_flag rhs)
 noexcept
@@ -68,7 +66,6 @@ noexcept
     return lhs |= static_cast<UT>(rhs);
 }
 
-/// Overload operator bitwise 'OR'.
 inline 
 flag_type operator|(ts_flag lhs, ts_flag rhs)
 noexcept
@@ -76,8 +73,6 @@ noexcept
     return static_cast<UT>(lhs) | static_cast<UT>(rhs);
 }
 
-/// Overload operator bitwise 'XOR'.
-/// Usage:
 inline 
 flag_type& operator^=(flag_type& lhs, ts_flag rhs)
 noexcept
@@ -85,8 +80,6 @@ noexcept
     return lhs ^= static_cast<UT>(rhs);
 }
 
-/// Overload operator bitwise 'AND'.
-///// Usage:
 inline
 flag_type& operator&=(flag_type& lhs, ts_flag rhs)
 noexcept
@@ -94,8 +87,6 @@ noexcept
     return lhs &= static_cast<UT>(rhs);
 }
 
-/// Overload operator bitwise complement.
-/// Usage:
 inline 
 flag_type operator~(ts_flag lhs)
 noexcept
