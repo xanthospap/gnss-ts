@@ -36,12 +36,49 @@ class TimeSeries:
         if self.sy_array is not None: self.sy_array = self.sy_array.astype(float)
         self.sz_array    = kwargs['sz_array']
         if self.sz_array is not None: self.sz_array = self.sz_array.astype(float)
+        assert self.check_sizes()
+
+    def check_sizes(self):
+        """ Check if all not None arrays of the instance are of equal size
+        """
+        sizes = []
+        def foo(x):
+            if x is not None: return x.size
+        sizes = [ foo(x) for x in [self.x_array, self.y_array, self.z_array,
+                                self.sx_array, self.sy_array, self.sz_array]
+                                if foo(x) is not None ]
+        if self.epoch_array is not None: sizes.append(len(self.epoch_array))
+        return sizes[1:] == sizes[:-1]
+
+    def size(self):
+        """ Return number of epochs, i.e. the size of the Timeseries
+        """
+        return len(self.epoch_array)
+
+    def min_epoch(self):
+        return self.epoch_array[0] if self.epoch_array is not None else None
+
+    def max_epoch(self):
+        return self.epoch_array[-1] if self.epoch_array is not None else None
 
     def array_w_index(self, idx):
         if   idx == 0: return self.x_array, self.sx_array
         elif idx == 1: return self.y_array, self.sy_array
         elif idx == 2: return self.z_array, self.sz_array
         else         : raise RuntimeError
+
+    def split(self, epoch):
+        """ Split the TimeSeries into two seperate TimeSeries at point epoch
+            (this should be a datetime instance. The two TimeSeries are returned
+            as a list (of two elements).
+        """
+        if self.epoch_array is None:
+            raise RuntimeError
+        if epoch < self.min_epoch():
+            return [None, self]
+        if epoch > self.max_epoch():
+            return [self, None]
+        # TODO
     
     def average(self, component=None, sigma=1.0):
         """ Compute and return the average values for all or for an individual
