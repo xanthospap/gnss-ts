@@ -11,6 +11,5 @@ setup(
     version      = '0.5',
     packages     = ['gts'],
     scripts      = [],
-    name         = 'gts',
-    install_requires = ['numpy']
+    name         = 'gts'
 )
