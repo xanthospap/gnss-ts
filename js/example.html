@@ -49,8 +49,8 @@ var yAxis = d3.svg.axis()
     .orient("left");
 
 var line = d3.svg.line()
-    .x(/*function(d) { return x(d.date); }*/)
-    .y(/*function(d) { return y(d.close); }*/);
+    .x(function(d) { return x(d.date); })
+    .y(function(d) { return y(d.close); });
 
 var svg = d3.select("body").append("svg")
     .attr("width", width + margin.left + margin.right)
@@ -87,7 +87,6 @@ d3.tsv("data.tsv", type, function(error, data) {
 
 
 function type(d) {
-    console.log("calling type with d=", d);
   d.date = formatDate.parse(d.date);
   d.close = +d.close;
   return d;

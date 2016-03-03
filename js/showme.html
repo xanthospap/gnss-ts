@@ -43,8 +43,8 @@ var xAxis = d3.svg.axis().scale(x).orient("bottom");
 var yAxis = d3.svg.axis().scale(y).orient("left");
 
 var line = d3.svg.line()
-    .x(function(d) { /*return x(d.date); */ console.log("called line"); return d.epochs; })
-    .y(function(d) { /*return y(d.size); */ return d.sizes; });
+    .x(function(d) { return x(dateFormat.parse(d.epoch)); })
+    .y(function(d) { return y(d.size); });
 
 var svg = d3.select("body").append("svg")
     .attr("width", width + margin.left + margin.right)
@@ -54,17 +54,18 @@ var svg = d3.select("body").append("svg")
     
 d3.json("akyr.json", /*type,*/ function(error, data) {
     if (error) throw error;
+    
+    //console.log(data.data);
 
     var epoch_array = [],
-        sizes_array = [],
-        line_data   = [];
+        sizes_array = [];
+    /*line_data   = [];*/
 
     for (var pt = 0; pt < data.data.length; pt++) {
         epoch = ( dateFormat.parse(data.data[pt].epoch) );
         val   = data.data[pt]["size"];
         epoch_array.push(epoch);
         sizes_array.push(val);
-        line_data.push({"x":epoch, "y":val});
     }
     
     x.domain(d3.extent(epoch_array));
@@ -84,6 +85,12 @@ d3.json("akyr.json", /*type,*/ function(error, data) {
        .attr("dy", ".71em")
        .style("text-anchor", "end")
        .text("File Size (Kb)");
+    
+    svg.append("path")
+      .datum(data.data)
+      .attr("class", "line")
+      .attr("d", line);
 
 });
+
 </script>

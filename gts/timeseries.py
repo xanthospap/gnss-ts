@@ -154,3 +154,9 @@ class TimeSeries:
                     sx_array    = self.sx_array,
                     sy_array    = self.sy_array,
                     sz_array    = self.sz_array)
+    
+    def to_json(json_file):
+        """ Output the timeseries instance to a file named json_file in
+            json format.
+        """
+        with open(json_file, 'w') as jf:
