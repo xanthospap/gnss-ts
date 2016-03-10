@@ -32,7 +32,6 @@ def mjd2pydt(mjd,fmjd=.0):
     return dt.datetime(year, month, mday, hour, minute, second)
 
 def read_plt(plt_file):
-
     with open(plt_file, 'r') as fin:
         epochs = []
         x_ar   = []

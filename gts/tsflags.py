@@ -16,7 +16,7 @@ class TsFlag(object):
     ''' A flag class to mark individual time-series epoch records
     '''
     
-    def __init__(self, f):
+    def __init__(self, f=0):
         self.flag = f
 
     @property
@@ -28,7 +28,7 @@ class TsFlag(object):
         if isinstance(val, TsFlagOption):
             self.__flag = val.value
             return
-        if val >= len(TsFlagOption):
+        if val >= pow(2, len(TsFlagOption)):
             raise RuntimeError('Invalid flag value!')
         self.__flag = val
 
@@ -38,8 +38,12 @@ class TsFlag(object):
         for i in options: self.__flag = self.__flag | i.value
 
     def clear(self, *options):
-        ''' Clear one or more TsFlagOption(s)
+        ''' Clear one or more TsFlagOption(s). If options is empty, clear all
+            flags.
         '''
+        if len(options) == 0:
+            self.__flag = 0
+            return
         for i in options: self.__flag = self.__flag & (~i.value)
 
     def check(self, option):
@@ -48,16 +52,27 @@ class TsFlag(object):
         return self.__flag & option.value
 
     def __repr__(self):
-        return 'flag:' + ' & '.join(filter(lambda a: a is not None, [ i.name if self.check(i) else None for i in TsFlagOption ]))
+        return 'flag:' + ' & '.join(filter(lambda a: a is not None,
+            [ i.name if self.check(i) else None for i in TsFlagOption ]))
 
+'''
+    driver routine
+'''
 
 if __name__=="__main__":
     f1 = TsFlag(TsFlagOption.jump)
     f1.set(TsFlagOption.outlier, TsFlagOption.vel_chg)
     print f1
 
-    f2 = TsFlag(f1.flag())
+    f2 = TsFlag(f1.flag)
     print f2
 
-    f3 = TsFlag(f2.flag()+1000)
-    print f3
+    f2.clear()
+    print f2
+    
+    # the following should not work
+    try:
+        f3 = TsFlag(f2.flag+1000)
+        print f3
+    except:
+        print 'Exception caught!'

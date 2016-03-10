@@ -1,7 +1,9 @@
 import numpy    as np
 import datetime as dt
-import geodesy  as geo
 from functools import partial
+
+import geodesy  as geo
+import tsflags
 
 ##  dummy Enumeration type for holding coordinate types
 def enum(**enums):
@@ -37,6 +39,8 @@ class TimeSeries:
         self.sz_array    = kwargs['sz_array']
         if self.sz_array is not None: self.sz_array = self.sz_array.astype(float)
         assert self.check_sizes()
+        ## the flag array, one flag per epoch
+        self.flags       = len(self.epoch_array)*[ tsflags.TsFlag() ]
 
     def check_sizes(self):
         """ Check if all not None arrays of the instance are of equal size
@@ -45,7 +49,8 @@ class TimeSeries:
         def foo(x):
             if x is not None: return x.size
         sizes = [ foo(x) for x in [self.x_array, self.y_array, self.z_array,
-                                self.sx_array, self.sy_array, self.sz_array]
+                                self.sx_array, self.sy_array, self.sz_array, 
+                                self.flags]
                                 if foo(x) is not None ]
         if self.epoch_array is not None: sizes.append(len(self.epoch_array))
         return sizes[1:] == sizes[:-1]
