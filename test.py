@@ -1,12 +1,24 @@
 #! /usr/bin/python
 
 import sys
+import datetime
+
 import gts.readers
 import gts.timeseries as ts
 import gts.tsploters
 
+## read from dso cts format
 dion_ts = gts.readers.read_ntua_cts("dion.c.cts")
+
+## trasnform to topocentric
 dion_ts = dion_ts.transform( ts.CoordinateType.Topocentric )
-gts.tsploters.ts_plot( dion_ts, y_erbar=True )
+
+## let's try splitting the ts
+dion_a, dion_b = dion_ts.split(datetime.datetime(2005, 01, 01))
+
+## try a simple, linear fit
+dion_a.dummy_lin_fit()
+
+gts.tsploters.ts_plot( dion_a, y_erbar=True )
 
 sys.exit(0)

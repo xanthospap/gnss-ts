@@ -1,6 +1,7 @@
 import numpy    as np
 import datetime as dt
 from functools import partial
+from bisect import bisect_right
 
 import geodesy  as geo
 import tsflags
@@ -20,8 +21,10 @@ class TimeSeries:
         for i in ['name',   'type',     'epoch_array',
                 'x_array',  'y_array',  'z_array',
                 'sx_array', 'sy_array', 'sz_array']:
-            try:    kwargs[i]
-            except: kwargs[i] = None
+            try:
+                kwargs[i]
+            except:
+                kwargs[i] = None
         self.station     = kwargs['name']
         self.crd_type    = kwargs['type']
         self.epoch_array = kwargs['epoch_array']
@@ -38,16 +41,22 @@ class TimeSeries:
         if self.sy_array is not None: self.sy_array = self.sy_array.astype(float)
         self.sz_array    = kwargs['sz_array']
         if self.sz_array is not None: self.sz_array = self.sz_array.astype(float)
-        assert self.check_sizes()
         ## the flag array, one flag per epoch
         self.flags       = len(self.epoch_array)*[ tsflags.TsFlag() ]
+        assert self.check_sizes()
+
+    def average_epoch(self):
+        return self.epoch_array[0] + (self.epoch_array[self.size()-1] - self.epoch_array[0]) / 2
 
     def check_sizes(self):
         """ Check if all not None arrays of the instance are of equal size
         """
         sizes = []
         def foo(x):
-            if x is not None: return x.size
+            if type(x) is list:
+                return len(x)
+            if x is not None:
+                return x.size
         sizes = [ foo(x) for x in [self.x_array, self.y_array, self.z_array,
                                 self.sx_array, self.sy_array, self.sz_array, 
                                 self.flags]
@@ -72,6 +81,27 @@ class TimeSeries:
         elif idx == 2: return self.z_array, self.sz_array
         else         : raise RuntimeError
 
+    def dummy_lin_fit(self):
+        for cmp in self.x_array, self.y_array, self.z_array:
+            keep_smoothing = True
+            while keep_smoothing:
+                yls = []
+                Als = []
+                t0  = self.average_epoch()
+                for i in range(0, self.size()):
+                    if not self.flags[i].check(tsflags.TsFlagOption.outlier):
+                        yls.append(cmp[i])
+                        Als.append([1.0, (self.epoch_array[i] - t0).days/365.25])
+                y = np.array(yls) #.astype(float)
+                A = np.array(Als) #.astype(float)
+                x, rms, rank, s = np.linalg.lstsq(A, y)
+                print '\tX0 = ', x[0]
+                print '\tV  = ', x[1]
+                print '\trms= ', rms
+                residuals = y - A*x
+                keep_smoothing = False
+                
+
     def split(self, epoch):
         """ Split the TimeSeries into two seperate TimeSeries at point epoch
             (this should be a datetime instance. The two TimeSeries are returned
@@ -80,10 +110,21 @@ class TimeSeries:
         if self.epoch_array is None:
             raise RuntimeError
         if epoch < self.min_epoch():
-            return [None, self]
+            return None, self
         if epoch > self.max_epoch():
-            return [self, None]
-        # TODO
+            return self, None
+        'Find leftmost value greater than x'
+        i = bisect_right(self.epoch_array, epoch)
+        if i == len(self.epoch_array):
+            raise RuntimeError
+        ts_left = TimeSeries(name=self.station, type=self.crd_type, epoch_array=self.epoch_array[0:i],
+            x_array=self.x_array[0:i], y_array=self.y_array[0:i],z_array=self.z_array[0:i],
+            sx_array=self.sx_array[0:i], sy_array=self.sy_array[0:i],sz_array=self.sz_array[0:i])
+        sz = len(self.epoch_array)
+        ts_right= TimeSeries(name=self.station, type=self.crd_type, epoch_array=self.epoch_array[i:sz],
+            x_array=self.x_array[i:sz], y_array=self.y_array[i:sz],z_array=self.z_array[i:sz],
+            sx_array=self.sx_array[i:sz], sy_array=self.sy_array[i:sz],sz_array=self.sz_array[i:sz])
+        return ts_left, ts_right
     
     def average(self, component=None, sigma=1.0):
         """ Compute and return the average values for all or for an individual
