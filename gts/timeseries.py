@@ -6,6 +6,9 @@ from bisect import bisect_right
 import geodesy  as geo
 import tsflags
 
+## for debuging
+## from scipy import stats
+
 ##  dummy Enumeration type for holding coordinate types
 def enum(**enums):
     return type('Enum', (), enums)
@@ -81,26 +84,22 @@ class TimeSeries:
         elif idx == 2: return self.z_array, self.sz_array
         else         : raise RuntimeError
 
-    def dummy_lin_fit(self):
+    def dummy_lin_fit(self, perform_outlier_filtering=False):
         for cmp in self.x_array, self.y_array, self.z_array:
-            keep_smoothing = True
-            while keep_smoothing:
-                yls = []
-                Als = []
-                t0  = self.average_epoch()
-                for i in range(0, self.size()):
-                    if not self.flags[i].check(tsflags.TsFlagOption.outlier):
-                        yls.append(cmp[i])
-                        Als.append([1.0, (self.epoch_array[i] - t0).days/365.25])
-                y = np.array(yls) #.astype(float)
-                A = np.array(Als) #.astype(float)
-                x, rms, rank, s = np.linalg.lstsq(A, y)
-                print '\tX0 = ', x[0]
-                print '\tV  = ', x[1]
-                print '\trms= ', rms
-                residuals = y - A*x
-                keep_smoothing = False
-                
+            yls = []
+            Als = []
+            t0  = self.average_epoch()
+            for i in range(0, self.size()):
+                if not self.flags[i].check(tsflags.TsFlagOption.outlier):
+                    yls.append(cmp[i])
+                    Als.append([1.0, (self.epoch_array[i] - t0).days/365.25])
+            y = np.array(yls) #.astype(float)
+            A = np.array(Als) #.astype(float)
+            x, sos, rank, s = np.linalg.lstsq(A, y)
+            rmse = np.sqrt(sos / y.size)
+            # print '\tX0 = ', x[0]
+            print '\tV  = {:7.2f} +- {:7.2f} mm/y # of points {:4d} from {:} to {:}'.format(x[1]*1000.0, rmse[0]*1000.0, y.size, min(self.epoch_array).date(), max(self.epoch_array).date())
+            residuals = y - A.dot(x)
 
     def split(self, epoch):
         """ Split the TimeSeries into two seperate TimeSeries at point epoch
