@@ -76,3 +76,16 @@ if __name__=="__main__":
         print f3
     except:
         print 'Exception caught!'
+    
+    fl = [TsFlag() for i in range(0,5)] * 5
+    fl.append(f1)
+    fl.append(f2)
+    for i in fl: print i
+    
+    print type(fl), type(fl[0])
+    (fl[0]).set(TsFlagOption.jump)
+    for i in fl: print i
+    
+    f = fl[0]
+    f.set(TsFlagOption.vel_chg)
+    for i in fl: print i

@@ -45,7 +45,7 @@ class TimeSeries:
         self.sz_array    = kwargs['sz_array']
         if self.sz_array is not None: self.sz_array = self.sz_array.astype(float)
         ## the flag array, one flag per epoch
-        self.flags       = len(self.epoch_array)*[ tsflags.TsFlag() ]
+        self.flags       = [ tsflags.TsFlag() for i in range(0, len(self.epoch_array)) ]
         assert self.check_sizes()
 
     def average_epoch(self):
@@ -85,21 +85,33 @@ class TimeSeries:
         else         : raise RuntimeError
 
     def dummy_lin_fit(self, perform_outlier_filtering=False):
-        for cmp in self.x_array, self.y_array, self.z_array:
-            yls = []
-            Als = []
-            t0  = self.average_epoch()
-            for i in range(0, self.size()):
-                if not self.flags[i].check(tsflags.TsFlagOption.outlier):
-                    yls.append(cmp[i])
-                    Als.append([1.0, (self.epoch_array[i] - t0).days/365.25])
-            y = np.array(yls) #.astype(float)
-            A = np.array(Als) #.astype(float)
-            x, sos, rank, s = np.linalg.lstsq(A, y)
-            rmse = np.sqrt(sos / y.size)
-            # print '\tX0 = ', x[0]
-            print '\tV  = {:7.2f} +- {:7.2f} mm/y # of points {:4d} from {:} to {:}'.format(x[1]*1000.0, rmse[0]*1000.0, y.size, min(self.epoch_array).date(), max(self.epoch_array).date())
-            residuals = y - A.dot(x)
+        new_outlier = True
+        iteration   = 0
+        while new_outlier and iteration <= 5:
+            print 'Iteration {:2d}'.format(iteration)
+            new_outlier = False
+            for cmp in self.x_array, self.y_array, self.z_array:
+                yls = []
+                Als = []
+                t0  = self.average_epoch()
+                rel_pos = [] ## original index of each element in the system
+                for i in range(0, self.size()):
+                    if not self.flags[i].check(tsflags.TsFlagOption.outlier):
+                        yls.append(cmp[i])
+                        Als.append([1.0, (self.epoch_array[i] - t0).days/365.25])
+                        rel_pos.append(i)
+                y = np.array(yls) #.astype(float)
+                A = np.array(Als) #.astype(float)
+                x, sos, rank, s = np.linalg.lstsq(A, y)
+                rmse = np.asscalar(np.sqrt(sos / y.size))
+                print '\tV  = {:7.2f} +- {:7.2f} mm/y # of points {:4d} from {:} to {:}'.format(x[1]*1000.0, rmse*1000.0, y.size, min(self.epoch_array).date(), max(self.epoch_array).date())
+                residuals = y - A.dot(x)
+                for i,r in enumerate(residuals):
+                    if abs(r) >= 3.0 * rmse:
+                        self.flags[rel_pos[i]].set(tsflags.TsFlagOption.outlier)
+                        print '\t\tOutlier at epoch {:} residual = {:+8.5f}mm 3*sigma = {:8.4f}'.format(self.epoch_array[rel_pos[i]], r, 3.0 * rmse)
+                        new_outlier = True
+            iteration += 1
 
     def split(self, epoch):
         """ Split the TimeSeries into two seperate TimeSeries at point epoch
@@ -200,10 +212,21 @@ class TimeSeries:
                     sy_array    = self.sy_array,
                     sz_array    = self.sz_array)
 
-'''
-    def to_json(json_file):
-        """ Output the timeseries instance to a file named json_file in
-            json format.
-        """
-        with open(json_file, 'w') as jf:
-'''
+    def collect_outliers(self):
+        ea = []
+        ra = []
+        fa = []
+        for i in range(0, self.size()):
+            if self.flags[i].check(tsflags.TsFlagOption.outlier):
+                ea.append(self.epoch_array[i])
+                ra.append([self.x_array[i], self.y_array[i], self.z_array[i], self.sx_array[i], self.sy_array[i], self.sz_array[i]])
+                fa.append(tsflags.TsFlag(tsflags.TsFlagOption.outlier))
+        return TimeSeries(name=self.station, type=self.crd_type,
+                    epoch_array = ea,
+                    x_array     = np.array(list(zip(*ra)[0] )),
+                    y_array     = np.array(list(zip(*ra)[1] )),
+                    z_array     = np.array(list(zip(*ra)[2] )),
+                    sx_array    = np.array(list(zip(*ra)[3] )),
+                    sy_array    = np.array(list(zip(*ra)[4] )),
+                    sz_array    = np.array(list(zip(*ra)[5] )) )
+
