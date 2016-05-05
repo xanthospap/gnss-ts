@@ -245,11 +245,18 @@ class TimeSeries:
     def toJson(self):
         jlst = []
         for i in range(0, self.size()):
-            s = '{{ \"value\":{:+10.5f}, \"date\":\"{:}\", \"l\":{:10.5f}, \"u\":{:10.5f}, \"flag\":\"{:}\" }}'.format(
-            self.x_array[i],
-            self.epoch_array[i].strftime('%Y-%m-%d'),
-            abs(self.sx_array[i])*-1.0 + self.x_array[i],
-            abs(self.sx_array[i]) + self.x_array[i],
-            self.flags[i])
-            jlst.append(s)
+            if not self.flags[i].check(tsflags.TsFlagOption.outlier):
+                s = '{{ \"date\":\"{:}\", \"north\":{:10.5f}, \"ln\":{:10.5f}, \"un\":{:10.5f}, \"east\":{:10.5f}, \"le\":{:10.5f}, \"ue\":{:10.5f}, \"up\":{:10.5f}, \"lu\":{:10.5f}, \"uu\":{:10.5f}, \"flag\":\"{:}\" }}'.format(
+                self.epoch_array[i].strftime('%Y-%m-%d'),
+                self.x_array[i] * 1000.0,
+                (abs(self.sx_array[i])*-1.0 + self.x_array[i]) * 1000.0,
+                (abs(self.sx_array[i]) + self.x_array[i]) * 1000.0,
+                self.y_array[i] * 1000.0,
+                (abs(self.sy_array[i])*-1.0 + self.y_array[i]) * 1000.0,
+                (abs(self.sy_array[i]) + self.y_array[i]) * 1000.0,
+                self.z_array[i] * 1000.0,
+                (abs(self.sz_array[i])*-1.0 + self.z_array[i]) * 1000.0,
+                (abs(self.sz_array[i]) + self.z_array[i]) * 1000.0,
+                self.flags[i])
+                jlst.append(s)
         print ',\n'.join(jlst)
