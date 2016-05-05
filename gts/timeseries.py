@@ -242,4 +242,14 @@ class TimeSeries:
                     sx_array    = np.array(list(zip(*ra)[3] )),
                     sy_array    = np.array(list(zip(*ra)[4] )),
                     sz_array    = np.array(list(zip(*ra)[5] )) )
-
+    def toJson(self):
+        jlst = []
+        for i in range(0, self.size()):
+            s = '{{ \"value\":{:+10.5f}, \"date\":\"{:}\", \"l\":{:10.5f}, \"u\":{:10.5f}, \"flag\":\"{:}\" }}'.format(
+            self.x_array[i],
+            self.epoch_array[i].strftime('%Y-%m-%d'),
+            abs(self.sx_array[i])*-1.0 + self.x_array[i],
+            abs(self.sx_array[i]) + self.x_array[i],
+            self.flags[i])
+            jlst.append(s)
+        print ',\n'.join(jlst)
