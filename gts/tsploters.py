@@ -1,5 +1,6 @@
 import datetime
 import timeseries as ts
+import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 
@@ -24,6 +25,7 @@ def ts_plot(ts, y_erbar=False):
     axs[0].set_title( 'Station %s'%ts.station )
     axs[0].set_ylabel( 'DNorth (m)' )
     axs[0].plot_date( x=mdates_out, y=outliers_ts.x_array, fmt="ro", markersize=4 )
+    axs[0].set_ylim([np.amin(outliers_ts.x_array), np.amax(outliers_ts.x_array)])
 
     if not y_erbar:
        axs[1].plot_date( x=mdates_series, y=ts.y_array, fmt="-" )
@@ -32,6 +34,7 @@ def ts_plot(ts, y_erbar=False):
                         yerr=ts.sy_array, ecolor='0.1')
     axs[1].set_ylabel( 'DEast (m)' )
     axs[1].plot_date( x=mdates_out, y=outliers_ts.y_array, fmt="ro", markersize=4)
+    axs[1].set_ylim([np.amin(outliers_ts.y_array), np.amax(outliers_ts.y_array)])
 
     if not y_erbar:
         axs[2].plot_date( x=mdates_series, y=ts.z_array, fmt="-" )
@@ -40,6 +43,7 @@ def ts_plot(ts, y_erbar=False):
                         yerr=ts.sz_array, ecolor='0.1')
     axs[2].set_ylabel( 'DUp (m)' )
     axs[2].plot_date( x=mdates_out, y=outliers_ts.z_array, fmt="ro", markersize=4 )
+    axs[2].set_ylim([np.amin(outliers_ts.z_array), np.amax(outliers_ts.z_array)])
 
     axs[0].xaxis.set_major_locator( mdates.YearLocator() )
     axs[0].xaxis.set_major_formatter( mdates.DateFormatter('%Y') )

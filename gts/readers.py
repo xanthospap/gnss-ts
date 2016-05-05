@@ -1,6 +1,7 @@
 import numpy      as np
 import datetime   as dt
 import timeseries as ts
+import bisect
 
 JAN11901 = 15385
 month_day = [
@@ -72,28 +73,66 @@ def read_plt(plt_file):
             y_array = np.array( y_ar ),
             z_array = np.array( z_ar ))
 
-def read_cts(cts_file):
+def sorted_appender(epoch_array, rest_array, time_stamps, new_epoch, new_record, t_stamp):
+    if len(epoch_array) == 0:
+            epoch_array.append(new_epoch)
+            rest_array.append(new_record)
+            time_stamps.append(t_stamp)
+            return
+    while True:
+        try:
+            idx = epoch_array.index(new_epoch)
+            if time_stamps[idx] > t_stamp:
+                print '[DEBUG] Record for date {:} already included with more recent time-stamp'.format(epoch_array[idx])
+                return
+            elif time_stamps[idx] == t_stamp:
+                return
+            else:
+                epoch_array[idx] = new_epoch
+                rest_array[idx]  = new_record
+                time_stamps[idx] = t_stamp
+        except ValueError:
+            idx = bisect.bisect_right(epoch_array, new_epoch)
+            epoch_array.insert(idx, new_epoch)
+            rest_array.insert(idx, new_record)
+            time_stamps.insert(idx, t_stamp)
+            return
+
+def read_cts(cts_file, comment=None):
     with open(cts_file, 'r') as fin:
         epochs_array = []
         rest_array   = []
+        time_stamps  = []
         for line in fin.readlines():
             if not line[0] == '#':
-                l = line.split()
-                assert len(l) >= 16
-                epochs_array.append(dt.datetime.strptime(l[0]+' '+l[1], '%Y-%m-%d %H:%M:%S'))
-                rest_array.append( [x for x in l[2:14]] )
-        sorted_lst = [list(x) for x in zip(*sorted(zip(epochs_array, rest_array), key=lambda pair: pair[0]))]
-        rest_array = map(list, zip(*sorted_lst[1]))
+                line_cmnt = line[196:].rstrip()
+                if comment is None or comment.rstrip() == line_cmnt:
+                    l = line.split()
+                    assert len(l) >= 16
+                    new_epoch  = dt.datetime.strptime(l[0]+' '+l[1], '%Y-%m-%d %H:%M:%S')
+                    new_record = [x for x in l[2:14]]
+                    t_stamp    = dt.datetime.strptime(l[14]+' '+l[15], '%Y-%m-%d %H:%M:%S.%f')
+                    sorted_appender(epochs_array, rest_array, time_stamps, new_epoch, new_record, t_stamp) 
+                    # epochs_array.append(dt.datetime.strptime(l[0]+' '+l[1], '%Y-%m-%d %H:%M:%S'))
+                    # rest_array.append( [x for x in l[2:14]] )
+                    # time_stamps.append(dt.datetime.strptime(l[14]+' '+l[15], '%Y-%m-%d %H:%M:%S'))
+                else:
+                    print '[DEBUG] Skipping record with description: \"{:}\"'.format(line_cmnt)
+        # sorted_lst = [list(x) for x in zip(*sorted(zip(epochs_array, rest_array), key=lambda pair: pair[0]))]
+        # rest_array = map(list, zip(*sorted_lst[1]))
+        assert len(epochs_array) == len(rest_array) and len(epochs_array) == len(time_stamps)
+        print 'Time-Series from {:} to {:}'.format(epochs_array[0], epochs_array[len(epochs_array)-1])
         return ts.TimeSeries(name=cts_file[0:4], type=ts.CoordinateType.Cartesian,
                     # following won't work. Why ?? Use classic datetime instead
                     # epoch_array=np.array([x.strftime('%Y-%m-%d:%H:%M:%S') for x in sorted_lst[0]], dtype='datetime64'))
-                    epoch_array = sorted_lst[0], ## the epochs list (NOT ARRAY)
-                    x_array     = np.array(rest_array[0]),
-                    y_array     = np.array(rest_array[2]),
-                    z_array     = np.array(rest_array[4]),
-                    sx_array    = np.array(rest_array[7]),
-                    sy_array    = np.array(rest_array[9]),
-                    sz_array    = np.array(rest_array[11]))
+                    # epoch_array = sorted_lst[0], ## the epochs list (NOT ARRAY)
+                    epoch_array = epochs_array,
+                    x_array     = np.array([i[0]  for i in rest_array]), # rest_array[0]),
+                    y_array     = np.array([i[2]  for i in rest_array]),
+                    z_array     = np.array([i[4]  for i in rest_array]),
+                    sx_array    = np.array([i[7]  for i in rest_array]),
+                    sy_array    = np.array([i[9]  for i in rest_array]),
+                    sz_array    = np.array([i[11] for i in rest_array]))
 
 def read_ntua_cts(cts_file):
     ##  format of .c.cts files

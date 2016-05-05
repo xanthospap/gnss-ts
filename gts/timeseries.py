@@ -1,10 +1,12 @@
 import numpy    as np
 import datetime as dt
+from datetime import timedelta
 from functools import partial
 from bisect import bisect_right
 
 import geodesy  as geo
 import tsflags
+import gpstime
 
 ## for debuging
 ## from scipy import stats
@@ -211,6 +213,17 @@ class TimeSeries:
                     sx_array    = self.sx_array,
                     sy_array    = self.sy_array,
                     sz_array    = self.sz_array)
+
+    def report_missing_days(self):
+        dt  = self.epoch_array[0]
+        idx = 0
+        while dt <= self.epoch_array[self.size()-1]:
+            if dt.date() != self.epoch_array[idx].date():
+                week, sow = gpstime.pydt2gps(dt)
+                print 'Missing date: {:} GPSt: {:04d}{:01d}'.format(dt, week, int(sow/86400.0))
+            else:
+                idx += 1
+            dt += timedelta(days=1)
 
     def collect_outliers(self):
         ea = []
