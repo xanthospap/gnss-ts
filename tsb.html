@@ -104,6 +104,7 @@ function deepCopy(arr) {
 }
 
 var globals = {};
+var plt_width = 800;
 
 var north_plot = {
         title: "Time-Series (component: North)",
@@ -111,7 +112,7 @@ var north_plot = {
         // data: data,
         animate_on_load: true,
         // format: 'percentage',
-        width: 1000,
+        width: plt_width,
         height: 400,
         right: 40,
         area: false,
@@ -139,7 +140,7 @@ var east_plot = {
         // data: data,
         animate_on_load: true,
         // format: 'percentage',
-        width: 1000,
+        width: plt_width,
         height: 400,
         right: 40,
         area: false,
@@ -165,7 +166,7 @@ var up_plot = {
         // data: data,
         animate_on_load: true,
         // format: 'percentage',
-        width: 1000,
+        width: plt_width,
         height: 400,
         right: 40,
         area: false,
@@ -185,7 +186,7 @@ var up_plot = {
         // full_width: true
 };
 
-d3.json('foo2.json', function(data) {
+d3.json('foo.json', function(data) {
     
     /* make clean_data; a 'deep' copy of data, with no outliers */
     var clean_data = deepCopy(data);
