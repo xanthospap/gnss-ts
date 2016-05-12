@@ -83,7 +83,7 @@ def sorted_appender(epoch_array, rest_array, time_stamps, new_epoch, new_record,
         try:
             idx = epoch_array.index(new_epoch)
             if time_stamps[idx] > t_stamp:
-                print '[DEBUG] Record for date {:} already included with more recent time-stamp'.format(epoch_array[idx])
+                print '## [DEBUG] Record for date {:} already included with more recent time-stamp'.format(epoch_array[idx])
                 return
             elif time_stamps[idx] == t_stamp:
                 return
@@ -111,15 +111,11 @@ def read_cts(cts_file, comment=None):
                     assert len(l) >= 16
                     new_epoch  = dt.datetime.strptime(l[0]+' '+l[1], '%Y-%m-%d %H:%M:%S')
                     new_record = [x for x in l[2:14]]
+                    new_record.append(line_cmnt)
                     t_stamp    = dt.datetime.strptime(l[14]+' '+l[15], '%Y-%m-%d %H:%M:%S.%f')
                     sorted_appender(epochs_array, rest_array, time_stamps, new_epoch, new_record, t_stamp) 
-                    # epochs_array.append(dt.datetime.strptime(l[0]+' '+l[1], '%Y-%m-%d %H:%M:%S'))
-                    # rest_array.append( [x for x in l[2:14]] )
-                    # time_stamps.append(dt.datetime.strptime(l[14]+' '+l[15], '%Y-%m-%d %H:%M:%S'))
                 else:
-                    print '[DEBUG] Skipping record with description: \"{:}\"'.format(line_cmnt)
-        # sorted_lst = [list(x) for x in zip(*sorted(zip(epochs_array, rest_array), key=lambda pair: pair[0]))]
-        # rest_array = map(list, zip(*sorted_lst[1]))
+                    print '## [DEBUG] Skipping record with description: \"{:}\"'.format(line_cmnt)
         assert len(epochs_array) == len(rest_array) and len(epochs_array) == len(time_stamps)
         print 'Time-Series from {:} to {:}'.format(epochs_array[0], epochs_array[len(epochs_array)-1])
         return ts.TimeSeries(name=cts_file[0:4], type=ts.CoordinateType.Cartesian,
@@ -132,7 +128,9 @@ def read_cts(cts_file, comment=None):
                     z_array     = np.array([i[4]  for i in rest_array]),
                     sx_array    = np.array([i[7]  for i in rest_array]),
                     sy_array    = np.array([i[9]  for i in rest_array]),
-                    sz_array    = np.array([i[11] for i in rest_array]))
+                    sz_array    = np.array([i[11] for i in rest_array]),
+                    comment     = list(zip(*rest_array)[12]),
+                    time_stamp  = time_stamps)
 
 def read_ntua_cts(cts_file):
     ##  format of .c.cts files

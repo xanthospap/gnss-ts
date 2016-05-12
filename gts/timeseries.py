@@ -25,7 +25,8 @@ class TimeSeries:
         ##  all possible arguments set to None if not given
         for i in ['name',   'type',     'epoch_array',
                 'x_array',  'y_array',  'z_array',
-                'sx_array', 'sy_array', 'sz_array']:
+                'sx_array', 'sy_array', 'sz_array',
+                'time_stamp', 'comment']:
             try:
                 kwargs[i]
             except:
@@ -48,6 +49,8 @@ class TimeSeries:
         if self.sz_array is not None: self.sz_array = self.sz_array.astype(float)
         ## the flag array, one flag per epoch
         self.flags       = [ tsflags.TsFlag() for i in range(0, len(self.epoch_array)) ]
+        self.time_stamps = kwargs['time_stamp']
+        self.comments    = kwargs['comment']
         assert self.check_sizes()
 
     def average_epoch(self):
@@ -62,9 +65,9 @@ class TimeSeries:
                 return len(x)
             if x is not None:
                 return x.size
-        sizes = [ foo(x) for x in [self.x_array, self.y_array, self.z_array,
+        sizes = [ foo(x) for x in [ self.x_array, self.y_array, self.z_array,
                                 self.sx_array, self.sy_array, self.sz_array, 
-                                self.flags]
+                                self.flags, self.time_stamps, self.comments ]
                                 if foo(x) is not None ]
         if self.epoch_array is not None: sizes.append(len(self.epoch_array))
         return sizes[1:] == sizes[:-1]
@@ -132,11 +135,13 @@ class TimeSeries:
             raise RuntimeError
         ts_left = TimeSeries(name=self.station, type=self.crd_type, epoch_array=self.epoch_array[0:i],
             x_array=self.x_array[0:i], y_array=self.y_array[0:i],z_array=self.z_array[0:i],
-            sx_array=self.sx_array[0:i], sy_array=self.sy_array[0:i],sz_array=self.sz_array[0:i])
+            sx_array=self.sx_array[0:i], sy_array=self.sy_array[0:i],sz_array=self.sz_array[0:i],
+            time_stamp=self.time_stamps[0:i], comment=self.comments[0:i])
         sz = len(self.epoch_array)
         ts_right= TimeSeries(name=self.station, type=self.crd_type, epoch_array=self.epoch_array[i:sz],
             x_array=self.x_array[i:sz], y_array=self.y_array[i:sz],z_array=self.z_array[i:sz],
-            sx_array=self.sx_array[i:sz], sy_array=self.sy_array[i:sz],sz_array=self.sz_array[i:sz])
+            sx_array=self.sx_array[i:sz], sy_array=self.sy_array[i:sz],sz_array=self.sz_array[i:sz],
+            time_stamp=self.time_stamps[i:sz], comment=self.comments[i:sz])
         return ts_left, ts_right
     
     def average(self, component=None, sigma=1.0):
@@ -260,3 +265,7 @@ class TimeSeries:
                 self.flags[i])
                 jlst.append(s)
         print ',\n'.join(jlst)
+
+    def print_as_cts(self):
+        for i in range(0, self.size()):
+            print '{:s} {:+15.5f} {:9.5f} {:+15.5f} {:9.5f} {:+15.5f} {:9.5f} {:s} {:s}'.format(self.epoch_array[i].strftime('%Y-%m-%d %H:%M:%S'), self.x_array[i], self.sx_array[i], self.y_array[i], self.sy_array[i], self.z_array[i], self.sz_array[i], self.time_stamps[i].strftime('%Y-%m-%d %H:%M:%S'), self.comments[i])
