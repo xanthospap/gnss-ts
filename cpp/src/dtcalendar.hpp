@@ -12,7 +12,9 @@ namespace ngpt {
  * A datetime class. Holds (integral) days as MJD and fraction of day as any
  * of the is_of_sec_type class (i.e. seconds/milli/micro).
  */
-template<class S>
+template<class S,
+        typename = std::enable_if_t<S::is_of_sec_type>
+        >
     class datetime {
 public:
 
@@ -30,11 +32,11 @@ public:
     /// Constructor from year, month, day of month and any sec type (T),
     /// convertible to S.
     template<class T,
-            std::enable_if_t<T::is_of_sec_type>
+            typename = std::enable_if_t<T::is_of_sec_type>
             >
         explicit datetime(year y, month m, day_of_month d, T t)
         : m_mjd{cal2mjd(y, m, d)}, m_sec{S(t)}
-    {std::cout<<"\tConstructor: datetime(year y, month m, day_of_month d, T t)\n";}
+    {}
 
     /// Constructor from year, month, day of month and fractional seconds.
     explicit
@@ -52,11 +54,21 @@ public:
     {}
     
     /// Constructor from year, month, day of month, hours, minutes and
-    /// micro- or milli- or seconds.
+    /// second type S.
     explicit
     datetime(year y, month m, day_of_month d, hours hr=hours(),
         minutes mn=minutes(), S sec=S())
     : m_mjd{cal2mjd(y, m, d)}, m_sec{hr, mn, sec}
+    {}
+    
+    /// Constructor from year, month, day of month, hours, minutes and
+    /// micro- or milli- or seconds (if T can be cast to S).
+    template<class T,
+            typename = std::enable_if_t<T::is_of_sec_type>
+            >
+    explicit
+        datetime(year y, month m, day_of_month d, hours hr, minutes mn, T sec)
+        : m_mjd{cal2mjd(y, m, d)}, m_sec{hr, mn, S(sec)}
     {}
 
     /// Get the MJDay.

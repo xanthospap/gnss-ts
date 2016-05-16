@@ -5,6 +5,8 @@
 using ngpt::datetime;
 using ngpt::year;
 using ngpt::month;
+using ngpt::hours;
+using ngpt::minutes;
 using ngpt::day_of_month;
 using ngpt::seconds;
 using ngpt::milliseconds;
@@ -44,24 +46,40 @@ int main()
     // this is fine; microseconds to seconds is allowed (BUT fractional sec 
     // are ignored!)
     datetime<seconds> d21 (year(2015), month(12), day_of_month(30),
-        microseconds(MilliSec));
+        milliseconds(MilliSec));
     std::cout << "d21 = " << d21.stringify() << " (" << d21.secs() << ")\n";
     // the opposite however id not allowed!
-    //datetime<microseconds> d5(year(2015), month(12), day_of_month(30),
-    //  seconds(100));
-/*    
-    // this is fine; use fractional seconds (which are skipped!)
-    datetime<seconds> d22 (year(2015), month(12), day_of_month(30), 30.001234);
+    // datetime<microseconds> d5(year(2015), month(12), day_of_month(30),
+    //     seconds(100)); ERROR!
+    // we can also use time (i.e. hours, minutes, etc..)
+    datetime<seconds> d22 (year(2015), month(12), day_of_month(30), hours(12),
+        minutes(50), seconds(30));
     std::cout << "d22 = " << d22.stringify() << " (" << d22.secs() << ")\n";
-    // or, for bigger accuracy ..
-    datetime<microseconds> d23 (year(2015), month(12), day_of_month(30),
-        30.000001);
+    // or
+    datetime<seconds> d23 (year(2015), month(12), day_of_month(30), hours(12),
+        minutes(50), microseconds(30000001));
     std::cout << "d23 = " << d23.stringify() << " (" << d23.secs() << ")\n";
-    // same as
-    datetime<microseconds> d24 (year(2015), month(12), day_of_month(30),
-        microseconds(1));
+    // or
+    datetime<microseconds> d24 (year(2015), month(12), day_of_month(30), hours(12),
+        minutes(50), microseconds(30000001));
     std::cout << "d24 = " << d24.stringify() << " (" << d24.secs() << ")\n";
-*/        
+    // but not (seconds cannot be cast to milliseconds) ERROR!
+    // datetime<milliseconds> d25 (year(2015), month(12), day_of_month(30), hours(12),
+    //     minutes(50), seconds(30000001));
+    // std::cout << "d25 = " << d25.stringify() << " (" << d25.secs() << ")\n";
+
+    // this is fine; use fractional seconds (which are skipped!)
+    // datetime<seconds> d22 (year(2015), month(12), day_of_month(30), 30.001234);
+    // std::cout << "d22 = " << d22.stringify() << " (" << d22.secs() << ")\n";
+    // or, for bigger accuracy ..
+    //datetime<microseconds> d23 (year(2015), month(12), day_of_month(30),
+    //    30.000001);
+    //std::cout << "d23 = " << d23.stringify() << " (" << d23.secs() << ")\n";
+    // same as
+    //datetime<microseconds> d24 (year(2015), month(12), day_of_month(30),
+    //    microseconds(1));
+    //std::cout << "d24 = " << d24.stringify() << " (" << d24.secs() << ")\n";
+        
     // std::cout<<"\nSize of v1 class: "<< sizeof(d1);
     std::cout<<"\nSize of v2 class: "<< sizeof(d2);
     
