@@ -1,7 +1,7 @@
-lib_LTLIBRARIES = libngpt.la
+lib_LTLIBRARIES = libdatetime.la
 
 ## Only use the following flags for debuging purposes
-libngpt_la_CXXFLAGS = \
+libdatetime_la_CXXFLAGS = \
 	-std=c++14 \
 	-g \
 	-pg \
@@ -16,7 +16,8 @@ libngpt_la_CXXFLAGS = \
 	-DDEBUG
 
 dist_include_HEADERS = \
-	datetime_v2.hpp
+	dtfund.hpp \
+	dtcalendar.hpp
 
-dist_libngpt_la_SOURCES = \
-	dtalg.cpp
+dist_libdatetime_la_SOURCES = \
+	dtfund.cpp

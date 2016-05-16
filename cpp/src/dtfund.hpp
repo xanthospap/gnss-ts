@@ -1,5 +1,5 @@
-#ifndef __DATETIME_NGPT__HPP__
-#define __DATETIME_NGPT__HPP__
+#ifndef __DTFUND_NGPT__HPP__
+#define __DTFUND_NGPT__HPP__
 
 #include <ostream>
 #include <iomanip>
@@ -9,6 +9,7 @@
 #include <cmath>
 #include <tuple>
 #include <string>
+
 #ifdef DEBUG
     #include <iostream>
 #endif
@@ -72,12 +73,14 @@ class year;
 class month;
 class day_of_month;
 class day_of_year;
-class day;
 class modified_julian_day;
 class julian_day;
 class seconds;
 class milliseconds;
 class microseconds;
+
+/// Calendar date (i.e. year, momth, day) to MJDay.
+modified_julian_day cal2mjd(year, month, day_of_month);
 
 /// A wrapper class for years.
 class year {
@@ -230,10 +233,10 @@ public:
     }
 
     /// Cast to year, day_of_year
-    year to_ydoy(day_of_year&) const noexcept;
+    std::tuple<year, day_of_year> to_ydoy() const noexcept;
     
     /// Cast to year, month, day_of_month
-    year to_ymd(month&, day_of_month&) const noexcept;
+    std::tuple<year, month, day_of_month> to_ymd() const noexcept;
     
 private:
     /// The modified julian day as underlying type.
@@ -313,11 +316,12 @@ public:
     template<typename T>
     static constexpr T sec_factor() noexcept
     { return static_cast<T>(1); }
-    
+*/
+    /// The scale factor to transform to seconds.
     template<typename T>
-    static constexpr T sec_ifactor() noexcept
+        static constexpr T sec_ifactor() noexcept
     { return static_cast<T>(1); }
-*/  
+
     /// Constructor.
     explicit constexpr seconds(underlying_type i=0L) noexcept : m_sec(i) {};
 
@@ -407,13 +411,20 @@ public:
     { return static_cast<double>(m_sec); }
 
     /// Translate to hours, minutes, seconds and fractional seconds
-    constexpr std::tuple<hours, minutes, seconds, double>
+    constexpr std::tuple<hours, minutes, seconds, long>
     to_hmsf() const noexcept
     {
+        /*
+        std::cout<<"(Seconds: " << m_sec << ") is:\n";
+        std::cout<<"\tHours   : "<< static_cast<int>(m_sec/3600L)  << "\n";
+        std::cout<<"\tMinutes : "<< static_cast<int>((m_sec%3600L)/60L) << "\n";
+        std::cout<<"\tSeconds : "<< (m_sec%3600L)%60L << "\n";
+        std::cout<<"\tSeconds : "<< 0L << "\n";
+        */
         return std::make_tuple(hours  {static_cast<int>(m_sec/3600L)},
                                minutes{static_cast<int>((m_sec%3600L)/60L)},
                                seconds{(m_sec%3600L)%60L},
-                               0.0e0);
+                               0L);
     }
 
 private:
@@ -428,7 +439,6 @@ private:
     underlying_type m_sec;
 
 }; // class seconds
-
 
 /// A wrapper class for milliseconds (i.e. 10**-3 sec).
 class milliseconds {
@@ -447,10 +457,11 @@ public:
     template<typename T>
     static constexpr T sec_factor() noexcept
     { return static_cast<T>(1000); }
-    template<typename T>
-    static constexpr T sec_ifactor() noexcept
-    { return ((static_cast<T>(1))/1000); }
 */
+    /// The scale factor to transform to seconds.
+    template<typename T>
+        static constexpr T sec_ifactor() noexcept
+    { return ((static_cast<T>(1))/1000); }
     
     /// Constructor.
     explicit constexpr milliseconds(underlying_type i=0L) noexcept
@@ -555,28 +566,35 @@ public:
         return sec;
     }
     
+    /// Translate to hours, minutes, seconds and milliseconds
+    constexpr std::tuple<hours, minutes, seconds, long>
+    to_hmsf() const noexcept
+    {
+        long hr { m_msec/3600000L                  };  // hours
+        long mn { (m_msec%3600000L)/60000L         };  // minutes
+        long sc { ((m_msec%3600000L)%60000L)/1000L };  // seconds
+        long ms { m_msec-((hr*60L+mn)*60L+sc)*1000L};  // milliseconds.
+        
+        /* std::cout<<"(Milliseconds: " << m_msec << ") is:\n";
+        std::cout<<"\tHours   : "<< hr << "\n";
+        std::cout<<"\tMinutes : "<< mn << "\n";
+        std::cout<<"\tSeconds : "<< sc << "\n";
+        std::cout<<"\tMilliSec: "<< ms << "\n";
+        */
+        return std::make_tuple( hours  { static_cast<hours::underlying_type>(hr) },
+                                minutes{ static_cast<minutes::underlying_type>(mn) },
+                                seconds{ sc },
+                                ms );
+    }
+
+private:
     /// Cast to any arithmetic type.
     template<typename T,
              typename=std::enable_if_t<std::is_arithmetic<T>::value>
              >
     constexpr T cast_to() const noexcept
     { return static_cast<T>( m_msec ); }
-    
-    /// Translate to hours, minutes, seconds and fraction of seconds
-    constexpr std::tuple<hours, minutes, seconds, double>
-    to_hmsf() const noexcept
-    {
-        long hr { m_msec/3600000L                    };  // hours
-        long mn { (m_msec%3600000L)/60000L           };  // minutes
-        long sc { ((m_msec%3600000L)%60000L)/1000L   };  // seconds
-        long ms { m_msec-(hr*3600L+mn*60L+ sc)*1000L };  // milliseconds
-        return std::make_tuple( hours  { static_cast<hours::underlying_type>(hr) },
-                                minutes{ static_cast<minutes::underlying_type>(mn) },
-                                seconds{ sc },
-                                static_cast<double>(ms) );
-    }
 
-private:
     /// Milliseconds as underlying type.
     underlying_type m_msec;
 
@@ -594,114 +612,125 @@ public:
     
     /// Max microseconds in day.
     static constexpr long max_in_day { 86400L * 1000000L };
-
+/*
     template<typename T>
     static constexpr T sec_factor() noexcept
     { return static_cast<T>(1000000); }
+*/
+
+    /// The scale factor to transform to seconds.
     template<typename T>
-    static constexpr T sec_ifactor() noexcept
+        static constexpr T sec_ifactor() noexcept
     { return ((static_cast<T>(1))/1000000); }
     
     /// Constructor.
-    explicit constexpr microseconds(underlying_type i=0L) noexcept : s(i) {};
+    explicit constexpr microseconds(underlying_type i=0L) noexcept
+    : m_msec(i) {};
     
     explicit constexpr microseconds(hours h, minutes m, microseconds c) noexcept
-        : s { c.as_underlying_type()
-            + m.as_underlying_type()*60L   *1000L * 1000L
-            + h.as_underlying_type()*3600L *1000L * 1000L}
+        : m_msec { c.as_underlying_type()
+            +(m.as_underlying_type()*60L
+            + h.as_underlying_type()*3600L) *1000L * 1000L}
     {}
     
-    /// Constructor from hours, minutes, fractional seconds
-    /*explicit constexpr microseconds(hours h, minutes m, double fs)
-    noexcept
-        : s(  static_cast<long>(fs*1e6)
-            + (m.as_underlying_type()*60L
-            + h.as_underlying_type()*3600L) * 1000000L
-            )
-    {}*/
-    
-    /// Nanoseconds can be cast to milliseconds will a loss of accuracy.
+    /// Microseconds can be cast to milliseconds will a loss of accuracy.
     constexpr explicit operator milliseconds() const
-    { return milliseconds(s/1000L); }
+    { return milliseconds(m_msec/1000L); }
     
-    /// Nanoseconds can be cast to seconds will a loss of accuracy.
-    constexpr explicit operator seconds() const { return seconds(s/1000000L); }
+    /// Microseconds can be cast to seconds will a loss of accuracy.
+    constexpr explicit operator seconds() const
+    { return seconds(m_msec/1000000L); }
     
-    /// Overload operatpr "+=" between microseconds.
-    constexpr void operator+=(const microseconds& ns) noexcept { s+=ns.s; }
-    constexpr void operator-=(const microseconds& ns) noexcept { s-=ns.s; }
+    /// Addition between microseconds.
+    constexpr void operator+=(const microseconds& ns) noexcept
+    { m_msec+=ns.m_msec; }
 
+    /// Subtraction between microseconds.
+    constexpr void operator-=(const microseconds& ns) noexcept
+    { m_msec-=ns.m_msec; }
+
+    /// Addition between microseconds.
     constexpr microseconds operator+(const microseconds& sec) const noexcept
-    { return microseconds(s+sec.s); }
+    { return microseconds{m_msec+sec.m_msec}; }
 
-    /// Overload '-' operator
+    /// Subtraction between microseconds.
     constexpr microseconds operator-(const microseconds& n) const noexcept
-    { return microseconds(s - n.s); }
+    { return microseconds{m_msec-n.m_msec}; }
     
-    /// Overload operatpr "/" between microseconds.
+    /// Division between microseconds.
     constexpr microseconds operator/(const microseconds& sc) noexcept
-    { return microseconds(s/sc.s); }
+    { return microseconds(m_msec/sc.m_msec); }
     
+    /// Equality operator.
     constexpr bool operator==(const microseconds& d) const noexcept
-    { return s == d.s; }
+    { return m_msec == d.m_msec; }
 
+    /// Greater than operator.
     constexpr bool operator>(const microseconds& d) const noexcept
-    { return s > d.s; }
+    { return m_msec > d.m_msec; }
 
+    /// Greater or equal to operator.
     constexpr bool operator>=(const microseconds& d) const noexcept
-    { return s >= d.s; }
+    { return m_msec >= d.m_msec; }
 
+    /// Less than operator.
     constexpr bool operator<(const microseconds& d) const noexcept
-    { return s < d.s; }
+    { return m_msec < d.m_msec; }
 
+    /// Less or equal to operator.
     constexpr bool operator<=(const microseconds& d) const noexcept
-    { return s <= d.s; }
+    { return m_msec <= d.m_msec; }
     
     /// Do the microseconds sum up to more than one day?
-    constexpr bool more_than_day() const noexcept { return s>max_in_day; }
+    constexpr bool more_than_day() const noexcept { return m_msec>max_in_day; }
     
     /// Cast to underlying type.
-    constexpr underlying_type as_underlying_type() const noexcept { return s; }
-    
-    /// Access (set/get) the underlying type.
-    constexpr underlying_type& assign() noexcept { return s; }
+    constexpr underlying_type as_underlying_type() const noexcept
+    { return m_msec; }
     
     /// If the microseconds sum up to more (or equal to) one day, remove the
     /// integral days (and return them); reset the microseconds to microseconds
     /// of the new day.
-    constexpr day remove_days() noexcept {
-        day d ( static_cast<int>(s/max_in_day) );
-        s %= max_in_day;
-        return d;
+    constexpr int remove_days() noexcept
+    {
+        int day { static_cast<int>(m_msec/max_in_day) };
+        m_msec %= max_in_day;
+        return day;
     }
     
     /// Cast to days.
-    constexpr day to_days() const noexcept {
-        return day(static_cast<day::underlying_type>(s/max_in_day));
-    }
+    constexpr int to_days() const noexcept
+    { return static_cast<int>(m_msec/max_in_day); }
     
     /// Cast to fractional days.
-    constexpr double fractional_days() const noexcept {
-        return static_cast<double>(s)/static_cast<double>(max_in_day);
+    constexpr double fractional_days() const noexcept
+    {
+        return static_cast<double>(m_msec)/static_cast<double>(max_in_day);
     }
     
     /// Cast to fractional seconds
     constexpr double to_fractional_seconds() const noexcept
-    { return static_cast<double>(s)*1.0e-6; }
+    { return static_cast<double>(m_msec)*1.0e-6; }
     
-    
-    /// Translate to hours, minutes, seconds and fraction of seconds.
-    constexpr std::tuple<hours, minutes, seconds, double>
+    /// Translate to hours, minutes, seconds and microseconds.
+    constexpr std::tuple<hours, minutes, seconds, long>
     to_hmsf() const noexcept
     {
         long hr { m_msec/3600000000L                       };  // hours
         long mn { (m_msec%3600000000L)/60000000L           };  // minutes
         long sc { ((m_msec%3600000000L)%60000000L)/1000000L};  // seconds
-        long ns { m_msec-(hr*3600L+mn*60L+sc)*1000000L     };  // nanoseconds
+        long ns { m_msec-((hr*60L+mn)*60L+sc)*1000000L     };  // microsec.
+        /*
+        std::cout<<"(Microseconds: " << m_msec << ") is:\n";
+        std::cout<<"\tHours   : "<< hr << "\n";
+        std::cout<<"\tMinutes : "<< mn << "\n";
+        std::cout<<"\tSeconds : "<< sc << "\n";
+        std::cout<<"\tMicroSec: "<< ns << "\n";
+        */
         return std::make_tuple( hours  { static_cast<hours::underlying_type>(hr) },
                                 minutes{ static_cast<minutes::underlying_type>(mn) },
                                 seconds{ sc },
-                                static_cast<double>(ns) );
+                                ns );
     }
 
 private:
@@ -717,221 +746,16 @@ private:
 
 }; // class microseconds
 
-/// Calendar date (i.e. year, momth, day) to MJDay.
-modified_julian_day cal2mjd(year, month, day_of_month);
-
-/// Valid output formats
-enum class datetime_output_format : char
+/// Express the difference between two Modified Julian Days as any sec type.
+/// \note The difference between two Modified Julian Days is always an integral
+///       number of days.
+template<typename S>
+    S mjd_sec_diff(modified_julian_day d1, modified_julian_day d2) noexcept
 {
-    ymd, ymdhms, ydhms, gps, ydoy, jd, mjd
-};
-
-/*
- * A datetime class. Holds (integral) days as MJD and fraction of day as any
- * of the is_of_sec_type class (i.e. seconds/milli/nano).
- */
-template<class S>
-class datev2 {
-public:
-
-    /// Only allow S parameter to be of sec type (seconds/milli/nano).
-    static_assert( S::is_of_sec_type, "" );
-    
-    /// Default (zero) constructor.
-    explicit constexpr datev2() noexcept : mjd_(0), sect_(0) {};
-    
-    /// Constructor from year, month, day of month and any sec type.
-    explicit constexpr datev2(year y, month m, day_of_month d, S s)
-        : mjd_ (cal2mjd(y, m, d)),
-          sect_(s)
-        {}
-
-    template<class T>
-    explicit datev2(year y, month m, day_of_month d, T t)
-        : mjd_ (cal2mjd(y, m, d)),
-          sect_(S(t))
-    {}
-
-    explicit
-    datev2(year y, month m, day_of_month d, hours hr, minutes mn, double fsecs)
-        : mjd_ ( cal2mjd(y, m, d) ),
-          sect_( hr, mn, fsecs )
-    {}
-
-    explicit
-    datev2(modified_julian_day mjd, hours hr=hours(), minutes mn=minutes(), S sec=S())
-        : mjd_ {mjd}, 
-          sect_{hr, mn, sec}
-    {}
-    
-    explicit
-    datev2(year y, month m, day_of_month d,
-           hours hr=hours(), minutes mn=minutes(), S sec=S())
-        : mjd_ {cal2mjd(y, m, d)}, 
-          sect_{hr, mn, sec}
-    {}
-
-    constexpr modified_julian_day mjd() const noexcept { return mjd_; }
-
-    template<class T>
-    constexpr void add_seconds(T t) noexcept
-    { 
-        sect_ += (S)t;
-        if ( sect_.more_than_day() ) this->normalize();
-        return;
-    }
-    
-    template<class T>
-    constexpr void remove_seconds(T t) noexcept
-    { 
-        sect_ -= (S)t;
-        if ( sect_ < (S)0 ) {
-            while ( sect_ < (S)0 ) {
-                --mjd_;
-                sect_ += (S)S::max_in_day;
-            }
-        }
-        return;
-    }
-
-    constexpr S delta_sec(const datev2& d) const noexcept
-    { return (sect_ - d.sect_) + to_sec_type<S>(mjd_ - d.mjd_); }
-
-    /// Overload equality operator.
-    constexpr bool operator==(const datev2& d) const noexcept
-    { return mjd_ == d.mjd_ && sect_ == d.sect_; }
-
-    /// Overload ">" operator.
-    constexpr bool operator>(const datev2& d) const noexcept
-    { return mjd_ > d.mjd_ || (mjd_ == d.mjd_ && sect_ > d.sect_); }
-    
-    /// Overload ">=" operator.
-    constexpr bool operator>=(const datev2& d) const noexcept
-    { return mjd_ > d.mjd_ || (mjd_ == d.mjd_ && sect_ >= d.sect_); }
-    
-    /// Overload "<" operator.
-    constexpr bool operator<(const datev2& d) const noexcept
-    { return mjd_ < d.mjd_ || (mjd_ == d.mjd_ && sect_ < d.sect_); }
-    
-    /// Overload "<=" operator.
-    constexpr bool operator<=(const datev2& d) const noexcept
-    { return mjd_ < d.mjd_ || (mjd_ == d.mjd_ && sect_ <= d.sect_); }
-
-    /// Reset the seconds/milli/nano after removing whole days.
-    constexpr void normalize() noexcept
-    {
-        mjd_ += sect_.remove_days();
-        return;
-    }
-
-    /// Cast to double Modified Julian Date.
-    constexpr double as_mjd() const noexcept
-    {
-        return static_cast<double>(mjd_.as_underlying_type())
-                                + sect_.fractional_days();
-    }
-
-    /// Cast to gps_datetime.
-    constexpr gps_datetime as_gps_datetime() const noexcept
-    {
-        long week   = (mjd_.as_underlying_type() - jan61980)/7L;
-        double secs = sect_.as_fractional_seconds();
-        secs       += static_cast<double>(
-                    ((mjd_.as_underlying_type() - jan61980) - week*7L ) * 86400L);
-        return gps_datetime( week, secs );
-    }
-
-    /// Cast to year, month, day of month
-    /*constexpr*/ std::tuple<year, month, day_of_month>
-    as_ymd() const noexcept
-    {
-        year y;
-        month m;
-        day_of_month d;
-        y = mjd_.to_ymd(m, d);
-        return std::make_tuple( y, m, d );
-    }
-
-    /// Cast to year, day_of_year
-    /*constexpr*/ std::tuple<year, day_of_year> as_ydoy() const noexcept
-    {
-        year y;
-        day_of_year d;
-        y = mjd_.to_ydoy( d );
-        return std::make_tuple( y, d );
-    }
-
-    /// Convert the *seconds to hours, minutes, seconds and fractional seconds
-    /*constexpr*/ std::tuple<hours, minutes, seconds, long>
-    as_hms() const noexcept
-    { return sect_.to_hms(); }
-
-    std::string stringify() const
-    {
-        auto ymd { this->as_ymd() };
-        auto hms { this->as_hms() };
-        /*double fsec = S::template sec_ifactor<double>() * std::get<3>(hms);*/
-        return std::string {
-                     std::to_string( std::get<0>(ymd).as_underlying_type() )
-             + "/" + std::to_string( std::get<1>(ymd).as_underlying_type() )
-             + "/" + std::to_string( std::get<2>(ymd).as_underlying_type() )
-             + " " + std::to_string( std::get<0>(hms).as_underlying_type() )
-             + ":" + std::to_string( std::get<1>(hms).as_underlying_type() )
-             + ":" + std::to_string( std::get<2>(hms).as_underlying_type() )
-             + "." + std::to_string( S::template sec_ifactor<int>() * std::get<3>(hms) )
-            };
-    }
-    
-    /// Overload operator "<<" TODO
-    /*
-    friend std::ostream& operator<<(std::ostream& o, const datev2& d)
-    {
-        o << d.stringify();
-        return o;
-    }
-    */
-
-private:
-    modified_julian_day mjd_;  ///< Modified Julian Day
-    S                   sect_; ///< Fraction of day in milli/nano/seconds
-};
-
-
-/*
-/// Cast a modified_julian_day to year, day_of_year
-constexpr ngpt::year
-ngpt::modified_julian_day::to_ydoy(day_of_year& d)
-const noexcept
-{
-    long days_fr_jan1_1901 = m - ngpt::jan11901;
-    long num_four_yrs      = days_fr_jan1_1901/1461L;
-    long years_so_far      = 1901L + 4*num_four_yrs;
-    long days_left         = days_fr_jan1_1901 - 1461*num_four_yrs;
-    long delta_yrs         = days_left/365 - days_left/1460;
-    day_of_year yday (static_cast<day_of_year::underlying_type>
-                                (days_left - 365*delta_yrs + 1));
-    d = yday;
-    return year (years_so_far + delta_yrs);
+    static_assert(S::is_of_sec_type, "");
+    return S{(static_cast<modified_julian_day::underlying_type>(d1-d2))
+        *S::max_in_day};
 }
-*/
-/*
-constexpr ngpt::year
-ngpt::modified_julian_day::to_ymd(ngpt::month& mm, ngpt::day_of_month& dd)
-const noexcept
-{
-    ngpt::day_of_year doy;
-    auto y     = this->to_ydoy( doy );
-    long yday  = static_cast<long>( doy.as_underlying_type() );
-    long leap  = ( y.as_underlying_type()%4L == 0 );
-    long guess = yday*0.032;
-    long more  = (( yday - month_day[leap][guess+1] ) > 0);
-    mm.assign() = static_cast<ngpt::month::underlying_type>
-                                    (guess + more + 1);
-    dd.assign() = static_cast<ngpt::day_of_month::underlying_type>
-                                    (yday - month_day[leap][guess+more]);
-    return y;
-}
-*/
 
 } // end namespace
 
