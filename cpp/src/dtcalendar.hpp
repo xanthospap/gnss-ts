@@ -4,6 +4,8 @@
 #include "dtfund.hpp"
 #ifdef DEBUG
     #include <iostream>
+    #include <iomanip>  // std::setprecision
+    #include <sstream>  // std::ostringstream
 #endif
 
 namespace ngpt {
@@ -43,7 +45,7 @@ public:
     datetime(year y, month m, day_of_month d, hours hr, minutes mn,
         double fsecs)
     : m_mjd{cal2mjd(y, m, d) }, m_sec{hr, mn, fsecs}
-    {std::cout<<"\tConstructor: datetime(year y, month m, day_of_month d, hours hr, minutes mn, double fsecs)\n";}
+    {}
 
     /// Constructor from modified julian day, hours, minutes and 
     /// micro- or milli- or seconds.
@@ -187,10 +189,15 @@ public:
     constexpr std::tuple<hours, minutes, seconds, long>
     as_hmsf() const noexcept { return m_sec.to_hmsf(); }
 
+#ifdef DEBUG
     std::string stringify() const
     {
         auto ymd { this->as_ymd() };
         auto hms { this->as_hmsf() };
+        S st { std::get<3>(hms) };
+        double fsec { st.as_underlying_type() * S::template sec_ifactor<double>() };
+        std::ostringstream out;
+        out << std::fixed << std::setprecision(9) << fsec;
 
         return std::string {
                      std::to_string( std::get<0>(ymd).as_underlying_type() )
@@ -199,9 +206,10 @@ public:
              + " " + std::to_string( std::get<0>(hms).as_underlying_type() )
              + ":" + std::to_string( std::get<1>(hms).as_underlying_type() )
              + ":" + std::to_string( std::get<2>(hms).as_underlying_type() )
-             + "." + std::to_string( S::template sec_ifactor<int>() * std::get<3>(hms) )
-            };
+             + "+" + out.str()
+        };
     }
+#endif
 
 private:
     modified_julian_day m_mjd;  ///< Modified Julian Day

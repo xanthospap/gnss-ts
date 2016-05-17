@@ -312,11 +312,12 @@ public:
     
     /// Max seconds in day.
     static constexpr underlying_type max_in_day { 86400L };
-/*
+
+    /// The scale factor to transform from seconds.
     template<typename T>
-    static constexpr T sec_factor() noexcept
+        static constexpr T sec_factor() noexcept
     { return static_cast<T>(1); }
-*/
+
     /// The scale factor to transform to seconds.
     template<typename T>
         static constexpr T sec_ifactor() noexcept
@@ -453,11 +454,10 @@ public:
     /// Max milliseconds in one day.
     static constexpr long max_in_day { 86400L * 1000L };
 
-/*
     template<typename T>
-    static constexpr T sec_factor() noexcept
+        static constexpr T sec_factor() noexcept
     { return static_cast<T>(1000); }
-*/
+
     /// The scale factor to transform to seconds.
     template<typename T>
         static constexpr T sec_ifactor() noexcept
@@ -467,7 +467,8 @@ public:
     explicit constexpr milliseconds(underlying_type i=0L) noexcept
     : m_msec(i)
     {};
-    
+ 
+    /// Constructor from hours, minutes, milliseconds.   
     explicit constexpr milliseconds(hours h, minutes m, milliseconds c) noexcept
     : m_msec { c.as_underlying_type()
         + m.as_underlying_type()*60L  *1000L
@@ -612,11 +613,10 @@ public:
     
     /// Max microseconds in day.
     static constexpr long max_in_day { 86400L * 1000000L };
-/*
+
     template<typename T>
-    static constexpr T sec_factor() noexcept
+        static constexpr T sec_factor() noexcept
     { return static_cast<T>(1000000); }
-*/
 
     /// The scale factor to transform to seconds.
     template<typename T>
@@ -627,10 +627,18 @@ public:
     explicit constexpr microseconds(underlying_type i=0L) noexcept
     : m_msec(i) {};
     
+    /// Constructor from hours, minutes, microseconds.
     explicit constexpr microseconds(hours h, minutes m, microseconds c) noexcept
         : m_msec { c.as_underlying_type()
             +(m.as_underlying_type()*60L
             + h.as_underlying_type()*3600L) *1000L * 1000L}
+    {}
+    
+    /// Constructor from hours, minutes, fractional seconds
+    explicit constexpr microseconds(hours h, minutes m, double fs) noexcept
+    : m_msec{ static_cast<long>(fs*1000000.0e0)
+        + (m.as_underlying_type()*60L
+        + h.as_underlying_type()*3600L) * 1000000L}
     {}
     
     /// Microseconds can be cast to milliseconds will a loss of accuracy.

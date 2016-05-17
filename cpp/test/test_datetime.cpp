@@ -28,9 +28,10 @@ int main()
     seconds sec2 {mcsec1};        // casting microsec to sec is allowed
     seconds sec3 {mlsec1};        // casting millisec to sec is allowed
     milliseconds mlsec2 {mcsec1}; // casting microsec to millisec is allowed
-    // However, itis not allowed to cast from lower to higher precsision, e.g.
+    // However, it is not allowed to cast from lower to higher precsision, e.g.
     // milliseconds ml1 {sec1};   // ERROR!
     // microseconds mc1 {mlsec1}; // ERROR!
+    std::cout<<"\nSize of class: "<< sizeof(datetime<seconds>) << "\n";
 
     //
     // Construction of datetime objects
@@ -69,65 +70,54 @@ int main()
     // std::cout << "d25 = " << d25.stringify() << " (" << d25.secs() << ")\n";
 
     // this is fine; use fractional seconds (which are skipped!)
-    // datetime<seconds> d22 (year(2015), month(12), day_of_month(30), 30.001234);
-    // std::cout << "d22 = " << d22.stringify() << " (" << d22.secs() << ")\n";
+    datetime<seconds> d3 (year(2015), month(12), day_of_month(30), hours(12), 
+        minutes(50), 30.001234);
+    std::cout << "d3  = " << d3.stringify() << " (" << d3.secs() << ")\n";
     // or, for bigger accuracy ..
-    //datetime<microseconds> d23 (year(2015), month(12), day_of_month(30),
-    //    30.000001);
-    //std::cout << "d23 = " << d23.stringify() << " (" << d23.secs() << ")\n";
-    // same as
-    //datetime<microseconds> d24 (year(2015), month(12), day_of_month(30),
-    //    microseconds(1));
-    //std::cout << "d24 = " << d24.stringify() << " (" << d24.secs() << ")\n";
-        
-    // std::cout<<"\nSize of v1 class: "<< sizeof(d1);
-    std::cout<<"\nSize of v2 class: "<< sizeof(d2);
+    datetime<microseconds> d31 (year(2015), month(12), day_of_month(30), hours(12),
+        minutes(5), 30.0000010);
+    std::cout << "d31 = " << d31.stringify() << " (" << d31.secs() << ")\n";
     
     //
     // Manipulation of datetime objects
     // -----------------------------------------------------------------------
     //
     d2.add_seconds(seconds(10));
-    std::cout << d2.stringify() << "\n";
 
+    std::cout<<"\n\nSequentialy adding seconds to a date.\n";
     std::chrono::steady_clock::time_point begin, end;
-    double mjd1=0, mjd2;
+    double mjd1=d2.as_mjd(),
+           mjd2;
 
+    std::cout <<"d2: " << d2.stringify() << ", MJD = " << d2.as_mjd() << "\n";
     begin = std::chrono::steady_clock::now();
-    for (int i = 0; i < 86400 * 2.5; ++i) {
+    for (int i = 0; i < 86400 * 2.5; ++i) { /* sequentialy add 2+1/2 days */
         d2.add_seconds( seconds(1L) );
-        mjd2 = d2.as_mjd();
     }
     end = std::chrono::steady_clock::now();
-    std::cout << "\nAdding two days in v2: " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() <<std::endl;
-    std::cout << "\nmjd= " << mjd2;
-    std::cout<<"\nDifference (in days) = " << mjd1 - mjd2 << " = " << (mjd1 - mjd2)*86400.0 << " seconds";
-    std::cout<<" = " << (mjd1 - mjd2)*86400000.0 << " milliseconds";
-  
-    datetime<milliseconds> d3(year(2015), month(12), day_of_month(30));
-    begin = std::chrono::steady_clock::now();
-    for (int i = 0; i < 86400 * 2.5; ++i) {
-        d3.add_seconds( milliseconds(1000L) );
-        mjd2 = d3.as_mjd();
-    }
-    end = std::chrono::steady_clock::now();
-    std::cout << "\nAdding two days in v2: " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() <<std::endl;
-    std::cout << "\nmjd= " << mjd2;
-    std::cout<<"\nDifference (in days) = " << mjd1 - mjd2 << " = " << (mjd1 - mjd2)*86400.0 << " seconds";
-    std::cout<<" = " << (mjd1 - mjd2)*86400000.0 << " milliseconds";
-   
-    datetime<microseconds> d4(year(2015), month(12), day_of_month(30));
-    begin = std::chrono::steady_clock::now();
-    for (int i = 0; i < 86400 * 2.5; ++i) {
-        d4.add_seconds( microseconds(1000000L) );
-        mjd2 = d4.as_mjd();
-    }
-    end = std::chrono::steady_clock::now();
-    std::cout << "\nAdding two days in v2: " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() <<std::endl;
-    std::cout << "\nmjd= " << mjd2;
-    std::cout<<"\nDifference (in days) = " << mjd1 - mjd2 << " = " << (mjd1 - mjd2)*86400.0 << " seconds";
-    std::cout<<" = " << (mjd1 - mjd2)*86400000.0 << " milliseconds";
+    mjd2 = d2.as_mjd();
+    std::cout << "Adding 2+1/2 days in to d2 takes about " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << " microsec.\n";
+    std::cout << "New mjd is " << mjd2 << "\n";
+    std::cout << "Difference = " << mjd2 - mjd1 << " days, or " << (mjd2 - mjd1)*86400.0 << " seconds";
+    std::cout << " or " << (mjd2 - mjd1)*86400000.0 << " milliseconds.\n";
+    std::cout << "The folowing number should be zero: " << ((mjd2 - mjd1)*86400000.0 - 2.5*86400000.0) << ", is it? " << std::boolalpha << (((mjd2 - mjd1)*86400000.0 - 2.5*86400000.0) == 0.0e0) << "\n";
+    std::cout << "d2: " << d2.stringify() << ", MJD = " << d2.as_mjd() << "\n";
 
+    std::cout << "Let's try this with higer accuracy\n";
+    mjd1 = d31.as_mjd();
+    std::cout <<"d3: " << d31.stringify() << ", MJD = " << d31.as_mjd() << "\n";
+    begin = std::chrono::steady_clock::now();
+    for (long i = 0; i < 8640 * 25 * 1000000; ++i) { /* sequentialy add 2+1/2 days */
+        d31.add_seconds( microseconds(1L) );
+    }
+    end = std::chrono::steady_clock::now();
+    mjd2 = d31.as_mjd();
+    std::cout << "Adding 2+1/2 days in to d3 takes about " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << " microsec.\n";
+    std::cout << "New mjd is " << mjd2 << "\n";
+    std::cout << "Difference = " << mjd2 - mjd1 << " days, or " << (mjd2 - mjd1)*86400.0 << " seconds";
+    std::cout << " or " << (mjd2 - mjd1)*86400000.0 << " milliseconds.\n";
+    std::cout << "The folowing number should be zero: " << ((mjd2 - mjd1)*86400000.0 - 2.5*86400000.0) << ", is it? " << std::boolalpha << (((mjd2 - mjd1)*86400000.0 - 2.5*86400000.0) == 0.0e0) << "\n";
+    std::cout << "d3: " << d31.stringify() << ", MJD = " << d31.as_mjd() << "\n";
     std::cout << "\n";
     return 0;   
 }
