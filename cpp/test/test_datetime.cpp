@@ -1,22 +1,51 @@
 #include <iostream>
 #include <chrono>
+#include <cassert>
+#include <limits>
+
+#include "dtfund.hpp"
 #include "dtcalendar.hpp"
 
-using ngpt::datetime;
-using ngpt::year;
-using ngpt::month;
-using ngpt::hours;
-using ngpt::minutes;
-using ngpt::day_of_month;
-using ngpt::seconds;
-using ngpt::milliseconds;
-using ngpt::microseconds;
+using namespace ngpt;
 
-long MilliSec = 1000L;
-long MicroSec = 1000000L;
+constexpr long MilliSec = 1000L;
+constexpr long MicroSec = 1000000L;
+constexpr long NanoSec  = 1000000000L;
+constexpr long maxL     = std::numeric_limits<long int>::max();
 
 int main()
 {
+    //
+    // Implementation on this arch.
+    // -----------------------------------------------------------------------
+    //
+    std::cout<<"\nSize of datetime class is "<< sizeof(datetime<seconds>) << " bytes.\n";
+    std::cout<<"Max representable (long) int is " << maxL << "\n";
+    static_assert(86400L*MilliSec < maxL, "-- MilliSeconds Overflow --");
+    static_assert(86400L*MicroSec < maxL, "-- MicroSeconds Overflow --");
+    static_assert(86400L*NanoSec < maxL, "-- NanoSeconds Overflow --");
+    std::cout<<"A whole day fits in long for:\n";
+    std::cout<<"\tMilliseconds: 86400 * 1000       = " << 86400*MilliSec <<", can fit about " << maxL/(86400*MilliSec) <<" days\n";
+    std::cout<<"\tMicroseconds: 86400 * 1000000    = " << 86400*MicroSec <<", can fit about " << maxL/(86400*MicroSec) <<" days\n";
+    std::cout<<"\tNanoseconds:  86400 * 1000000000 = " << 86400*NanoSec  <<", can fit about " << maxL/(86400*NanoSec) <<" days\n";
+    std::cout<<"Part A -- OK\n\n";
+
+    //
+    // Let's try the user defined literals (these need namespace ngpt)
+    // -----------------------------------------------------------------------
+    //
+    std::cout<<"Testing constructors\n";
+    auto yr1 = 2016_Y; // year  = 2016
+    auto mt1 = 12_M;   // month = 12
+    auto dm1 = 30_D;   // day of month = 30
+    auto hr1 = 12_h;   //
+    auto mn1 = 59_m;   //
+    constexpr auto ss1 = 30_sec; //
+    constexpr auto sm1 = 30000_millisec;    //
+    constexpr auto sm2 = 30000000_microsec; //
+    static_assert( sm1 == (milliseconds)sm2, "-- Terribly Wrong --" );
+    static_assert( ss1 == (seconds)sm1 && ss1 == (seconds)sm2, "-- Terribly Wrong --" );
+    std::cout<<"Part B -- OK\n\n";
     
     //
     // Seconds, MicroSec and Millisec
@@ -31,7 +60,6 @@ int main()
     // However, it is not allowed to cast from lower to higher precsision, e.g.
     // milliseconds ml1 {sec1};   // ERROR!
     // microseconds mc1 {mlsec1}; // ERROR!
-    std::cout<<"\nSize of class: "<< sizeof(datetime<seconds>) << "\n";
 
     //
     // Construction of datetime objects
@@ -103,21 +131,6 @@ int main()
     std::cout << "The folowing number should be zero: " << ((mjd2 - mjd1)*86400000.0 - 2.5*86400000.0) << ", is it? " << std::boolalpha << (((mjd2 - mjd1)*86400000.0 - 2.5*86400000.0) == 0.0e0) << "\n";
     std::cout << "d2: " << d2.stringify() << ", MJD = " << d2.as_mjd() << "\n";
 
-    std::cout << "Let's try this with higer accuracy\n";
-    mjd1 = d31.as_mjd();
-    std::cout <<"d3: " << d31.stringify() << ", MJD = " << d31.as_mjd() << "\n";
-    begin = std::chrono::steady_clock::now();
-    for (long i = 0; i < 8640 * 25 * 1000000; ++i) { /* sequentialy add 2+1/2 days */
-        d31.add_seconds( microseconds(1L) );
-    }
-    end = std::chrono::steady_clock::now();
-    mjd2 = d31.as_mjd();
-    std::cout << "Adding 2+1/2 days in to d3 takes about " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << " microsec.\n";
-    std::cout << "New mjd is " << mjd2 << "\n";
-    std::cout << "Difference = " << mjd2 - mjd1 << " days, or " << (mjd2 - mjd1)*86400.0 << " seconds";
-    std::cout << " or " << (mjd2 - mjd1)*86400000.0 << " milliseconds.\n";
-    std::cout << "The folowing number should be zero: " << ((mjd2 - mjd1)*86400000.0 - 2.5*86400000.0) << ", is it? " << std::boolalpha << (((mjd2 - mjd1)*86400000.0 - 2.5*86400000.0) == 0.0e0) << "\n";
-    std::cout << "d3: " << d31.stringify() << ", MJD = " << d31.as_mjd() << "\n";
     std::cout << "\n";
     return 0;   
 }

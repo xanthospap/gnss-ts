@@ -46,9 +46,6 @@ constexpr double mjd0_jd { 2400000.5e0 };
 /// TT minus TAI (s)
 constexpr double tt_minus_tai { 32.184e0 };
 
-/// Time-Scales
-/// enum class time_scale : char { tai, tt, utc, ut1 };
-
 /// Calendar date to MJD.
 long cal2mjd(int, int, int);
 
@@ -74,7 +71,8 @@ class month;
 class day_of_month;
 class day_of_year;
 class modified_julian_day;
-class julian_day;
+class hours;
+class minutes;
 class seconds;
 class milliseconds;
 class microseconds;
@@ -138,27 +136,6 @@ private:
     underlying_type m_month;
 
 }; // class month
-
-/*
-/// A wrapper class for days (in general!).
-class day {
-
-public:
-    /// Days are represented as ints.
-    typedef int underlying_type;
-    
-    /// Constructor.
-    explicit constexpr day(underlying_type i=0) noexcept : m_day(i) {};
-    
-    /// Get the underlying int.
-    constexpr underlying_type as_underlying_type() const noexcept
-    { return m_day; }
-
-private:
-    /// The day as underlying_type.
-    underlying_type m_day;
-};
-*/
 
 /// A wrapper class for day of month.
 class day_of_month {
@@ -764,6 +741,41 @@ template<typename S>
     return S{(static_cast<modified_julian_day::underlying_type>(d1-d2))
         *S::max_in_day};
 }
+
+/// For user-defined literals, i am going to replace long with unsigned long long int
+namespace ddetail { using ulli = unsigned long long int; }
+
+/// A year can be constructed via "_Y".
+constexpr year operator "" _Y(ddetail::ulli i) noexcept
+{ return year{static_cast<year::underlying_type>(i)}; }
+
+/// A month can be constructed via "_M".
+constexpr month operator "" _M(ddetail::ulli i) noexcept
+{ return month{static_cast<month::underlying_type>(i)}; }
+
+/// A day of month can be constructed via "_D".
+constexpr day_of_month operator "" _D(ddetail::ulli i) noexcept
+{ return day_of_month{static_cast<day_of_month::underlying_type>(i)}; }
+
+/// An hour can be constructed via "_h".
+constexpr hours operator "" _h(ddetail::ulli i) noexcept
+{ return hours{static_cast<hours::underlying_type>(i)}; }
+
+/// A minute can be constructed via "_m".
+constexpr minutes operator "" _m(ddetail::ulli i) noexcept
+{ return minutes{static_cast<minutes::underlying_type>(i)}; }
+
+/// Seconds can be constructed via "_sec".
+constexpr seconds operator "" _sec(ddetail::ulli i) noexcept
+{ return seconds{static_cast<seconds::underlying_type>(i)}; }
+
+/// MilliSeconds can be constructed via "_millisec".
+constexpr milliseconds operator "" _millisec(ddetail::ulli i) noexcept
+{ return milliseconds{static_cast<milliseconds::underlying_type>(i)}; }
+
+/// MicroSeconds can be constructed via "_microsec".
+constexpr microseconds operator "" _microsec(ddetail::ulli i) noexcept
+{ return microseconds{static_cast<microseconds::underlying_type>(i)}; }
 
 } // end namespace
 

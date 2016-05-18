@@ -17,7 +17,13 @@ libdatetime_la_CXXFLAGS = \
 
 dist_include_HEADERS = \
 	dtfund.hpp \
-	dtcalendar.hpp
+	dtcalendar.hpp \
+	ellipsoid.hpp \
+	geodesy.hpp \
+	car2ell.hpp \
+	car2top.hpp \
+	ell2car.hpp
 
 dist_libdatetime_la_SOURCES = \
-	dtfund.cpp
+	dtfund.cpp \
+	top2daz.cpp

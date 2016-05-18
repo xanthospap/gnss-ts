@@ -12,7 +12,8 @@ MCXXFLAGS = \
 	-W \
 	-Wshadow \
 	-Wdisabled-optimization \
-	-DDEBUG
+	-DDEBUG \
+	-Wno-unused-variable
 
 testDatetime_SOURCES   = test_datetime.cpp
 testDatetime_CXXFLAGS  = $(MCXXFLAGS) -I$(top_srcdir)/src -L$(top_srcdir)/src

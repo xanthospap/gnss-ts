@@ -150,18 +150,6 @@ public:
             + m_sec.fractional_days();
     }
 
-/*
-    /// Cast to gps_datetime.
-    constexpr gps_datetime as_gps_datetime() const noexcept
-    {
-        long week   = (m_mjd.as_underlying_type() - jan61980)/7L;
-        double secs = m_sec.as_fractional_seconds();
-        secs       += static_cast<double>(
-                    ((m_mjd.as_underlying_type() - jan61980) - week*7L ) * 86400L);
-        return gps_datetime( week, secs );
-    }
-*/
-
     /// Cast to year, month, day of month
     constexpr std::tuple<year, month, day_of_month>
     as_ymd() const noexcept
