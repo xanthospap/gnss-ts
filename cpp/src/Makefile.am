@@ -16,6 +16,7 @@ libdatetime_la_CXXFLAGS = \
 	-DDEBUG
 
 dist_include_HEADERS = \
+	geoconst.hpp \
 	dtfund.hpp \
 	dtcalendar.hpp \
 	ellipsoid.hpp \
