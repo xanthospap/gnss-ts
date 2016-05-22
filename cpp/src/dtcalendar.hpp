@@ -203,6 +203,32 @@ public:
     }
 #endif
 
+    /// Time format
+    enum class datetime_format : char {
+        ymd,
+        ymd_hms,
+        ydoy,
+        ydoy_hms,
+        gpswdow
+    };
+
+    /// Resolve a date from a c-string.
+    template<datetime_format F>
+        static datetime strptime(const char* str, char ymd_delim, char hms_delim)
+    {}
+
+    /// Read a date from a c-string of type:
+    /// YYYY-MM-DD, where the delimeter '-' is specified by ymd_delim
+    template<>
+        static datetime strptime<datetime_format::ymd>(
+            const char* str, char ymd_delim, char hms_delim)
+    {
+        const int max_chars = (4+1+2+1+2);
+        char* end;
+        long y = std::strtol(str, &end, 10);
+    }
+
+
 private:
     modified_julian_day m_mjd;  ///< Modified Julian Day
     S                   m_sec;  ///< Fraction of day in milli/nano/seconds

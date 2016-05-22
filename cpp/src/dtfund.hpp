@@ -392,13 +392,6 @@ public:
     constexpr std::tuple<hours, minutes, seconds, long>
     to_hmsf() const noexcept
     {
-        /*
-        std::cout<<"(Seconds: " << m_sec << ") is:\n";
-        std::cout<<"\tHours   : "<< static_cast<int>(m_sec/3600L)  << "\n";
-        std::cout<<"\tMinutes : "<< static_cast<int>((m_sec%3600L)/60L) << "\n";
-        std::cout<<"\tSeconds : "<< (m_sec%3600L)%60L << "\n";
-        std::cout<<"\tSeconds : "<< 0L << "\n";
-        */
         return std::make_tuple(hours  {static_cast<int>(m_sec/3600L)},
                                minutes{static_cast<int>((m_sec%3600L)/60L)},
                                seconds{(m_sec%3600L)%60L},
@@ -553,12 +546,6 @@ public:
         long sc { ((m_msec%3600000L)%60000L)/1000L };  // seconds
         long ms { m_msec-((hr*60L+mn)*60L+sc)*1000L};  // milliseconds.
         
-        /* std::cout<<"(Milliseconds: " << m_msec << ") is:\n";
-        std::cout<<"\tHours   : "<< hr << "\n";
-        std::cout<<"\tMinutes : "<< mn << "\n";
-        std::cout<<"\tSeconds : "<< sc << "\n";
-        std::cout<<"\tMilliSec: "<< ms << "\n";
-        */
         return std::make_tuple( hours  { static_cast<hours::underlying_type>(hr) },
                                 minutes{ static_cast<minutes::underlying_type>(mn) },
                                 seconds{ sc },
@@ -721,7 +708,7 @@ public:
 private:
     /// Cast to any arithmetic type.
     template<typename T,
-             typename=std::enable_if_t<std::is_arithmetic<T>::value>
+             typename = std::enable_if_t<std::is_arithmetic<T>::value>
              >
     constexpr T cast_to() const noexcept
     { return static_cast<T>(m_msec); }
@@ -734,15 +721,17 @@ private:
 /// Express the difference between two Modified Julian Days as any sec type.
 /// \note The difference between two Modified Julian Days is always an integral
 ///       number of days.
-template<typename S>
+template<typename S,
+        typename = std::enable_if_t<S::is_of_sec_type>
+        >
     S mjd_sec_diff(modified_julian_day d1, modified_julian_day d2) noexcept
 {
-    static_assert(S::is_of_sec_type, "");
-    return S{(static_cast<modified_julian_day::underlying_type>(d1-d2))
-        *S::max_in_day};
+    modified_julian_day d {d1-d2};
+    return S{d.as_underlying_type()*S::max_in_day};
 }
 
-/// For user-defined literals, i am going to replace long with unsigned long long int
+/// For user-defined literals, i am going to replace long with
+/// unsigned long long int.
 namespace ddetail { using ulli = unsigned long long int; }
 
 /// A year can be constructed via "_Y".

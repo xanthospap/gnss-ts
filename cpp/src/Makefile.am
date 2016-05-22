@@ -23,7 +23,11 @@ dist_include_HEADERS = \
 	geodesy.hpp \
 	car2ell.hpp \
 	car2top.hpp \
-	ell2car.hpp
+	ell2car.hpp \
+	genflags.hpp \
+	tsflagenum.hpp \
+	timeseries.hpp \
+	crdts.hpp
 
 dist_libdatetime_la_SOURCES = \
 	dtfund.cpp \
