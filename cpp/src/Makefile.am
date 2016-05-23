@@ -19,6 +19,7 @@ dist_include_HEADERS = \
 	geoconst.hpp \
 	dtfund.hpp \
 	dtcalendar.hpp \
+	datetime_read.hpp \
 	ellipsoid.hpp \
 	geodesy.hpp \
 	car2ell.hpp \

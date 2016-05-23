@@ -5,6 +5,7 @@
 
 #include "dtfund.hpp"
 #include "dtcalendar.hpp"
+#include "datetime_read.hpp"
 
 using namespace ngpt;
 
@@ -46,6 +47,28 @@ int main()
     static_assert( sm1 == (milliseconds)sm2, "-- Terribly Wrong --" );
     static_assert( ss1 == (seconds)sm1 && ss1 == (seconds)sm2, "-- Terribly Wrong --" );
     std::cout<<"Part B -- OK\n\n";
+    
+    //
+    // Let's try reading dates
+    // -----------------------------------------------------------------------
+    //
+    std::cout<<"Testing reading dates\n";
+    const char* date1_str = "2015-12-30 12:09:30";
+    const char* date2_str = "2015/12/30 12:09:30";
+    const char* date3_str = "2015-12-30 12:09:30.000011";
+    const char* date4_str = "2015 12 30 12 9 30";
+    datetime<seconds> dfs1 = ngpt::strptime_ymd_hms<seconds>(date1_str);
+    datetime<seconds> dfs2 = ngpt::strptime_ymd_hms<seconds>(date2_str);
+    datetime<seconds> dfs3 = ngpt::strptime_ymd_hms<seconds>(date3_str);
+    datetime<seconds> dfs4 = ngpt::strptime_ymd_hms<seconds>(date4_str);
+    datetime<seconds> dfs1_ {year(2015), month(12), day_of_month(30), hours(12), minutes(9), seconds(30)};
+    assert( dfs1 == dfs1_ && dfs1 == dfs2 && dfs2 == dfs3 && dfs3 == dfs4 );
+
+    /*datetime<microseconds>*/ auto dfs5 = ngpt::strptime_ymd_hms<microseconds>(date3_str);
+    datetime<microseconds> dfs5_ {year(2015), month(12), day_of_month(30), hours(12), minutes(9), microseconds(30000011)};
+    assert( dfs5 == dfs5_ );
+    std::cout << "dfs5  = " << dfs5.stringify() << " (" << dfs5.secs() << ")\n";
+    std::cout<<"Part C -- OK\n\n";
     
     //
     // Seconds, MicroSec and Millisec
