@@ -41,6 +41,19 @@ public:
         : m_mjd{cal2mjd(y, m, d)}, m_sec{S(t)}
     {}
     
+    /// Constructor from year, day of year and any sec type (T),
+    /// convertible to S.
+    template<class T,
+            typename = std::enable_if_t<T::is_of_sec_type>,
+            typename = std::enable_if_t<
+                std::is_same<S, decltype(static_cast<S>(T{}))>::value,
+                bool
+                >
+            >
+        explicit datetime(year y, day_of_year d, T t)
+        : m_mjd{ydoy2mjd(y, d)}, m_sec{S(t)}
+    {}
+    
     /// Constructor from year, month, day of month, hours, minutes and
     /// micro- or milli- or seconds (if T can be cast to S).
     template<class T,
@@ -54,12 +67,33 @@ public:
         datetime(year y, month m, day_of_month d, hours hr, minutes mn, T sec)
         : m_mjd{cal2mjd(y, m, d)}, m_sec{hr, mn, S(sec)}
     {}
+    
+    /// Constructor from year, day of year, hours, minutes and
+    /// micro- or milli- or seconds (if T can be cast to S).
+    template<class T,
+            typename = std::enable_if_t<T::is_of_sec_type>,
+            typename = std::enable_if_t<
+                std::is_same<S, decltype(static_cast<S>(T{}))>::value,
+                bool
+                >
+            >
+        explicit
+        datetime(year y, day_of_year d, hours hr, minutes mn, T sec)
+        : m_mjd{ydoy2mjd(y, d)}, m_sec{hr, mn, S(sec)}
+    {}
 
     /// Constructor from year, month, day of month and fractional seconds.
     explicit
     datetime(year y, month m, day_of_month d, hours hr, minutes mn,
         double fsecs)
-    : m_mjd{cal2mjd(y, m, d) }, m_sec{hr, mn, fsecs}
+    : m_mjd{cal2mjd(y, m, d)}, m_sec{hr, mn, fsecs}
+    {}
+    
+    /// Constructor from year, day of year and fractional seconds.
+    explicit
+    datetime(year y, day_of_year d, hours hr, minutes mn,
+        double fsecs)
+    : m_mjd{ydoy2mjd(y, d)}, m_sec{hr, mn, fsecs}
     {}
 
     /// Constructor from modified julian day, hours, minutes and 
@@ -76,6 +110,14 @@ public:
     datetime(year y, month m, day_of_month d, hours hr=hours(),
         minutes mn=minutes(), S sec=S())
     : m_mjd{cal2mjd(y, m, d)}, m_sec{hr, mn, sec}
+    {}
+    
+    /// Constructor from year, day of year, hours, minutes and
+    /// second type S.
+    explicit
+    datetime(year y, day_of_year d, hours hr=hours(),
+        minutes mn=minutes(), S sec=S())
+    : m_mjd{ydoy2mjd(y, d)}, m_sec{hr, mn, sec}
     {}
 
     /// Get the MJDay.

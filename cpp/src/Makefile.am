@@ -28,7 +28,8 @@ dist_include_HEADERS = \
 	genflags.hpp \
 	tsflagenum.hpp \
 	timeseries.hpp \
-	crdts.hpp
+	crdts.hpp \
+	cts_read.hpp
 
 dist_libdatetime_la_SOURCES = \
 	dtfund.cpp \

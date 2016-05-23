@@ -81,7 +81,7 @@ class microseconds;
 modified_julian_day cal2mjd(year, month, day_of_month);
 
 /// Convert a pair of Year, Day of year toMJDay.
-modified_julian_day ydoy2ymd(year, day_of_year) noexcept;
+modified_julian_day ydoy2mjd(year, day_of_year) noexcept;
 
 /// A wrapper class for years.
 class year {

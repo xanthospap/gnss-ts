@@ -59,7 +59,7 @@ ngpt::modified_julian_day::to_ymd() const noexcept
 /// Convert a pair of Year, Day of year to a Modified Julian Day
 /// Reference: http://www.ngs.noaa.gov/gps-toolbox/bwr-c.txt :: ydhms_to_mjd
 ngpt::modified_julian_day
-ngpt::ydoy2ymd(ngpt::year yr, ngpt::day_of_year doy) noexcept
+ngpt::ydoy2mjd(ngpt::year yr, ngpt::day_of_year doy) noexcept
 {
     long iyr { static_cast<long>(yr.as_underlying_type()) };
     long idy { static_cast<long>(doy.as_underlying_type()) };

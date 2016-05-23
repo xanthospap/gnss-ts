@@ -1,6 +1,7 @@
 #ifndef __NGPT_TIMESERIES__
 #define __NGPT_TIMESERIES__
 
+#include <vector>
 #include "dtcalendar.hpp"
 #include "genflags.hpp"
 #include "tsflagenum.hpp"
@@ -44,7 +45,7 @@ public:
     using tflag = ngpt::flag<ngpt::ts_events>;
 
     /// Constructor.
-    explicit timeseries(std::vector<epoch>* epochs = nullptr) noexcept
+    explicit timeseries(std::vector<epoch>* epochs=nullptr) noexcept
     : m_epochs(epochs), m_mean{0.0}
     {
         if ( m_epochs ) {
