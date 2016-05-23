@@ -38,7 +38,6 @@ ngpt::modified_julian_day::to_ydoy() const noexcept
 }
 
 /// Cast a modified_julian_day to year, month, day_of_month
-// ngpt::year
 std::tuple<ngpt::year, ngpt::month, ngpt::day_of_month>
 ngpt::modified_julian_day::to_ymd() const noexcept
 {
@@ -55,6 +54,17 @@ ngpt::modified_julian_day::to_ymd() const noexcept
         (yday-month_day[leap][guess+more]) };
 
     return std::make_tuple(y, mon, dom);
+}
+
+/// Convert a pair of Year, Day of year to a Modified Julian Day
+/// Reference: http://www.ngs.noaa.gov/gps-toolbox/bwr-c.txt :: ydhms_to_mjd
+ngpt::modified_julian_day
+ngpt::ydoy2ymd(ngpt::year yr, ngpt::day_of_year doy) noexcept
+{
+    long iyr { static_cast<long>(yr.as_underlying_type()) };
+    long idy { static_cast<long>(doy.as_underlying_type()) };
+    return modified_julian_day {((iyr-1901)/4)*1461 + ((iyr-1901)%4)*365 +
+        idy - 1 + ngpt::jan11901};
 }
 
 /// Calendar date (i.e. year-month-day) to Modified Julian Date.

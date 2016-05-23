@@ -28,8 +28,33 @@ template<typename T,
 {}
 */
 
-/// Read a date from a c-string of type:
-/// YYYY-MM-DD HH:MM:SS.SSSS
+/// Read and return a date from a c-string of type:
+/// YYYY-MM-DD, where the delimeters can be whatever (but something,
+/// i.e. two numbers must be seperated by some char -- 20150930 is wrong --).
+/// Hours, minutes and seconds are set to 0.
+template<typename T> datetime<T> strptime_ymd(const char* str)
+{
+    char *end;
+    const char* start = str;
+    int ints[3];
+
+    for (int i = 0; i < 3; ++i) {
+        ints[i] = static_cast<int>( std::abs(std::strtol(start, &end, 10)) );
+        if (errno == ERANGE || start == end) {
+            errno = 0;
+            throw std::invalid_argument
+                ("Invalid date format: \""+std::string(str)+"\" (argument " + std::to_string(i+1) + ").");
+        }
+        start = end+1;
+    }
+    return datetime<T> {year{ints[0]}, month{ints[1]}, day_of_month{ints[2]},
+        hours{0}, minutes{0}, T{0}};
+}
+
+/// Read and return a date from a c-string of type:
+/// YYYY-MM-DD HH:MM:SS.SSSS, where the delimeters can be whatever (but something,
+/// i.e. two numbers must be seperated by some char -- 20150930 is wrong --).
+/// Seconds can be fractional or integer.
 template<typename T> datetime<T> strptime_ymd_hms(const char* str)
 {
     char *end;
@@ -39,10 +64,7 @@ template<typename T> datetime<T> strptime_ymd_hms(const char* str)
 
     for (int i = 0; i < 5; ++i) {
         ints[i] = static_cast<int>( std::abs(std::strtol(start, &end, 10)) );
-        // std::cout << "\tArgument " << i << " = " << ints[i] << ", string: [" << std::string(start, end-start) << "]\n";
         if (errno == ERANGE || start == end) {
-            // if (errno == ERANGE) {std::cout << "\tERRNO set!\n";}
-            // if (start == end) {std::cout<<"\tstart == end\n";}
             errno = 0;
             throw std::invalid_argument
                 ("Invalid date format: \""+std::string(str)+"\" (argument " + std::to_string(i+1) + ").");

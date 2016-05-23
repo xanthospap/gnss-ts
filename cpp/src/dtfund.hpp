@@ -80,6 +80,9 @@ class microseconds;
 /// Calendar date (i.e. year, momth, day) to MJDay.
 modified_julian_day cal2mjd(year, month, day_of_month);
 
+/// Convert a pair of Year, Day of year toMJDay.
+modified_julian_day ydoy2ymd(year, day_of_year) noexcept;
+
 /// A wrapper class for years.
 class year {
 
@@ -593,7 +596,7 @@ public:
     
     /// Constructor from hours, minutes, microseconds.
     explicit constexpr microseconds(hours h, minutes m, microseconds c) noexcept
-        : m_msec { c.as_underlying_type()
+    : m_msec { c.as_underlying_type()
             +(m.as_underlying_type()*60L
             + h.as_underlying_type()*3600L) *1000L * 1000L}
     {}

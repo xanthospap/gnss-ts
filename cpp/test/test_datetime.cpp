@@ -68,6 +68,14 @@ int main()
     datetime<microseconds> dfs5_ {year(2015), month(12), day_of_month(30), hours(12), minutes(9), microseconds(30000011)};
     assert( dfs5 == dfs5_ );
     std::cout << "dfs5  = " << dfs5.stringify() << " (" << dfs5.secs() << ")\n";
+
+    const char* date6_str = "2015-12-30";
+    datetime<seconds> dfs6 = ngpt::strptime_ymd<seconds>(date6_str);
+    const char* date7_str = "2015-12-30 0 0 0";
+    datetime<seconds> dfs7 = ngpt::strptime_ymd<seconds>(date7_str);
+    datetime<seconds> dfs7_ {year(2015), month(12), day_of_month(30), hours(0), minutes(0), seconds(0)};
+    assert( dfs6 == dfs7 && dfs7 == dfs7_ );
+
     std::cout<<"Part C -- OK\n\n";
     
     //
