@@ -33,4 +33,5 @@ dist_include_HEADERS = \
 
 dist_libdatetime_la_SOURCES = \
 	dtfund.cpp \
-	top2daz.cpp
+	top2daz.cpp \
+	rf_convert.cpp

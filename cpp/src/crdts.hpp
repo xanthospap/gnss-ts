@@ -1,10 +1,13 @@
 #ifndef __NGPT_CRD_TIMESERIES__
 #define __NGPT_CRD_TIMESERIES__
 
+#include <cmath>
 #include "dtcalendar.hpp"
 #include "genflags.hpp"
 #include "tsflagenum.hpp"
 #include "timeseries.hpp"
+#include "geodesy.hpp"
+#include "car2ell.hpp"
 
 namespace ngpt
 {
@@ -95,8 +98,52 @@ public:
         m_epochs.emplace_back(t);
         m_x.add_point(x, sx, fx);
         m_y.add_point(y, sy, fy);
-        m_x.add_point(z, sz, fz);
+        m_z.add_point(z, sz, fz);
         set_epoch_ptr();
+    }
+
+    /// Convert from cartesian to topocentric.
+    void cartesian2topocentric() noexcept
+    {
+        double lat, lon, hgt;
+        double cf[9], cf_s[9];
+        ngpt::data_point px, py, pz;
+
+        // Reference point is mean value
+        ngpt::car2ell(m_x.mean(), m_y.mean(), m_z.mean(), lat, lon, hgt);
+        double sinf { std::sin(lat) };
+        double cosf { std::cos(lat) };
+        double sinl { std::sin(lon) };
+        double cosl { std::cos(lon) };
+        
+        ngpt::detail::car2top_matrix(sinf, sinl, cosf, cosl, cf);
+        ngpt::detail::car2top_cov_matrix(sinf*sinf, sinl*sinl, cosf*cosf, cosl*cosl, cf);
+
+#ifdef DEBUG
+        assert(
+            m_x.size() == m_epochs.size() &&
+            m_y.size() == m_epochs.size() &&
+            m_z.size() == m_epochs.size() );
+#endif
+        
+        for (std::size_t i = 0; i < m_epochs.size(); ++i) {
+            px = m_x[i];
+            py = m_y[i];
+            pz = m_z[i];
+            px.value() = cf[0]*m_x[i].value() + cf[1]*m_y[i].value() + cf[2]*m_z[i].value();
+            py.value() = cf[3]*m_x[i].value() + cf[4]*m_y[i].value() + cf[5]*m_z[i].value();
+            pz.value() = cf[6]*m_x[i].value() + cf[7]*m_y[i].value() + cf[8]*m_z[i].value();
+            double xsigma2 = px.sigma() * px.sigma();
+            double ysigma2 = py.sigma() * py.sigma();
+            double zsigma2 = pz.sigma() * pz.sigma();
+            px.sigma() = std::sqrt(cf[0]*xsigma2 + cf[1]*ysigma2 + cf[2]*zsigma2);
+            py.sigma() = std::sqrt(cf[3]*xsigma2 + cf[4]*ysigma2 + cf[5]*zsigma2);
+            pz.sigma() = std::sqrt(cf[6]*xsigma2 + cf[7]*ysigma2 + cf[8]*zsigma2);
+            m_x[i] = px;
+            m_y[i] = py;
+            m_z[i] = pz;
+        }
+        return;
     }
 
 private:

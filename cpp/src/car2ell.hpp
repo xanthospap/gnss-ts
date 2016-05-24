@@ -30,7 +30,7 @@ namespace ngpt {
  *            coordinates accelerated by Halley's method", J. Geodesy (2006),
  *            79(12): 689-693
  */
-template<ellipsoid E>
+template<ellipsoid E = ellipsoid::grs80>
 void
 car2ell(double x,    double y,       double z,
         double& phi, double& lambda, double& h)

@@ -16,13 +16,18 @@ public:
     using tflag = ngpt::flag<ngpt::ts_events>;
     
     /// Constructor.
-    explicit data_point(double val, double sigma=1.0, tflag f=tflag{}) noexcept
+    explicit data_point(double val=0.0, double sigma=1.0, tflag f=tflag{})
+    noexcept
     : m_value{val}, m_sigma{sigma}, m_flag{f}
     {}
 
     ///
     double value() const noexcept { return m_value; }
     double& value() noexcept { return m_value; }
+
+    ///
+    double sigma() const noexcept { return m_sigma; }
+    double& sigma() noexcept { return m_sigma; }
 
 private:
     double m_value;
@@ -64,6 +69,12 @@ public:
 
     /// Get the data point at index i.
     data_point& operator[](std::size_t i) { return m_data[i]; }
+
+    /// Get the mean value
+    double mean() const noexcept { return m_mean; }
+
+    /// Get the size
+    std::size_t size() const noexcept { return m_data.size(); }
 
     /// Copy constructor. Note that the epoch vector is set to nullptr.
     timeseries(const timeseries& ts, std::size_t start=0, std::size_t end=0)

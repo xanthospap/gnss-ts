@@ -16,5 +16,7 @@ main(int argc, char* argv[])
     ngpt::crdts<ngpt::milliseconds> ts =
         ngpt::cts_read<ngpt::milliseconds>(cts_file, cts_name);
 
+    ts.cartesian2topocentric();
+
     return 0;
 }

@@ -15,7 +15,9 @@ namespace ngpt
 {
 
 /// Read a time-series (aka crdts<T>) off from a .cts file.
-/// Note that each line (in the file) can have no more than 256 characters
+/// Note that each line (in the file) can have no more than 256 characters.
+/// Also note that the sigmas are scaled to 1000 (i.e. they are assumed meters
+/// and converted to millimeters).
 template<class T,
         typename = std::enable_if_t<T::is_of_sec_type>
         >
@@ -50,7 +52,8 @@ template<class T,
                         ("Invalid record line: \""+std::string(line)+"\" (argument #"+std::to_string(i)+")");
                 }
             }
-            ts.add(epoch, data[0], data[2], data[4], data[1], data[3], data[5]);
+            ts.add(epoch, data[0], data[2], data[4], data[1]*1000.0,
+                data[3]*1000.0, data[5]*1000.0);
 #ifdef DEBUG
             ++line_counter;
 #endif
