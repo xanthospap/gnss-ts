@@ -8,6 +8,7 @@
 
 namespace ngpt
 {
+
 /// A generic time-series class
 template<class T,
         typename = std::enable_if_t<T::is_of_sec_type>
@@ -23,7 +24,7 @@ public:
 
     /// Constructor
     explicit crdts(std::string name="") noexcept
-    : m_name{name}, m_epochs{}, m_x{}, m_y{}, m{z}
+    : m_name{name}, m_epochs{}, m_x{}, m_y{}, m_z{}
     {}
 
     /// Copy constructor.
@@ -40,10 +41,11 @@ public:
             if ( !end ) {
                 end = ts.m_epochs.size();
             }
-            st::vector<epoch> newvec {ts.m_epochs.cbegin()+start, ts.m_epochs.cbegin()+end}; 
-            m_epochs = std::move{newvec};
-        } 
-        m_x.epochs() = m_y.epochs() = m_z.epochs = &m_epochs;
+            std::vector<epoch> newvec {ts.m_epochs.cbegin()+start,
+                                       ts.m_epochs.cbegin()+end}; 
+            m_epochs = std::move(newvec);
+        }
+        set_epoch_ptr();
     }
 
     /// Move constructor
@@ -54,7 +56,7 @@ public:
       m_y{std::move(ts.m_y)},
       m_z{std::move(ts.m_z)}
     {
-        m_x.epochs() = m_y.epochs() = m_z.epochs = &m_epochs;
+        set_epoch_ptr();
     }
 
     /// Copy assignment.
@@ -66,7 +68,7 @@ public:
             m_x = ts.m_x;
             m_y = ts.m_y;
             m_z = ts.m_z;
-            m_x.epochs() = m_y.epochs() = m_z.epochs = &m_epochs;
+            set_epoch_ptr();
         }
         return *this;
     }
@@ -80,27 +82,38 @@ public:
             m_x = std::move(ts.m_x);
             m_y = std::move(ts.m_y);
             m_z = std::move(ts.m_z);
-            m_x.epochs() = m_y.epochs() = m_z.epochs = &m_epochs;
+            set_epoch_ptr();
         }
         return *this;
     }
 
     /// Add a crdts data point.
     void add(const epoch& t, double x, double y, double z, double sx=1.0,
-        double sy=1.0, double sz=1.0, flag fx=flag{}, flag fy=flag{},
-        flag fz=flag{})
+        double sy=1.0, double sz=1.0, tflag fx=tflag{}, tflag fy=tflag{},
+        tflag fz=tflag{})
     {
         m_epochs.emplace_back(t);
         m_x.add_point(x, sx, fx);
         m_y.add_point(y, sy, fy);
         m_x.add_point(z, sz, fz);
-        m_x.epochs() = m_y.epochs() = m_z.epochs = &m_epochs;
+        set_epoch_ptr();
     }
 
 private:
+
+    /// Set the epoch pointer of each timeseries component
+    void set_epoch_ptr() noexcept
+    {
+        m_x.epochs() = &m_epochs;
+        m_y.epochs() = &m_epochs;
+        m_z.epochs() = &m_epochs;
+    }
+
     std::string        m_name;
     std::vector<epoch> m_epochs;
     timeseries<T>      m_x, m_y, m_z;
+
+}; // end class crdts
 
 } // end namespace ngpt
 

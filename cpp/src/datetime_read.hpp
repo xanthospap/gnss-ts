@@ -17,7 +17,8 @@ namespace ngpt {
 /// Hours, minutes and seconds are set to 0.
 /// If the argument stop is passed, it will be set to the last character (of
 /// str) interpreted.
-template<typename T> datetime<T> strptime_ymd(const char* str, char* stop=nullptr)
+template<typename T>
+    datetime<T> strptime_ymd(const char* str, char* stop=nullptr)
 {
     char *end;
     const char* start = str;
@@ -43,7 +44,8 @@ template<typename T> datetime<T> strptime_ymd(const char* str, char* stop=nullpt
 /// Hours, minutes and seconds are set to 0.
 /// If the argument stop is passed, it will be set to the last character (of
 /// str) interpreted.
-template<typename T> datetime<T> strptime_ydoy(const char* str, char* stop=nullptr)
+template<typename T>
+    datetime<T> strptime_ydoy(const char* str, char* stop=nullptr)
 {
     char *end;
     const char* start = str;

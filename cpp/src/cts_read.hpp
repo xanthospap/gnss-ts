@@ -5,10 +5,10 @@
 #include <cstdlib>
 #include <fstream>
 #include "crdts.hpp"
+#include "datetime_read.hpp"
 #include "dtcalendar.hpp"
 #include "genflags.hpp"
 #include "tsflagenum.hpp"
-#include "timeseries.hpp"
 #include "crdts.hpp"
 
 namespace ngpt
@@ -29,15 +29,17 @@ template<class T,
     }
 
     char line[MAX_CHARS];
-    char *cptr, *end;
+    char *cptr(&line[0]), *end;
     ngpt::datetime<T> epoch;
     double data[6];
-
-    crdts<T> ts{ts_name};
+    crdts<T> ts {ts_name};
+#ifdef DEBUG
+    std::size_t line_counter = 0;
+#endif
 
     while ( ifs.getline(line, MAX_CHARS) ) {
         if ( *line != '#' ) {
-            epoch = ngpt::strptime_ymd_hms(line, cptr);
+            epoch = ngpt::strptime_ymd_hms<T>(line, cptr);
             ++cptr;
             for (int i = 0; i < 6; ++i) {
                 data[i] = std::strtod(cptr, &end);
@@ -45,13 +47,19 @@ template<class T,
                     errno = 0;
                     ifs.close();
                     throw std::invalid_argument
-                        ("Invalid record line: \""+std::string(line)+"\" (argument #" << std::to_string(i)<<")");
+                        ("Invalid record line: \""+std::string(line)+"\" (argument #"+std::to_string(i)+")");
                 }
             }
             ts.add(epoch, data[0], data[2], data[4], data[1], data[3], data[5]);
+#ifdef DEBUG
+            ++line_counter;
+#endif
         }
     }
 
+#ifdef DEBUG
+    std::cout<<"\tRead #"<<line_counter<<" lines from cts file.\n";
+#endif
     ifs.close();
     return ts;
 }

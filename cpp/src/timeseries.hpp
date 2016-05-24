@@ -54,7 +54,7 @@ public:
     }
 
     /// Get the (pointer to) epoch vector.
-    std::vector<epoch>* epochs() noexcept { return m_epochs; }
+    std::vector<epoch>*& epochs() noexcept { return m_epochs; }
 
     /// Get the (pointer to) epoch vector.
     const std::vector<epoch>* epochs() const noexcept { return m_epochs; }
@@ -82,7 +82,7 @@ public:
             for (std::size_t i = start; i < end; ++i) {
                 sz = i - start;
                 m_data.emplace_back(ts[i]);
-                new_ts.m_mean = (ts[i].value() + sz*m_mean)/(sz+1.0);
+                m_mean = (ts[i].value() + sz*m_mean)/(sz+1.0);
             }
         } else {
             m_data = ts.m_data;
@@ -101,7 +101,7 @@ public:
         if (this != &ts) {
             m_epochs = nullptr;
             m_mean   = ts.m_mean;
-            m_data   = ts..m_data;
+            m_data   = ts.m_data;
         }
         return *this;
     }
@@ -121,9 +121,6 @@ public:
     /// [0-idx) and [idx-end). Note that the epoch vector s left as is.
     auto split(std::size_t idx) const
     {
-        if ( !stop ) {
-            stop = m_data.size();
-        }
         timeseries left  (*this, 0, idx);
         timeseries right (*this, idx);
         return std::make_tuple(std::move(left), std::move(right));
