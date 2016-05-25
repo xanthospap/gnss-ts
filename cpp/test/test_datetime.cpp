@@ -75,6 +75,32 @@ int main()
     datetime<seconds> dfs7 = ngpt::strptime_ymd<seconds>(date7_str);
     datetime<seconds> dfs7_ {year(2015), month(12), day_of_month(30), hours(0), minutes(0), seconds(0)};
     assert( dfs6 == dfs7 && dfs7 == dfs7_ );
+    
+    const char* date8_str = "2015 Dec 30 12 9 30";
+    const char* date9_str = "2015/DEC/30 12 9 30";
+    const char* date10_str= "2015-DEC-30 12 9 30";
+    try{
+    datetime<seconds> dfs8 = ngpt::strptime_yod_hms<seconds>(date8_str);
+        std::cerr<<dfs8.stringify();
+    }catch (std::invalid_argument& e) {
+        e.what();
+        std::cerr<<"\nInvalid date 1\n";
+    }
+    try{
+    datetime<seconds> dfs9 = ngpt::strptime_yod_hms<seconds>(date9_str);
+        std::cerr<<dfs9.stringify();
+    }catch (std::invalid_argument& e) {
+        e.what();
+        std::cerr<<"\nInvalid date 2\n";
+    }
+    try{
+    datetime<seconds> dfs10= ngpt::strptime_yod_hms<seconds>(date10_str);
+        std::cerr<<dfs10.stringify();
+    }catch (std::invalid_argument& e) {
+        e.what();
+        std::cerr<<"\nInvalid date 3\n";
+    }
+    // assert( dfs1 == dfs1_ && dfs1 == dfs8 && dfs8 == dfs9 && dfs9 == dfs10 );
 
     std::cout<<"Part C -- OK\n\n";
     

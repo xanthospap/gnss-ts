@@ -29,7 +29,8 @@ dist_include_HEADERS = \
 	tsflagenum.hpp \
 	timeseries.hpp \
 	crdts.hpp \
-	cts_read.hpp
+	cts_read.hpp \
+	earthquake_cat.hpp
 
 dist_libdatetime_la_SOURCES = \
 	dtfund.cpp \

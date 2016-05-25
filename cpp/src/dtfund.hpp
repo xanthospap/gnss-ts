@@ -8,6 +8,7 @@
 #include <cassert>
 #include <cmath>
 #include <tuple>
+#include <cstring>
 #include <string>
 
 #ifdef DEBUG
@@ -111,7 +112,23 @@ public:
     typedef int underlying_type;
 
     /// Constructor.
-    explicit constexpr month (underlying_type i=1) noexcept : m_month(i) {};
+    explicit constexpr month(underlying_type i=1) noexcept : m_month(i) {};
+
+    /// Constructor from c-string (may throw).
+    explicit month(const char* str)
+    {
+        m_month = 0;
+        if ( std::strlen(str)  >= 3 ) {
+            for (int i = 0; i < 12; ++i) {
+                if ( !std::strncmp(short_names[i], str, 3) ) {
+                    m_month = i+1;
+                }
+            }
+        }
+        if (!m_month || std::strlen(str) < 3 ) {
+            throw std::invalid_argument("Failed to set month from string \""+std::string(str)+"\"");
+        }
+    }
 
     /// Get the underlying int.
     constexpr underlying_type as_underlying_type() const noexcept
