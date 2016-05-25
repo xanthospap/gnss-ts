@@ -148,10 +148,13 @@ template<typename T>
     }
     
     if (stop) {
+        std::cout << "\t------------------------------------------------------\n";
         std::cout << "\tYOD -> setting pointer to end!\n";
         std::cout << "\t" << str << "\n";
         stop = end;
+        std::cout << "\tPointer now at: "<< stop << "\n";
         std::cout << "\t" << stop << "\n";
+        std::cout << "\t------------------------------------------------------\n";
     }
 
     return datetime<T> {year{ints[0]}, mnt, day_of_month{ints[2]},
