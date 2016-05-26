@@ -14,7 +14,7 @@ namespace ngpt
 {
 
 enum class coordinate_type : char
-{ cartesian, topocentric, ellipsoidal, unknown }
+{ cartesian, topocentric, ellipsoidal, unknown };
 
 /// A generic time-series class
 template<class T,
@@ -31,7 +31,7 @@ public:
 
     /// Constructor
     explicit crdts(std::string name="") noexcept
-    : m_name{name}, m_epochs{}, m_x{}, m_y{}, m_z{}i, m_ctype{coordinate_type::unknown}
+    : m_name{name}, m_epochs{}, m_x{}, m_y{}, m_z{}, m_ctype{coordinate_type::unknown}
     {}
 
     /// Copy constructor.
@@ -119,10 +119,10 @@ public:
     { return m_epochs[m_epochs.size()-1]; }
 
     /// Return the coordinate type
-    coordinate_type coordinate_type() const noexcept { return m_ctype; }
+    coordinate_type crd_type() const noexcept { return m_ctype; }
     
     /// Return the coordinate type
-    coordinate_type& coordinate_type() noexcept { return m_ctype; }
+    coordinate_type& crd_type() noexcept { return m_ctype; }
 
     /// Given an earthquake_catalogue, read it through and apply the earthquakes
     /// of interest. For an earthquake to be applied, the following condition

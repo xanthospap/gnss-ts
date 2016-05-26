@@ -64,7 +64,7 @@ template<class T,
     std::cout<<"\tRead #"<<line_counter<<" lines from cts file.\n";
 #endif
     ifs.close();
-    ts.coordinate_type() = coordinate_type::cartesian;
+    ts.crd_type() = coordinate_type::cartesian;
     return ts;
 }
 

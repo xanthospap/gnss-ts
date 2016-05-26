@@ -1,7 +1,8 @@
 noinst_PROGRAMS = \
 		testDatetime \
 		readcts \
-		readcat
+		readcat \
+		vincenty
 
 MCXXFLAGS = \
 	-std=c++14 \
@@ -28,3 +29,7 @@ readcts_LDADD     = $(top_srcdir)/src/libdatetime.la
 readcat_SOURCES   = test_earthqcat.cpp
 readcat_CXXFLAGS  = $(MCXXFLAGS) -I$(top_srcdir)/src -L$(top_srcdir)/src
 readcat_LDADD     = $(top_srcdir)/src/libdatetime.la
+
+vincenty_SOURCES   = test_vincenty.cpp
+vincenty_CXXFLAGS  = $(MCXXFLAGS) -I$(top_srcdir)/src -L$(top_srcdir)/src
+vincenty_LDADD     = $(top_srcdir)/src/libdatetime.la
