@@ -56,7 +56,9 @@ public:
 
     /// Constructor using a filename.
     earthquake_catalogue(const std::string& filename)
-    : m_filename{filename}, m_ifs{filename.c_str(), std::ifstream::in}
+    : m_filename{filename},
+      m_ifs{filename.c_str(), std::ifstream::in},
+      m_end_of_header{0}
     {
         if ( !m_ifs.is_open() ) {
             throw std::invalid_argument
@@ -79,7 +81,8 @@ public:
     /// Move constructor
     earthquake_catalogue(earthquake_catalogue&& ec)
     : m_filename{std::move(ec.m_filename)},
-      m_ifs{std::move(ec.m_ifs)}
+      m_ifs{std::move(ec.m_ifs)},
+      m_end_of_header{std::move(ec.m_end_of_header)}
     {}
 
     /// Move assignment operator
@@ -88,6 +91,7 @@ public:
         if (*this != ec) {
             m_filename = std::move(ec.m_filename);
             m_ifs = std::move(ec.m_ifs);
+            m_end_of_header = std::move(ec.m_end_of_header);
         }
         return *this;
     }
@@ -98,27 +102,36 @@ public:
         if (m_ifs.is_open()) { m_ifs.close(); }
     }
 
+    /// Go to the top of the file (after the header lines); that is, next line
+    /// to be read should be the first earthquake in the catalogue.
+    void rewind() noexcept
+    {
+        m_ifs.seekg(m_end_of_header, std::ios::beg);
+        return;
+    }
+
     /// Read and return the next earthquake
     bool read_next_earthquake(earthquake<T>& eq)
     {
         static char line[earthquake_catalogue_detail::MAX_CHARS_IN_LINE];
 
-        if ( !m_ifs.getline(line, earthquake_catalogue_detail::MAX_CHARS_IN_LINE) ) return false;
+        if ( !m_ifs.getline(line, earthquake_catalogue_detail::MAX_CHARS_IN_LINE) ) 
+            return false;
         
         constexpr double deg2rad = ngpt::DPI / 180.0;
         static float info[4];
         char *start(line), *end;
-        datetime<T> eph =  ngpt::strptime_yod_hms<T>(line, start);
-        std::cout<<"\tAfter reading date, start is at: "<< start - line << " dld: " << start << "\n";
+        datetime<T> eph =  ngpt::strptime_yod_hms<T>(line, &start);
+        // std::cout<<"\tAfter reading date, start is at: "<< start - line << " dld: " << start << "\n";
 
         for (int i = 0; i < 4; ++i) {
             info[i] = std::strtod(start, &end);
             if (errno == ERANGE || start == end) {
                 errno = 0;
                 throw std::invalid_argument
-                    ("Invalid line: \""+std::string(line)+"\" (argument #" + std::to_string(i+1) + ") in catalogue file.");
+                    ("Invalid line: \""+std::string(line)+"\" (argument #"+
+                    std::to_string(i+1)+") in catalogue file.");
             }
-            std::cout<<"\tread: "<<info[i];
             start = end;
         }
         earthquake<T> eqt {eph, info[0]*deg2rad, info[1]*deg2rad, info[2]/1000.0, info[3]};
@@ -131,6 +144,8 @@ private:
     std::string m_filename;
     /// the input file stream
     std::ifstream m_ifs;
+    /// the position within the stream, to start reading the first earthquake
+    std::ifstream::pos_type m_end_of_header;
     
     /// read header records
     bool read_header()
@@ -149,6 +164,7 @@ private:
         {
             return false;
         }
+        m_end_of_header = m_ifs.tellg();
         return true;
     }
 

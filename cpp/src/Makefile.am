@@ -25,6 +25,7 @@ dist_include_HEADERS = \
 	car2ell.hpp \
 	car2top.hpp \
 	ell2car.hpp \
+	vincenty.hpp \
 	genflags.hpp \
 	tsflagenum.hpp \
 	timeseries.hpp \

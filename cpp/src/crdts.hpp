@@ -8,9 +8,13 @@
 #include "timeseries.hpp"
 #include "geodesy.hpp"
 #include "car2ell.hpp"
+#include "earthquake_cat.hpp"
 
 namespace ngpt
 {
+
+enum class coordinate_type : char
+{ cartesian, topocentric, ellipsoidal, unknown }
 
 /// A generic time-series class
 template<class T,
@@ -27,7 +31,7 @@ public:
 
     /// Constructor
     explicit crdts(std::string name="") noexcept
-    : m_name{name}, m_epochs{}, m_x{}, m_y{}, m_z{}
+    : m_name{name}, m_epochs{}, m_x{}, m_y{}, m_z{}i, m_ctype{coordinate_type::unknown}
     {}
 
     /// Copy constructor.
@@ -36,7 +40,8 @@ public:
       m_epochs{},
       m_x{ts.m_x, start, end},
       m_y{ts.m_y, start, end},
-      m_z{ts.m_z, start, end}
+      m_z{ts.m_z, start, end},
+      m_ctype{ts.m_ctype}
     {
         if (!start && !end) {
             m_epochs = ts.m_epochs;
@@ -57,7 +62,8 @@ public:
       m_epochs{std::move(ts.m_epochs)},
       m_x{std::move(ts.m_x)},
       m_y{std::move(ts.m_y)},
-      m_z{std::move(ts.m_z)}
+      m_z{std::move(ts.m_z)},
+      m_ctype{std::move(ts.m_ctype)}
     {
         set_epoch_ptr();
     }
@@ -71,6 +77,7 @@ public:
             m_x = ts.m_x;
             m_y = ts.m_y;
             m_z = ts.m_z;
+            m_ctype = ts.m_ctype;
             set_epoch_ptr();
         }
         return *this;
@@ -85,6 +92,7 @@ public:
             m_x = std::move(ts.m_x);
             m_y = std::move(ts.m_y);
             m_z = std::move(ts.m_z);
+            m_ctype = std::move(ts.m_ctype);
             set_epoch_ptr();
         }
         return *this;
@@ -102,6 +110,45 @@ public:
         set_epoch_ptr();
     }
 
+    /// Return the first date
+    datetime<T> first_epoch() const noexcept
+    { return m_epochs[0]; }
+
+    /// Return the last date
+    datetime<T> last_epoch() const noexcept
+    { return m_epochs[m_epochs.size()-1]; }
+
+    /// Return the coordinate type
+    coordinate_type coordinate_type() const noexcept { return m_ctype; }
+    
+    /// Return the coordinate type
+    coordinate_type& coordinate_type() noexcept { return m_ctype; }
+
+    /// Given an earthquake_catalogue, read it through and apply the earthquakes
+    /// of interest. For an earthquake to be applied, the following condition
+    /// must be met:
+    /// M >= -5.60 + 2.17 * log_10(d), where d is the distance from the station
+    /// to the epicenter (in meters). This is taken from \cite{fodits}
+    /// The number of applied earthquakes is returned.
+    /*std::size_t
+    apply_earthquake_catalogue(earthquake_catalogue<T>& catalogue)
+    {
+        catalogue.rewind();
+        datetime<T> start {this->first_epoch()},
+            stop {this->last_epoch()};
+        earthquake<T> eq;
+
+        /// The site's coordinates (ellipsoidal)
+        double slat, slon, shgt;
+        double elat, elon, ehgt;
+        ngpt::car2ell(m_x.mean(), m_y.mean(), m_z.mean(), slat, slon, shgt);
+
+        while ( catalogue.read_next_earthquake(eq) ) {
+            elat = eq.
+
+        }
+    }*/
+    
     /// Convert from cartesian to topocentric.
     void cartesian2topocentric() noexcept
     {
@@ -143,6 +190,7 @@ public:
             m_y[i] = py;
             m_z[i] = pz;
         }
+        m_ctype = coordinate_type::topocentric;
         return;
     }
 
@@ -159,6 +207,7 @@ private:
     std::string        m_name;
     std::vector<epoch> m_epochs;
     timeseries<T>      m_x, m_y, m_z;
+    coordinate_type    m_ctype;
 
 }; // end class crdts
 

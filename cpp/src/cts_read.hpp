@@ -14,7 +14,7 @@
 namespace ngpt
 {
 
-/// Read a time-series (aka crdts<T>) off from a .cts file.
+/// Read a time-series in cartesian coordinates (aka crdts<T>) off from a .cts file.
 /// Note that each line (in the file) can have no more than 256 characters.
 /// Also note that the sigmas are scaled to 1000 (i.e. they are assumed meters
 /// and converted to millimeters).
@@ -41,7 +41,7 @@ template<class T,
 
     while ( ifs.getline(line, MAX_CHARS) ) {
         if ( *line != '#' ) {
-            epoch = ngpt::strptime_ymd_hms<T>(line, cptr);
+            epoch = ngpt::strptime_ymd_hms<T>(line, &cptr);
             ++cptr;
             for (int i = 0; i < 6; ++i) {
                 data[i] = std::strtod(cptr, &end);
@@ -64,6 +64,7 @@ template<class T,
     std::cout<<"\tRead #"<<line_counter<<" lines from cts file.\n";
 #endif
     ifs.close();
+    ts.coordinate_type() = coordinate_type::cartesian;
     return ts;
 }
 
