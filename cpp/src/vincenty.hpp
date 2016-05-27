@@ -4,6 +4,9 @@
 #include <cmath>
 #include <stdexcept>
 #include "ellipsoid.hpp"
+#ifdef DEBUG
+#include <iostream>
+#endif
 
 namespace ngpt {
 
@@ -13,7 +16,7 @@ namespace ngpt {
 /// formula is used (https://en.wikipedia.org/wiki/Vincenty's_formulae)
 ///
 template<ellipsoid E = ellipsoid::grs80>
-    double inverse_vincenty(double f1, double l1, double f2, double l2,
+    double inverse_vincenty(double lat1, double lon1, double lat2, double lon2,
         double& a12, double& a21, double convergence_limit = 1e-8)
 {
     const int MAX_ITERATIONS = 100;
@@ -23,47 +26,53 @@ template<ellipsoid E = ellipsoid::grs80>
     double f = ellipsoid_traits<E>::f;
     double b = semi_minor<E>();
 
-    double  U1 { std::atan((1-f)*std::tan(f1)) },
-            U2 { std::atan((1-f)*std::tan(f2)) },
-            L  { l2 -l1 },
-            l  {L}, new_l {l};
-    double sins, coss, s, sina, cosa2, sinl, cosl, C, sinU1, cosU1, sinU2,
-        cosU2, cos2sm;
-    sinU1 = std::sin(U1);
-    sinU2 = std::sin(U2);
-    cosU1 = std::cos(U1);
-    cosU2 = std::cos(U2);
+    double U1     { std::atan((1-f)*std::tan(lat1)) };
+    double U2     { std::atan((1-f)*std::tan(lat2)) };
+    double L      { lon2 -lon1 };
+    double sinU1  { std::sin(U1) };
+    double sinU2  { std::sin(U2) };
+    double cosU1  { std::cos(U1) };
+    double cosU2  { std::cos(U2) };
+    double lambda {L};
+    double sinSigma, cosSigma, sigma, sinAlpha, cosSqAlpha, C, cos2SigmaM,
+           lambdaP, sinLambda, cosLambda;
 
     do {
         if (++iteration > MAX_ITERATIONS) {
             throw std::out_of_range("Inverse Vincenty cannot converge after 1000 iterations!");
         }
-        l     = new_l;
-        sinl  = std::sin(l);
-        cosl  = std::cos(l);
-        sins  = std::sqrt( (cosU2*sinl)*(cosU2*sinl) +
-                (cosU1*sinU2-sinU1*cosU2*cosl)*(cosU1*sinU2-sinU1*cosU2*cosl) );
-        coss  = sinU1*sinU2 + cosU1*cosU2*cosl;
-        s     = atan2(sins, coss);
-        sina  = cosU1*cosU2*sinl / sins;
-        cosa2 = 1 - sina*sina;
-        cos2sm= coss - (2*sinU1*sinU2)/cosa2;
-        C     = (f/16)*cosa2*(4+f*(4-3*cosa2));
-        new_l = L + (1-C)*f*sina*(s+C*sins*(cos2sm+C*coss*(-1+s*cos2sm*cos2sm)));
-    } while ( std::abs(l-new_l) < convergence_limit );
+        sinLambda  = std::sin(lambda);
+        cosLambda  = std::cos(lambda);
+        sinSigma   = std::sqrt( (cosU2*sinLambda) * (cosU2*sinLambda) +
+                (cosU1*sinU2-sinU1*cosU2*cosLambda) * (cosU1*sinU2-sinU1*cosU2*cosLambda) );
+        cosSigma   = sinU1*sinU2 + cosU1*cosU2*cosLambda;
+        sigma      = atan2(sinSigma, cosSigma);
+        sinAlpha   = cosU1*cosU2*sinLambda / sinSigma;
+        cosSqAlpha = 1.0 - sinAlpha*sinAlpha;
+        cos2SigmaM = cosSigma - 2.0*sinU1*sinU2/cosSqAlpha;
+        C          = (f/16.0)*cosSqAlpha*(4.0+f*(4.0-3.0*cosSqAlpha));
+        lambdaP    = lambda;
+        lambda     = L + (1.0-C)*f*sinAlpha*
+                    (sigma+C*sinSigma*(cos2SigmaM+C*cosSigma*
+                    (-1.0+2.0*cos2SigmaM*cos2SigmaM)));
+    } while ( std::abs(lambda-lambdaP) > convergence_limit );
+#ifdef DEBUG
+    std::cout<<"\tVincenty Inverse converged after "<<iteration<<" iterations\n";
+#endif
 
-    l = new_l;
-    sinl  = std::sin(l);
-    cosl  = std::cos(l);
-    double u2 { cosa2*(a*a-b*b)/(b*b) };
-    double A  { 1 + (u2*(4096+u2*(-768+u2*(320-175*u2))))/16384 };
-    double B  { u2*(256+u2*(-128+u2*(74-47*u2))) / 1024 };
-    double Ds { B*sins*(cos2sm + 0.25*B*(coss*(-1+2*cos2sm*cos2sm)-
-            (1/6.0)*B*cos2sm*(-3+4*sins*sins)*(-3+4*cos2sm*cos2sm))) };
-    double distance { b*A*(s-Ds) };
+    double uSq { cosSqAlpha*(a*a-b*b)/(b*b) };
+    //double A  { 1 + (u2*(4096+u2*(-768+u2*(320-175*u2))))/16384 };
+    //double B  { u2*(256+u2*(-128+u2*(74-47*u2))) / 1024 };
+    double k1 { (std::sqrt(1.0+uSq)-1.0)/(std::sqrt(1.0+uSq)+1.0) };
+    double A  { (1+0.25*k1*k1)/(1.0-k1) };
+    double B  { k1*(1.0-(3.0/8.0)*k1*k1) };
+    double deltaSigma { B*sinSigma*(cos2SigmaM+B/4.0*(cosSigma*
+            (-1.0+2.0*cos2SigmaM*cos2SigmaM)-B/6.0*cos2SigmaM*
+            (-3.0+4.0*sinSigma*sinSigma)*(-3.0+4.0*cos2SigmaM*cos2SigmaM))) };
+    double distance { b*A*(sigma-deltaSigma) };
     
-    a12 = atan2(cosU2*sinl, cosU1*sinU2-sinU1*cosU2*cosl);
-    a21 = atan2(cosU1*sinl, -sinU1*cosU2+cosU1*sinU2*cosl);
+    a12 = std::atan2(cosU2*sinLambda, cosU1*sinU2-sinU1*cosU2*cosLambda);
+    a21 = std::atan2(cosU1*sinLambda, -sinU1*cosU2+cosU1*sinU2*cosLambda);
     return distance;
 }
 
