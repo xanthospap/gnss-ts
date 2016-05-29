@@ -2,6 +2,7 @@
 #define __NGPT_CRD_TIMESERIES__
 
 #include <cmath>
+#include <algorithm>
 #include "dtcalendar.hpp"
 #include "genflags.hpp"
 #include "tsflagenum.hpp"
@@ -130,24 +131,42 @@ public:
     /// M >= -5.60 + 2.17 * log_10(d), where d is the distance from the station
     /// to the epicenter (in meters). This is taken from \cite{fodits}
     /// The number of applied earthquakes is returned.
-    /*std::size_t
+    std::size_t
     apply_earthquake_catalogue(earthquake_catalogue<T>& catalogue)
     {
         catalogue.rewind();
         datetime<T> start {this->first_epoch()},
-            stop {this->last_epoch()};
+                    stop {this->last_epoch()};
         earthquake<T> eq;
+        std::size_t start_search_at = 0;
 
         /// The site's coordinates (ellipsoidal)
         double slat, slon, shgt;
         double elat, elon, ehgt;
+        double distance;
         ngpt::car2ell(m_x.mean(), m_y.mean(), m_z.mean(), slat, slon, shgt);
 
-        while ( catalogue.read_next_earthquake(eq) ) {
-            elat = eq.
-
+        while ( catalogue.read_next_earthquake(eq) && eq.epoch <= stop) {
+            if (eq.epoch >= start) {
+                elat = eq.latitude;
+                elon = eq.longtitude;
+                ehgt = -1 * eq.depth;
+                distance = ngpt::haversine(slat, slon, elat, elon);
+                if ( eq.magnitude >= -5.6 + 2.17 * std::log10(distance) ) {
+                    auto lower = std::lower_bound(m_epochs.begin()+start_search_at,
+                                m_epochs.end(), eq.epoch);
+                    assert(lower != m_epochs.end());
+                    auto index = std::distance(m_epochs.begin(), lower);
+                    m_x.mark(index, ts_events::earthquake);
+                    m_y.mark(index, ts_events::earthquake);
+                    m_z.mark(index, ts_events::earthquake);
+#ifdef DEBUG
+                    std::cout<<"\tAdding earthquake at "<<eq.latitude<<", "<<eq.longtitude<<", of size "<<eq.magnitude<<"\n";
+#endif
+                }
+            }
         }
-    }*/
+    }
     
     /// Convert from cartesian to topocentric.
     void cartesian2topocentric() noexcept

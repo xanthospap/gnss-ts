@@ -48,7 +48,7 @@ template<ellipsoid E>
     constexpr double eccentricity_squared() noexcept
 {
     constexpr double f {ellipsoid_traits<E>::f};
-    return (2.0e0-f) * f;
+    return (2.0e0 - f) * f;
 }
 
 /// Compute the semi-minor axis (i.e. b) for an ellipsoid model.
@@ -56,13 +56,14 @@ template<ellipsoid E>
     constexpr double semi_minor() noexcept
 {
   constexpr double a {ellipsoid_traits<E>::a};
-  return a - eccentricity_squared<E>() * a;
+  constexpr double f {ellipsoid_traits<E>::f};
+  return a * (1.0e0 - f);
 }
 
 /// Compute the Normal radious of curvature, for a given latitude.
 /// Physical Geodesy, p. 194
 template<ellipsoid E>
-    double N (double lat) noexcept
+    double N(double lat) noexcept
 {
     constexpr double a {ellipsoid_traits<E>::a};
 

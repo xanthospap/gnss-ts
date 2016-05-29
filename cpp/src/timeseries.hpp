@@ -29,6 +29,10 @@ public:
     double sigma() const noexcept { return m_sigma; }
     double& sigma() noexcept { return m_sigma; }
 
+    ///
+    tflag flag() const noexcept { return m_flag; }
+    tflag& flag() noexcept { return m_flag; }
+
 private:
     double m_value;
     double m_sigma;
@@ -144,6 +148,12 @@ public:
         m_data.emplace_back(val, sigma, f);
         m_mean = (val + sz*m_mean)/(sz+1.0);
         return m_mean;
+    }
+
+    /// Mark a data point given its index.
+    void mark(std::size_t index, ts_events f)
+    {
+        m_data[index].flag().set(f);
     }
 
 private:

@@ -31,18 +31,18 @@ template<class T,
     /// Full-fledged constructor
     explicit earthquake(const ngpt::datetime<T>& d, double lon, double lat,
         double dpth, double mag) noexcept
-    : m_date{d}, m_longtitude{lon}, m_latitude{lat}, m_depth{dpth},
-      m_magnitude{mag}
+    : epoch{d}, longtitude{lon}, latitude{lat}, depth{dpth},
+      magnitude{mag}
     {}
 
     /// the date it appeared
-    ngpt::datetime<T> m_date;
+    ngpt::datetime<T> epoch;
     
     /// The longtitude, latitude and depth (in radians, radians, meters)
-    double m_longtitude, m_latitude, m_depth;
+    double longtitude, latitude, depth;
     
     /// The magnitude in (??)
-    double m_magnitude;
+    double magnitude;
 
 }; // end class earthquake
 

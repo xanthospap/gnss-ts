@@ -1,4 +1,5 @@
 #include <iostream>
+#include <iomanip>
 #include <tuple>
 #include "vincenty.hpp"
 #include "geoconst.hpp"
@@ -7,11 +8,13 @@ constexpr double deg2rad = ngpt::DPI / 180.0;
 
 auto rad2hdeg(double rad)
 {
+    int sign {1};
+    if (rad < 0) { rad *= -1.0; sign = -1;}
     double ddeg = rad * 180 / ngpt::DPI;
     int deg = static_cast<int>(ddeg);
     int min = static_cast<int>( (ddeg-static_cast<double>(deg))*60.0 );
     double sec = (ddeg - (deg+min/60.0)) * 3600.0;
-    return std::make_tuple(deg, min, sec);
+    return std::make_tuple(deg*sign, min, sec);
 }
 
 void
@@ -49,18 +52,26 @@ int main(int argc, char* argv[])
 
     double a12, a21, distance;
     distance = ngpt::inverse_vincenty<ngpt::ellipsoid::wgs84>(lat1*deg2rad, lon1*deg2rad,
-        lat2*deg2rad, lon2*deg2rad, a12, a21, 1e-10);
+        lat2*deg2rad, lon2*deg2rad, a12, a21, 1e-12);
 
     auto a12d = rad2hdeg(a12);
     auto a21d = rad2hdeg(a21);
 
     std::cout << "Point 1      : (" << lon1 << ", " << lat1 << ")\n";
     std::cout << "Point 2      : (" << lon2 << ", " << lat2 << ")\n";
-    std::cout << "Distance     : "  << distance << "\n";
+    std::cout << "Distance     : "  << std::fixed << std::setprecision(3) << distance << "\n";
     std::cout << "Azimouth 1->2: "  << a12 << " or "; print_hex_deg(a12d);
     std::cout << "\nAzimouth 2->1: "<< a21 << " or "; print_hex_deg(a21d);
-    std::cout << "\nPoint 1      : (" << lon1*deg2rad << ", " << lat1*deg2rad << ") rad.\n";
-    std::cout << "Point 2      : (" << lon2*deg2rad << ", " << lat2*deg2rad << ") rad.\n";
+    // std::cout << "\nPoint 1      : (" << lon1*deg2rad << ", " << lat1*deg2rad << ") rad.\n";
+    // std::cout << "Point 2      : (" << lon2*deg2rad << ", " << lat2*deg2rad << ") rad.\n";
+    
+    distance = ngpt::haversine<ngpt::ellipsoid::wgs84>(lat1*deg2rad, lon1*deg2rad,
+        lat2*deg2rad, lon2*deg2rad);
+    std::cout << "\nDistance Haversine (wgs84): "  << std::fixed << std::setprecision(3) << distance << "\n";
+    
+    distance = ngpt::haversine(lat1*deg2rad, lon1*deg2rad, lat2*deg2rad, lon2*deg2rad);
+    std::cout << "\nDistance Haversine (using Earth's radius): "  << std::fixed << std::setprecision(3) << distance << "\n";
+    
     std::cout<<"\n";
 
     return 0;

@@ -6,18 +6,44 @@
 #include "ellipsoid.hpp"
 #ifdef DEBUG
 #include <iostream>
+#include <iomanip>
 #endif
 
 namespace ngpt {
+
+/// Compute the haversine formula.
+double haversine(double angle) noexcept
+{
+    double sinHalfTheta { std::sin(angle/2.0) };
+    return sinHalfTheta * sinHalfTheta;
+}
+
+/// Given the (ellipsoidal) coordinates of two points (1 and 2) in radians,
+/// compute the great circle distance between them, using the haversine formula
+/// see https://en.wikipedia.org/wiki/Haversine_formula. The Earth's radius is
+/// computed as an average of the Normal radious of curvature at the two points.
+template<ellipsoid E = ellipsoid::wgs84>
+    double haversine(double lat1, double lon1, double lat2, double lon2)
+{
+    // double r1 { N<E>(lat1) };
+    // double r2 { N<E>(lat2) };
+    double h  { haversine(lat2-lat1) + std::cos(lat1) * std::cos(lat2) * 
+        haversine(lon2-lon1) };
+    // double EarthRadius { r1/2 + r2/2 };
+    double EarthRadius { (2*ellipsoid_traits<E>::a + semi_minor<E>())/3 };
+
+    return 2 * EarthRadius * std::asin(std::sqrt(h));
+}
+
 
 /// Given the (ellipsoidal) coordinates of two points (1 and 2) in radians,
 /// calculate the forward azimouths from 1->2 (i.e. a12) and fro 2->1 (i.e. a21)
 /// and the ellipsoidal distance between the two points. The inverse Vincenty's
 /// formula is used (https://en.wikipedia.org/wiki/Vincenty's_formulae)
 ///
-template<ellipsoid E = ellipsoid::grs80>
+template<ellipsoid E = ellipsoid::wgs84>
     double inverse_vincenty(double lat1, double lon1, double lat2, double lon2,
-        double& a12, double& a21, double convergence_limit = 1e-8)
+        double& a12, double& a21, double convergence_limit = 1e-10)
 {
     const int MAX_ITERATIONS = 100;
     int iteration = 0;
