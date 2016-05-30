@@ -25,11 +25,11 @@ template<class T,
 {
     /// Empty!
     earthquake() noexcept
-    : m_date{}, m_longtitude{0}, m_latitude{0}, m_depth{0}, m_magnitude{0}
+    : epoch{}, longtitude{0}, latitude{0}, depth{0}, magnitude{0}
     {}
 
     /// Full-fledged constructor
-    explicit earthquake(const ngpt::datetime<T>& d, double lon, double lat,
+    explicit earthquake(const ngpt::datetime<T>& d, double lat, double lon,
         double dpth, double mag) noexcept
     : epoch{d}, longtitude{lon}, latitude{lat}, depth{dpth},
       magnitude{mag}

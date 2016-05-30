@@ -19,7 +19,7 @@ namespace ngpt {
  * 
  *  \throw    Does not throw.
  */
-template<ellipsoid E>
+template<ellipsoid E = ellipsoid::wgs84>
 void 
 ell2car(double phi, double lambda, double h,
         double& x,  double& y,     double& z)

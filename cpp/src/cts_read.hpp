@@ -51,6 +51,7 @@ template<class T,
                     throw std::invalid_argument
                         ("Invalid record line: \""+std::string(line)+"\" (argument #"+std::to_string(i)+")");
                 }
+                cptr = end;
             }
             ts.add(epoch, data[0], data[2], data[4], data[1]*1000.0,
                 data[3]*1000.0, data[5]*1000.0);

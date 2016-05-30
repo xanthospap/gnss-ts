@@ -4,8 +4,8 @@
 int
 main(int argc, char* argv[])
 {
-    if (argc != 2) {
-        std::cerr<<"Usage: read_cts <cts file>\n";
+    if (argc < 2 || argc > 3) {
+        std::cerr<<"Usage: read_cts <cts file> [catalogue]\n";
         return 1;
     }
 
@@ -17,6 +17,11 @@ main(int argc, char* argv[])
         ngpt::cts_read<ngpt::milliseconds>(cts_file, cts_name);
 
     ts.cartesian2topocentric();
+
+    if (argc > 2) {
+        ngpt::earthquake_catalogue<ngpt::milliseconds> eq_cat {std::string(argv[2])};
+        ts.apply_earthquake_catalogue(eq_cat);
+    }
 
     return 0;
 }

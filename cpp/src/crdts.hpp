@@ -10,6 +10,7 @@
 #include "geodesy.hpp"
 #include "car2ell.hpp"
 #include "earthquake_cat.hpp"
+#include "vincenty.hpp"
 
 namespace ngpt
 {
@@ -138,19 +139,26 @@ public:
         datetime<T> start {this->first_epoch()},
                     stop {this->last_epoch()};
         earthquake<T> eq;
-        std::size_t start_search_at = 0;
+        std::size_t start_search_at = 0,
+                    eq_applied = 0;
+#ifdef DEBUG
+        std::size_t eq_read = 0;
+#endif
 
         /// The site's coordinates (ellipsoidal)
         double slat, slon, shgt;
-        double elat, elon, ehgt;
+        double elat, elon/*, ehgt*/;
         double distance;
         ngpt::car2ell(m_x.mean(), m_y.mean(), m_z.mean(), slat, slon, shgt);
 
         while ( catalogue.read_next_earthquake(eq) && eq.epoch <= stop) {
+#ifdef DEBUG
+            ++eq_read;
+#endif
             if (eq.epoch >= start) {
                 elat = eq.latitude;
                 elon = eq.longtitude;
-                ehgt = -1 * eq.depth;
+                //ehgt = -1 * eq.depth;
                 distance = ngpt::haversine(slat, slon, elat, elon);
                 if ( eq.magnitude >= -5.6 + 2.17 * std::log10(distance) ) {
                     auto lower = std::lower_bound(m_epochs.begin()+start_search_at,
@@ -160,12 +168,23 @@ public:
                     m_x.mark(index, ts_events::earthquake);
                     m_y.mark(index, ts_events::earthquake);
                     m_z.mark(index, ts_events::earthquake);
+                    ++eq_applied;
 #ifdef DEBUG
-                    std::cout<<"\tAdding earthquake at "<<eq.latitude<<", "<<eq.longtitude<<", of size "<<eq.magnitude<<"\n";
+                    std::cout<<"\tAdding earthquake at "<< eq.epoch.stringify() << " (" <<eq.latitude*180/DPI<<", "<<eq.longtitude*180/DPI<<"), of size "<<eq.magnitude<<"M.\n";
 #endif
                 }
+//#ifdef DEBUG
+//                else {
+//                    std::cout<<"\tEarthquake too far away: " << distance/1000.0 << "km. limit = "  << -5.6 + 2.17 * std::log10(distance) << "M." << " (" <<eq.magnitude<<")";
+//                    std::cout<<" eq("<<elat*180/DPI <<", "<<elon*180/DPI<<")\n";
+//                }
+//#endif
             }
         }
+#ifdef DEBUG
+        std::cout<<"\tRead "<<eq_read<<" earthquakes from catalogue\n";
+#endif
+        return eq_applied;
     }
     
     /// Convert from cartesian to topocentric.
