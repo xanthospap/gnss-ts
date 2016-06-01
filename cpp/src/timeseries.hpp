@@ -55,7 +55,7 @@ public:
 
     /// Constructor.
     explicit timeseries(std::vector<epoch>* epochs=nullptr) noexcept
-    : m_epochs(epochs), m_mean{0.0}
+    : m_epochs(epochs), m_mean{0.0}, m_events{0}
     {
         if ( m_epochs ) {
             m_data.reserve(m_epochs->size());
@@ -80,9 +80,12 @@ public:
     /// Get the size
     std::size_t size() const noexcept { return m_data.size(); }
 
+    /// Get the number of parameters.
+    std::size_t events() const noexcept { return m_events; }
+
     /// Copy constructor. Note that the epoch vector is set to nullptr.
     timeseries(const timeseries& ts, std::size_t start=0, std::size_t end=0)
-    : m_epochs(nullptr), m_mean{ts.m_mean}
+    : m_epochs(nullptr), m_mean{ts.m_mean}, m_events{ts.m_events}
     {
         if (start || end) {
             if (start && !end) {
@@ -107,7 +110,8 @@ public:
     /// Move constructor. Note that the epoch vector is set to nullptr.
     timeseries(timeseries&& ts) noexcept
     : m_epochs(nullptr), m_mean{std::move(ts.m_mean)},
-      m_data{std::move(ts.m_data)}
+      m_data{std::move(ts.m_data)},
+      m_events{std::move(ts.m_events)}
     {}
 
     /// Assignment operator. Note that the epoch vector is set to nullptr.
@@ -117,6 +121,7 @@ public:
             m_epochs = nullptr;
             m_mean   = ts.m_mean;
             m_data   = ts.m_data;
+            m_events = ts.m_events;
         }
         return *this;
     }
@@ -128,6 +133,7 @@ public:
             m_epochs = nullptr;
             m_mean   = std::move(ts.m_mean);
             m_data   = std::move(ts.m_data);
+            m_events = std::move(ts.m_events);
         }
         return *this;
     }
@@ -147,6 +153,12 @@ public:
         double sz = static_cast<double>(m_data.size());
         m_data.emplace_back(val, sigma, f);
         m_mean = (val + sz*m_mean)/(sz+1.0);
+        if (   f.check(ts_events::jump)
+            || f.check(ts_events::velocity_change)
+            || f.check(ts_events::earthquake) )
+        {
+            ++m_events;
+        }
         return m_mean;
     }
 
@@ -154,6 +166,12 @@ public:
     void mark(std::size_t index, ts_events f)
     {
         m_data[index].flag().set(f);
+        if (   f == ts_events::jump
+            || f == ts_events::velocity_change
+            || f == ts_events::earthquake )
+        {
+            ++m_events;
+        }
     }
 
 private:
@@ -163,6 +181,8 @@ private:
     double m_mean;
     /// The vector of data points.
     std::vector<data_point> m_data;
+    /// number of parameters (offsets + vel. changes + earthquakes)
+    std::size_t m_events;
 
 }; // class timeseries
 

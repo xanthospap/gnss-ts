@@ -1,6 +1,9 @@
 lib_LTLIBRARIES = libdatetime.la
 
+##
 ## Only use the following flags for debuging purposes
+## --------------------------------------------------
+##
 libdatetime_la_CXXFLAGS = \
 	-std=c++14 \
 	-g \
@@ -13,6 +16,7 @@ libdatetime_la_CXXFLAGS = \
 	-Wshadow \
 	-Winline \
 	-Wdisabled-optimization \
+	-march=native \
 	-DDEBUG
 
 dist_include_HEADERS = \
