@@ -55,7 +55,7 @@ public:
 
     /// Constructor.
     explicit timeseries(std::vector<epoch>* epochs=nullptr) noexcept
-    : m_epochs(epochs), m_mean{0.0}, m_events{0}
+    : m_epochs(epochs), m_mean{0.0}, m_events{0}, m_skiped{0}
     {
         if ( m_epochs ) {
             m_data.reserve(m_epochs->size());
@@ -85,7 +85,7 @@ public:
 
     /// Copy constructor. Note that the epoch vector is set to nullptr.
     timeseries(const timeseries& ts, std::size_t start=0, std::size_t end=0)
-    : m_epochs(nullptr), m_mean{ts.m_mean}, m_events{ts.m_events}
+    : m_epochs(nullptr), m_mean{ts.m_mean}, m_events{ts.m_events}, m_skiped{ts.m_skiped}
     {
         if (start || end) {
             if (start && !end) {
@@ -111,7 +111,8 @@ public:
     timeseries(timeseries&& ts) noexcept
     : m_epochs(nullptr), m_mean{std::move(ts.m_mean)},
       m_data{std::move(ts.m_data)},
-      m_events{std::move(ts.m_events)}
+      m_events{std::move(ts.m_events)},
+      m_skiped{std::move(ts.m_skiped)}
     {}
 
     /// Assignment operator. Note that the epoch vector is set to nullptr.
@@ -122,6 +123,7 @@ public:
             m_mean   = ts.m_mean;
             m_data   = ts.m_data;
             m_events = ts.m_events;
+            m_skiped = ts.m_skiped;
         }
         return *this;
     }
@@ -134,6 +136,7 @@ public:
             m_mean   = std::move(ts.m_mean);
             m_data   = std::move(ts.m_data);
             m_events = std::move(ts.m_events);
+            m_skiped = std::move(ts.m_skiped);
         }
         return *this;
     }
@@ -159,6 +162,11 @@ public:
         {
             ++m_events;
         }
+        if ( f.check(ts_events::outlier)
+            || f.check(ts_events::skip) )
+        {
+            ++m_skiped;
+        }
         return m_mean;
     }
 
@@ -172,6 +180,31 @@ public:
         {
             ++m_events;
         }
+        if ( f == ts_events::outlier 
+            || f == ts_events::skip )
+        {
+            ++m_skiped;
+        }
+    }
+
+    /// Solve the least squares via QR (@Eigen)
+    ???
+    qr_ls_solve(std::vector<double>* phases = nullptr)
+    {
+        if ( !m_epochs ) {
+            throw 1
+
+        /// number of cols/parameters = events + a0 + b0 + 2*(periodic_terms)
+        std::size_t parameters = events() + 1  + 1  + (phases ? 2*phases->size() : 0);
+        /// number of rows/observations = size - (outliers + skiped)
+        std::size_t observations = m_data.size() - m_skiped;
+        /// indexes
+        std::size_t idx = 0;
+
+        for (const auto& it = m_data.cbegin(); it!= m_data.cend(); ++it)
+        {
+
+        }
     }
 
 private:
@@ -183,6 +216,8 @@ private:
     std::vector<data_point> m_data;
     /// number of parameters (offsets + vel. changes + earthquakes)
     std::size_t m_events;
+    /// number of outliers/skipped points.
+    std::size_t m_skiped;
 
 }; // class timeseries
 
