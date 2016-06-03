@@ -190,6 +190,28 @@ public:
         return;
     }
 
+    /// Difference between two dates in MJdays and *seconds.
+    constexpr std::tuple<modified_julian_day, S>
+    delta_date(const datetime& d) const noexcept
+    {
+        modified_julian_day::underlying_type t_mjd, sign{1};
+        S::underlying_type t_secs;
+        epoch d1{*this}, d2{d};
+        if (d2 > d1) {
+            d1 = d;
+            d2 = *this;
+            sign = -1;
+        }
+        t_mjd = d1.m_mjd.as_underlying_type() - d2.m_mjd.as_underlying_type();
+        t_secs= d1.m_sec.as_underlying_type() - d2.m_sec.as_underlying_type();
+        if (t_secs < 0) {
+            t_secs += S::max_in_day;
+            t_mjd  -= 1;
+        }
+        t_mjd *= sign;
+        return std::make_tuple(modified_julian_day{t_mjd}, S{t_secs});
+    }
+
     /// Cast to double (i.e. fractional) Modified Julian Date.
     constexpr double as_mjd() const noexcept
     {
@@ -251,6 +273,17 @@ private:
     S                   m_sec;  ///< Fraction of day in milli/nano/seconds
 
 }; // end class datetime
+
+
+/// Difference between two dates in MJdays and *seconds.
+template<typename T, 
+        typename = std::enable_if_t<T::is_of_sec_type>
+        >
+    constexpr std::tuple<modified_julian_day, T> delta_date(const datetime& dt1,
+        const datetime& dt2) noexcept
+{
+    return dt1.delta_date( dt2 );
+}
 
 } // end namespace
 

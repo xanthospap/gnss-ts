@@ -2,6 +2,9 @@
 #define __NGPT_TIMESERIES__
 
 #include <vector>
+#include "Eigen/Core"
+#include "Eigen/QR"
+
 #include "dtcalendar.hpp"
 #include "genflags.hpp"
 #include "tsflagenum.hpp"
@@ -82,6 +85,13 @@ public:
 
     /// Get the number of parameters.
     std::size_t events() const noexcept { return m_events; }
+
+    /// Get the first epoch
+    /// FIXME what if the first data point is flaged outlier or skipped ??
+    epoch first_epoch() const noexcept { return m_epochs[0]; }
+
+    /// Get the last epoch
+    epoch last_epoch() const noexcept { return m_epochs[m_epochs.size()-1]; }
 
     /// Copy constructor. Note that the epoch vector is set to nullptr.
     timeseries(const timeseries& ts, std::size_t start=0, std::size_t end=0)
@@ -187,12 +197,20 @@ public:
         }
     }
 
+    /// Compute the mean (i.e. central epoch).
+    epoch
+    central_epoch() const
+    {
+        auto delta_dt = ngpt::delta_date(first_epoch(), last_epoch());
+        // FIXME
+    }
+
+#ifdef KOKO
     /// Solve the least squares via QR (@Eigen)
     ???
     qr_ls_solve(std::vector<double>* phases = nullptr)
     {
-        if ( !m_epochs ) {
-            throw 1
+        if ( !m_epochs ) { throw 1 }
 
         /// number of cols/parameters = events + a0 + b0 + 2*(periodic_terms)
         std::size_t parameters = events() + 1  + 1  + (phases ? 2*phases->size() : 0);
@@ -201,11 +219,21 @@ public:
         /// indexes
         std::size_t idx = 0;
 
+        if ( !parameters ) { throw 1; }
+        if ( observations < parameters ) { throw 1; }
+        
+        Eigen::MatrixXd A = Eigen::MatrixXd(observations, parameters);
+        Eigen::VectorXd b = Eigen::VectorXd(observations);
+
         for (const auto& it = m_data.cbegin(); it!= m_data.cend(); ++it)
         {
 
+            A.coeff(idx, 0) = 1.0e0;
+            
         }
+        ///FIXME
     }
+#endif
 
 private:
     /// A pointer to a vector of datetime<T> instances.
