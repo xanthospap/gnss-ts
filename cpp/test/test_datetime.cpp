@@ -52,19 +52,20 @@ int main()
     // Let's try reading dates
     // -----------------------------------------------------------------------
     //
+    /*char* __end = nullptr;*/
     std::cout<<"Testing reading dates\n";
     const char* date1_str = "2015-12-30 12:09:30";
     const char* date2_str = "2015/12/30 12:09:30";
     const char* date3_str = "2015-12-30 12:09:30.000011";
     const char* date4_str = "2015 12 30 12 9 30";
-    datetime<seconds> dfs1 = ngpt::strptime_ymd_hms<seconds>(date1_str);
-    datetime<seconds> dfs2 = ngpt::strptime_ymd_hms<seconds>(date2_str);
-    datetime<seconds> dfs3 = ngpt::strptime_ymd_hms<seconds>(date3_str);
-    datetime<seconds> dfs4 = ngpt::strptime_ymd_hms<seconds>(date4_str);
+    datetime<seconds> dfs1 = ngpt::strptime_ymd_hms<seconds>(date1_str/*, &__end*/);
+    datetime<seconds> dfs2 = ngpt::strptime_ymd_hms<seconds>(date2_str/*, &__end*/);
+    datetime<seconds> dfs3 = ngpt::strptime_ymd_hms<seconds>(date3_str/*, &__end*/);
+    datetime<seconds> dfs4 = ngpt::strptime_ymd_hms<seconds>(date4_str/*, &__end*/);
     datetime<seconds> dfs1_ {year(2015), month(12), day_of_month(30), hours(12), minutes(9), seconds(30)};
     assert( dfs1 == dfs1_ && dfs1 == dfs2 && dfs2 == dfs3 && dfs3 == dfs4 );
-
-    /*datetime<microseconds>*/ auto dfs5 = ngpt::strptime_ymd_hms<microseconds>(date3_str);
+    
+    auto dfs5 = ngpt::strptime_ymd_hms<microseconds>(date3_str);
     datetime<microseconds> dfs5_ {year(2015), month(12), day_of_month(30), hours(12), minutes(9), microseconds(30000011)};
     assert( dfs5 == dfs5_ );
     std::cout << "dfs5  = " << dfs5.stringify() << " (" << dfs5.secs() << ")\n";
@@ -75,33 +76,32 @@ int main()
     datetime<seconds> dfs7 = ngpt::strptime_ymd<seconds>(date7_str);
     datetime<seconds> dfs7_ {year(2015), month(12), day_of_month(30), hours(0), minutes(0), seconds(0)};
     assert( dfs6 == dfs7 && dfs7 == dfs7_ );
-    
     const char* date8_str = "2015 Dec 30 12 9 30";
     const char* date9_str = "2015/DEC/30 12 9 30";
     const char* date10_str= "2015-DEC-30 12 9 30";
     try{
-    datetime<seconds> dfs8 = ngpt::strptime_yod_hms<seconds>(date8_str);
+        datetime<seconds> dfs8 = ngpt::strptime_yod_hms<seconds>(date8_str);
         std::cerr<<dfs8.stringify();
     }catch (std::invalid_argument& e) {
         e.what();
         std::cerr<<"\nInvalid date 1\n";
     }
     try{
-    datetime<seconds> dfs9 = ngpt::strptime_yod_hms<seconds>(date9_str);
+        datetime<seconds> dfs9 = ngpt::strptime_yod_hms<seconds>(date9_str);
         std::cerr<<dfs9.stringify();
     }catch (std::invalid_argument& e) {
         e.what();
         std::cerr<<"\nInvalid date 2\n";
     }
     try{
-    datetime<seconds> dfs10= ngpt::strptime_yod_hms<seconds>(date10_str);
+        datetime<seconds> dfs10= ngpt::strptime_yod_hms<seconds>(date10_str);
         std::cerr<<dfs10.stringify();
     }catch (std::invalid_argument& e) {
         e.what();
         std::cerr<<"\nInvalid date 3\n";
     }
+    
     // assert( dfs1 == dfs1_ && dfs1 == dfs8 && dfs8 == dfs9 && dfs9 == dfs10 );
-
     std::cout<<"Part C -- OK\n\n";
     
     //

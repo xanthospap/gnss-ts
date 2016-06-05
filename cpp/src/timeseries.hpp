@@ -2,8 +2,10 @@
 #define __NGPT_TIMESERIES__
 
 #include <vector>
+#ifdef KOKO
 #include "Eigen/Core"
 #include "Eigen/QR"
+#endif
 
 #include "dtcalendar.hpp"
 #include "genflags.hpp"
@@ -183,6 +185,7 @@ public:
     /// Mark a data point given its index.
     void mark(std::size_t index, ts_events f)
     {
+        /// FIXME if this point is already marked do NOT augment the counter
         m_data[index].flag().set(f);
         if (   f == ts_events::jump
             || f == ts_events::velocity_change
@@ -199,10 +202,12 @@ public:
 
     /// Compute the mean (i.e. central epoch).
     epoch
-    central_epoch() const
+    central_epoch() const noexcept
     {
         auto delta_dt = ngpt::delta_date(first_epoch(), last_epoch());
-        // FIXME
+        auto central_dt = m_epochs[0].add(std::get<0>(delta_dt),
+            std::get<1>(delta_dt));
+        return central_epoch;
     }
 
 #ifdef KOKO
@@ -217,7 +222,7 @@ public:
         /// number of rows/observations = size - (outliers + skiped)
         std::size_t observations = m_data.size() - m_skiped;
         /// indexes
-        std::size_t idx = 0;
+        std::size_t idx{0}, counter{0};
 
         if ( !parameters ) { throw 1; }
         if ( observations < parameters ) { throw 1; }
@@ -225,11 +230,20 @@ public:
         Eigen::MatrixXd A = Eigen::MatrixXd(observations, parameters);
         Eigen::VectorXd b = Eigen::VectorXd(observations);
 
+        // TODO
+        // This is cool for a day interval but probably not enough for more
+        // dense sampling rates.
+        double mean_epoch { this->central_epoch().as_mjd() };
         for (const auto& it = m_data.cbegin(); it!= m_data.cend(); ++it)
         {
-
-            A.coeff(idx, 0) = 1.0e0;
-            
+            if ( !it->flag().check(ts_event::outlier)
+                && !it->flag().check(ts_event::skip) )
+            {
+                A.coeff(idx, 0) = 1.0e0;
+                A.coeff(idx, 1) = m_epochs->[counter] - mean_epoch;
+                ++idx;
+            }
+            ++counter;
         }
         ///FIXME
     }

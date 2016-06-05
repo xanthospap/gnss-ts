@@ -31,9 +31,15 @@ public:
     /// Simplify the flag type.
     using tflag = ngpt::flag<ngpt::ts_events>;
 
+    ///
+    using tsevent = std::pair<epoch, ngpt::ts_events>;
+
     /// Constructor
     explicit crdts(std::string name="") noexcept
-    : m_name{name}, m_epochs{}, m_x{}, m_y{}, m_z{}, m_ctype{coordinate_type::unknown}
+    : m_name{name},
+      m_epochs{},
+      m_x{}, m_y{}, m_z{},
+      m_ctype{coordinate_type::unknown}
     {}
 
     /// Copy constructor.
@@ -43,6 +49,7 @@ public:
       m_x{ts.m_x, start, end},
       m_y{ts.m_y, start, end},
       m_z{ts.m_z, start, end},
+      m_events{ts.m_events},
       m_ctype{ts.m_ctype}
     {
         if (!start && !end) {
@@ -54,6 +61,11 @@ public:
             std::vector<epoch> newvec {ts.m_epochs.cbegin()+start,
                                        ts.m_epochs.cbegin()+end}; 
             m_epochs = std::move(newvec);
+            // leave the events within the new time interval
+            std::vector<tsevent> new_events;
+            std::size_t sz = m_epochs.size();
+            std::copy_if(m_events.cbegin(), m_events.cend(), new_events.begin(),
+                [sz](const tsevent& it){it.first>=m_epochs[0] && it.second<=m_epochs[sz-1]});
         }
         set_epoch_ptr();
     }
@@ -65,6 +77,7 @@ public:
       m_x{std::move(ts.m_x)},
       m_y{std::move(ts.m_y)},
       m_z{std::move(ts.m_z)},
+      m_events{std::move(ts.m_events)},
       m_ctype{std::move(ts.m_ctype)}
     {
         set_epoch_ptr();
@@ -109,6 +122,19 @@ public:
         m_x.add_point(x, sx, fx);
         m_y.add_point(y, sy, fy);
         m_z.add_point(z, sz, fz);
+        if (   fx.check(ts_events::jump)
+            || fx.check(ts_events::velocity_change)
+            || fx.check(ts_events::earthquake) 
+            || fy.check(ts_events::jump)
+            || fy.check(ts_events::velocity_change)
+            || fy.check(ts_events::earthquake) 
+            || fz.check(ts_events::jump)
+            || fz.check(ts_events::velocity_change)
+            || fz.check(ts_events::earthquake) 
+        )
+        {
+            m_events.emplace_back(epoch, ;
+        }
         set_epoch_ptr();
     }
 
@@ -173,12 +199,6 @@ public:
                     std::cout<<"\tAdding earthquake at "<< eq.epoch.stringify() << " (" <<eq.latitude*180/DPI<<", "<<eq.longtitude*180/DPI<<"), of size "<<eq.magnitude<<"M.\n";
 #endif
                 }
-//#ifdef DEBUG
-//                else {
-//                    std::cout<<"\tEarthquake too far away: " << distance/1000.0 << "km. limit = "  << -5.6 + 2.17 * std::log10(distance) << "M." << " (" <<eq.magnitude<<")";
-//                    std::cout<<" eq("<<elat*180/DPI <<", "<<elon*180/DPI<<")\n";
-//                }
-//#endif
             }
         }
 #ifdef DEBUG
@@ -242,10 +262,11 @@ private:
         m_z.epochs() = &m_epochs;
     }
 
-    std::string        m_name;
-    std::vector<epoch> m_epochs;
-    timeseries<T>      m_x, m_y, m_z;
-    coordinate_type    m_ctype;
+    std::string          m_name;
+    std::vector<epoch>   m_epochs;
+    timeseries<T>        m_x, m_y, m_z;
+    std::vector<tsevent> m_events;
+    coordinate_type      m_ctype;
 
 }; // end class crdts
 

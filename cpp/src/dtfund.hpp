@@ -201,6 +201,11 @@ public:
     constexpr modified_julian_day operator-(const modified_julian_day& mjd)
     const noexcept
     { return modified_julian_day{m_mjd-mjd.m_mjd}; }
+    
+    /// Operator + (addition).
+    constexpr modified_julian_day operator+(const modified_julian_day& mjd)
+    const noexcept
+    { return modified_julian_day{m_mjd+mjd.m_mjd}; }
 
     /// Operator == (equality).
     constexpr bool operator==(const modified_julian_day& d) const noexcept

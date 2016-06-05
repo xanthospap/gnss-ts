@@ -34,7 +34,7 @@ template<typename T>
         }
         start = end+1;
     }
-    if (*stop) *stop = end - 1;
+    if (stop) *stop = end - 1;
     return datetime<T> {year{ints[0]}, month{ints[1]}, day_of_month{ints[2]},
         hours{0}, minutes{0}, T{0}};
 }
@@ -61,7 +61,7 @@ template<typename T>
         }
         start = end+1;
     }
-    if (*stop) *stop = end - 1;
+    if (stop) *stop = end - 1;
     return datetime<T> {year{ints[0]}, day_of_year{ints[1]}, hours{0},
         minutes{0}, T{0}};
 }
@@ -95,7 +95,7 @@ template<typename T>
         throw std::invalid_argument
             ("Invalid date format: \""+std::string(str)+"\" (argument #6)");
     }
-    if (*stop) *stop = end;
+    if (stop) *stop = end;
     return datetime<T> {year{ints[0]}, month{ints[1]}, day_of_month{ints[2]},
         hours{ints[3]}, minutes{ints[4]}, secs};
 }
@@ -147,7 +147,7 @@ template<typename T>
             ("Invalid date format: \""+std::string(str)+"\" (argument #6)");
     }
     
-    if (*stop) *stop = end;
+    if (stop) *stop = end;
 
     return datetime<T> {year{ints[0]}, mnt, day_of_month{ints[2]},
         hours{ints[3]}, minutes{ints[4]}, secs};
@@ -182,7 +182,7 @@ template<typename T>
         throw std::invalid_argument
             ("Invalid date format: \""+std::string(str)+"\" (argument #5)");
     }
-    if (*stop) *stop = end;
+    if (stop) *stop = end;
     return datetime<T> {year{ints[0]}, day_of_year{ints[1]}, hours{ints[2]},
         minutes{ints[3]}, secs};
 }
