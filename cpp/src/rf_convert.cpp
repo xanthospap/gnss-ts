@@ -1,5 +1,4 @@
-#include <cmath>
-#include "geodesy.hpp"
+#include "geodetails.hpp"
 
 /// Compute the rotation matrix R, to convert a cartesian vector to a
 /// topocentric one, i.e.

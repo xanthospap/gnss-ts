@@ -2,12 +2,18 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.69])
-AC_INIT([nts], [0.10], [xanthos@mail.ntua.gr], [nts],[http://dionysos.survey.ntua.gr])
+
+AC_INIT([nts],
+    [0.10],
+    [xanthos@mail.ntua.gr],
+    [nts],
+    [http://dionysos.survey.ntua.gr])
+
 AM_INIT_AUTOMAKE
 
 AC_LANG(C++)
 
-AC_CONFIG_SRCDIR([src/dtfund.hpp])
+AC_CONFIG_SRCDIR([src/crdts.hpp])
 AC_CONFIG_HEADERS([config.h])
 
 # Libtool
@@ -48,6 +54,12 @@ AC_C_INLINE
 
 # Checks for library functions.
 AC_CHECK_FUNCS([floor modf pow sqrt])
+
+# Check for libraries
+AC_SEARCH_LIBS([dat], [ggdatetime], [], [
+    AC_MSG_ERROR([ERROR: can't link against ggdatetime])])
+AC_SEARCH_LIBS([top2daz], [ggeodesy], [], [
+    AC_MSG_ERROR([ERROR: can't link against ggeodesy])])
 
 AC_CONFIG_FILES([Makefile
                  src/Makefile

@@ -1,12 +1,17 @@
 #ifndef __NGPT_CRD_TSREAD__
 #define __NGPT_CRD_TSREAD__
 
+// standard headers
 #include <iostream>
 #include <cstdlib>
 #include <fstream>
+
+// ggdatetime headers
+#include "ggdatetime/datetime_read.hpp"
+#include "ggdatetime/dtcalendar.hpp"
+
+// gtms headers
 #include "crdts.hpp"
-#include "datetime_read.hpp"
-#include "dtcalendar.hpp"
 #include "genflags.hpp"
 #include "tsflagenum.hpp"
 #include "crdts.hpp"
