@@ -1,3 +1,10 @@
+/// \file tsflagenum.hpp
+///
+/// \brief Enumeration class to act as flags for time-series.
+///
+/// \see ngpt::flag
+///
+
 #ifndef __TS_FLAG_ENUM__
 #define __TS_FLAG_ENUM__
 

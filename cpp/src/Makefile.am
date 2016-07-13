@@ -20,7 +20,6 @@ libgtms_la_CXXFLAGS = \
 	-DDEBUG
 
 dist_include_HEADERS = \
-	geodetails.hpp \
 	genflags.hpp \
 	tsflagenum.hpp \
 	timeseries.hpp \
@@ -28,5 +27,4 @@ dist_include_HEADERS = \
 	cts_read.hpp \
 	earthquake_cat.hpp
 
-dist_libgtms_la_SOURCES = \
-	rf_convert.cpp
+dist_libgtms_la_SOURCES =

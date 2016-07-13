@@ -1,12 +1,17 @@
 #ifndef __EARTHQUAKE_CATALOGUE__
 #define __EARTHQUAKE_CATALOGUE__
 
+// standard headers
 #include <fstream>
 #include <cstring>
 #include <stdexcept>
-#include "dtcalendar.hpp"
-#include "datetime_read.hpp"
-#include "geoconst.hpp"   // for DPI
+
+// datetime headers
+#include "ggdatetime/dtcalendar.hpp"
+#include "ggdatetime/datetime_read.hpp"
+
+// ggeodesy headers
+#include "ggeodesy/geoconst.hpp"   // for DPI
 
 namespace ngpt
 {

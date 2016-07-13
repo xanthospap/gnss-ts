@@ -1,52 +1,77 @@
 #ifndef __NGPT_TIMESERIES__
 #define __NGPT_TIMESERIES__
 
+// standard headers
 #include <vector>
+
+// Eigen headers
 #ifdef KOKO
-#include "Eigen/Core"
-#include "Eigen/QR"
+    #include "Eigen/Core"
+    #include "Eigen/QR"
 #endif
 
-#include "dtcalendar.hpp"
+// ggdatetime headers
+#include "ggdatetime/dtcalendar.hpp"
+
 #include "genflags.hpp"
 #include "tsflagenum.hpp"
 
 namespace ngpt
 {
 
-/// A time-series is a series of data points.
-class data_point {
+/// A time-series is a series of data points. This data_point class is designed
+/// to assist the handling of timeseries. The class itself does very little 
+/// and is pretty generic. The only limitation is that the F template parameter
+/// is a enumeration class that can act as a flag, i.e. ngpt::flag<F> makes sense
+/// and has a default constructor.
+/// For example, coordinate time-series, could use: ngpt::ts_events (as the F
+/// parameter).
+///
+/// \see ngpt::flag template class
+///
+template<class F> class data_point
+{
 public:
+
     /// Simplify the flag type.
-    using tflag = ngpt::flag<ngpt::ts_events>;
+    using tflag = ngpt::flag<F>;
     
     /// Constructor.
     explicit data_point(double val=0.0, double sigma=1.0, tflag f=tflag{})
     noexcept
-    : m_value{val}, m_sigma{sigma}, m_flag{f}
+    : m_value{val},
+      m_sigma{sigma},
+      m_flag{f}
     {}
 
-    ///
+    /// const get.
     double value() const noexcept { return m_value; }
+
+    /// get/set
     double& value() noexcept { return m_value; }
 
-    ///
+    /// const get
     double sigma() const noexcept { return m_sigma; }
+
+    /// get/set
     double& sigma() noexcept { return m_sigma; }
 
-    ///
+    /// const get
     tflag flag() const noexcept { return m_flag; }
+
+    /// get/set
     tflag& flag() noexcept { return m_flag; }
 
 private:
-    double m_value;
-    double m_sigma;
-    tflag  m_flag;
+    double m_value; ///< The data point's value
+    double m_sigma; ///< The data point's sigma (i.e. standard deviation)
+    tflag  m_flag;  ///< The point's flag
 
 }; // end class data_point
 
 /// A generic time-series class
 template<class T,
+        class F,
         typename = std::enable_if_t<T::is_of_sec_type>
         >
     class timeseries
@@ -56,24 +81,35 @@ public:
     using epoch = ngpt::datetime<T>;
     
     /// Simplify the flag type.
-    using tflag = ngpt::flag<ngpt::ts_events>;
+    using tflag = ngpt::flag<F>;
 
-    /// Constructor.
+    /// Constructor. If a vector of epochs is passed in, then we know we have
+    /// our epochs.
     explicit timeseries(std::vector<epoch>* epochs=nullptr) noexcept
-    : m_epochs(epochs), m_mean{0.0}, m_events{0}, m_skiped{0}
+    : m_epochs(epochs),
+      m_mean{0.0},
+      m_skiped{0}
     {
-        if ( m_epochs ) {
-            m_data.reserve(m_epochs->size());
-        }
+        if ( m_epochs ) m_data.reserve(m_epochs->size());
+    }
+    
+    /// Constructor. Use this constructor if we don't know how many elements the
+    /// time-series will have, but we do have a clue.
+    explicit timeseries(std::size_t size_hint) noexcept
+    : m_epochs(nullptr),
+      m_mean{0.0}
+      m_skiped{0}
+    {
+        m_data.reserve(size_hint);
     }
 
     /// Get the (pointer to) epoch vector.
     std::vector<epoch>*& epochs() noexcept { return m_epochs; }
 
-    /// Get the (pointer to) epoch vector.
+    /// Get the (pointer to) epoch vector (const version).
     const std::vector<epoch>* epochs() const noexcept { return m_epochs; }
 
-    /// Get the data point at index i.
+    /// Get the data point at index i (const version).
     data_point operator[](std::size_t i) const { return m_data[i]; }
 
     /// Get the data point at index i.
@@ -252,13 +288,11 @@ public:
 private:
     /// A pointer to a vector of datetime<T> instances.
     std::vector<epoch>* m_epochs;
-    /// The average of the data points.
+    /// The average value of the data points.
     double m_mean;
     /// The vector of data points.
     std::vector<data_point> m_data;
-    /// number of parameters (offsets + vel. changes + earthquakes)
-    std::size_t m_events;
-    /// number of outliers/skipped points.
+    /// Number of outliers/skipped points.
     std::size_t m_skiped;
 
 }; // class timeseries

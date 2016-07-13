@@ -1,16 +1,24 @@
 #ifndef __NGPT_CRD_TIMESERIES__
 #define __NGPT_CRD_TIMESERIES__
 
+// standard headers
 #include <cmath>
 #include <algorithm>
-#include "dtcalendar.hpp"
+
+// ggdatetime headers
+#include "ggdatetime/dtcalendar.hpp"
+
+// ggeodesy headers
+#include "ggeodesy/ellipsoid.hpp"
+#include "ggeodesy/geodesy.hpp"
+#include "ggeodesy/car2ell.hpp"
+#include "ggeodesy/vincenty.hpp"
+#include "ggeodesy/trnsfdtls.hpp"
+
 #include "genflags.hpp"
 #include "tsflagenum.hpp"
-#include "timeseries.hpp"
-#include "geodesy.hpp"
-#include "car2ell.hpp"
 #include "earthquake_cat.hpp"
-#include "vincenty.hpp"
+#include "timeseries.hpp"
 
 namespace ngpt
 {
@@ -31,8 +39,11 @@ public:
     /// Simplify the flag type.
     using tflag = ngpt::flag<ngpt::ts_events>;
 
-    ///
+    /// An event is described by the event type and a time-stamp (i.e. epoch).
     using tsevent = std::pair<epoch, ngpt::ts_events>;
+    
+    /// standard ellipsoid
+    // using Ell = ngpt::ellipsoid::grs80;
 
     /// Constructor
     explicit crdts(std::string name="") noexcept
@@ -42,7 +53,15 @@ public:
       m_ctype{coordinate_type::unknown}
     {}
 
-    /// Copy constructor.
+    /// Copy constructor. If needed, the user can specify the start and stop
+    /// indexes i.e. construct a crdts from another crdts copying only a portion
+    /// of the original crdts.
+    /// Only the relevant portion of the events list is going to be copied. The
+    /// actual index range copied is [start, end).
+    ///
+    /// \param[in] start Starting index to start copying from.
+    /// \param[in] end   Ending index to stop copying at.
+    ///
     crdts(const crdts& ts, std::size_t start=0, std::size_t end=0)
     : m_name{ts.m_name},
       m_epochs{},
@@ -52,20 +71,20 @@ public:
       m_events{ts.m_events},
       m_ctype{ts.m_ctype}
     {
+        // start and end not given; copy the whole epochs vector
         if (!start && !end) {
             m_epochs = ts.m_epochs;
+        // end index not given; end index set to the (original) epochs size.
         } else {
-            if ( !end ) {
-                end = ts.m_epochs.size();
-            }
+            if ( !end ) { end = ts.m_epochs.size(); }
             std::vector<epoch> newvec {ts.m_epochs.cbegin()+start,
-                                       ts.m_epochs.cbegin()+end}; 
+                                       ts.m_epochs.cbegin()+end};
             m_epochs = std::move(newvec);
             // leave the events within the new time interval
             std::vector<tsevent> new_events;
             std::size_t sz = m_epochs.size();
             std::copy_if(m_events.cbegin(), m_events.cend(), new_events.begin(),
-                [sz](const tsevent& it){it.first>=m_epochs[0] && it.second<=m_epochs[sz-1]});
+                [&](const tsevent& it){it.first>=m_epochs[0] && it.second<=m_epochs[sz-1];});
         }
         set_epoch_ptr();
     }
@@ -92,6 +111,7 @@ public:
             m_x = ts.m_x;
             m_y = ts.m_y;
             m_z = ts.m_z;
+            m_events = ts.m_events;
             m_ctype = ts.m_ctype;
             set_epoch_ptr();
         }
@@ -107,6 +127,7 @@ public:
             m_x = std::move(ts.m_x);
             m_y = std::move(ts.m_y);
             m_z = std::move(ts.m_z);
+            m_events = std::move(ts.m_events);
             m_ctype = std::move(ts.m_ctype);
             set_epoch_ptr();
         }
@@ -175,7 +196,7 @@ public:
         double slat, slon, shgt;
         double elat, elon/*, ehgt*/;
         double distance;
-        ngpt::car2ell(m_x.mean(), m_y.mean(), m_z.mean(), slat, slon, shgt);
+        ngpt::car2ell<ngpt::ellipsoid::grs80>(m_x.mean(), m_y.mean(), m_z.mean(), slat, slon, shgt);
 
         while ( catalogue.read_next_earthquake(eq) && eq.epoch <= stop) {
 #ifdef DEBUG
@@ -215,7 +236,7 @@ public:
         ngpt::data_point px, py, pz;
 
         // Reference point is mean value
-        ngpt::car2ell(m_x.mean(), m_y.mean(), m_z.mean(), lat, lon, hgt);
+        ngpt::car2ell<ngpt::ellipsoid::grs80>(m_x.mean(), m_y.mean(), m_z.mean(), lat, lon, hgt);
         double sinf { std::sin(lat) };
         double cosf { std::cos(lat) };
         double sinl { std::sin(lon) };
@@ -254,7 +275,7 @@ public:
 
 private:
 
-    /// Set the epoch pointer of each timeseries component
+    /// Set the epoch pointer of each timeseries component.
     void set_epoch_ptr() noexcept
     {
         m_x.epochs() = &m_epochs;
@@ -262,11 +283,11 @@ private:
         m_z.epochs() = &m_epochs;
     }
 
-    std::string          m_name;
-    std::vector<epoch>   m_epochs;
-    timeseries<T>        m_x, m_y, m_z;
-    std::vector<tsevent> m_events;
-    coordinate_type      m_ctype;
+    std::string          m_name;         /// name of the timeseries
+    std::vector<epoch>   m_epochs;       /// vector of epochs
+    timeseries<T>        m_x, m_y, m_z;  /// the individual components
+    std::vector<tsevent> m_events;       /// a vector of events (e.g. earthquakes)
+    coordinate_type      m_ctype;        /// the coordinate type
 
 }; // end class crdts
 

@@ -56,10 +56,10 @@ AC_C_INLINE
 AC_CHECK_FUNCS([floor modf pow sqrt])
 
 # Check for libraries
-AC_SEARCH_LIBS([dat], [ggdatetime], [], [
-    AC_MSG_ERROR([ERROR: can't link against ggdatetime])])
-AC_SEARCH_LIBS([top2daz], [ggeodesy], [], [
-    AC_MSG_ERROR([ERROR: can't link against ggeodesy])])
+#AC_SEARCH_LIBS([ngpt::dat], [ggdatetime], [], [
+#    AC_MSG_ERROR([ERROR: can't link against ggdatetime])])
+#AC_SEARCH_LIBS([top2daz], [ggeodesy], [], [
+#    AC_MSG_ERROR([ERROR: can't link against ggeodesy])])
 
 AC_CONFIG_FILES([Makefile
                  src/Makefile
