@@ -53,6 +53,25 @@ public:
 
 }; // class flag<FlagEnum>
 
+/// An enumeration type to hold possible flags for coordinate time-series.
+enum class ts_event : char
+{
+    jump,
+    earthquake,
+    velocity_change,
+    outlier,
+    skip
+};
+
+/// For any enumerationtype that can be wrapped around the flag (template) class,
+/// there should be a function called skip that determines if a data point with
+/// a certain flag should be ignored.
+bool
+skip(flag<ts_event> p) noexcept
+{
+    return p.check(ts_event::outlier) || p.check(ts_event::skip);
+}
+
 } // ngpt
 
 #endif

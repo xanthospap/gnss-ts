@@ -3,6 +3,7 @@
 
 // standard headers
 #include <vector>
+#include <algorithm>
 
 // Eigen headers
 #ifdef KOKO
@@ -13,8 +14,8 @@
 // ggdatetime headers
 #include "ggdatetime/dtcalendar.hpp"
 
+// gtms headers
 #include "genflags.hpp"
-#include "tsflagenum.hpp"
 
 namespace ngpt
 {
@@ -29,6 +30,8 @@ namespace ngpt
 ///
 /// \see ngpt::flag template class
 ///
+/// \todo there should be a restriction on F that the function: bool skip(ngpt::flag<F>) noexcept
+///       exists.
 template<class F> class data_point
 {
 public:
@@ -62,6 +65,9 @@ public:
     /// get/set
     tflag& flag() noexcept { return m_flag; }
 
+    /// Should the data point be skipped/ignored?
+    bool skip() const noexcept { return skip(this->m_flag); }
+
 private:
     double m_value; ///< The data point's value
     double m_sigma; ///< The data point's sigma (i.e. standard deviation)
@@ -70,6 +76,7 @@ private:
 }; // end class data_point
 
 /// A generic time-series class
+/// Mean value and number of skipped points should always be correct (i.e. updated).
 template<class T,
         class F,
         typename = std::enable_if_t<T::is_of_sec_type>
@@ -82,6 +89,9 @@ public:
     
     /// Simplify the flag type.
     using tflag = ngpt::flag<F>;
+
+    /// The data points
+    using entry = ngpt::data_point<F>;
 
     /// Constructor. If a vector of epochs is passed in, then we know we have
     /// our epochs.
@@ -97,7 +107,7 @@ public:
     /// time-series will have, but we do have a clue.
     explicit timeseries(std::size_t size_hint) noexcept
     : m_epochs(nullptr),
-      m_mean{0.0}
+      m_mean{0.0},
       m_skiped{0}
     {
         m_data.reserve(size_hint);
@@ -110,30 +120,52 @@ public:
     const std::vector<epoch>* epochs() const noexcept { return m_epochs; }
 
     /// Get the data point at index i (const version).
-    data_point operator[](std::size_t i) const { return m_data[i]; }
+    entry operator[](std::size_t i) const { return m_data[i]; }
 
     /// Get the data point at index i.
-    data_point& operator[](std::size_t i) { return m_data[i]; }
+    entry& operator[](std::size_t i) { return m_data[i]; }
 
     /// Get the mean value
     double mean() const noexcept { return m_mean; }
 
-    /// Get the size
+    /// Get the number of data points.
     std::size_t size() const noexcept { return m_data.size(); }
 
-    /// Get the number of parameters.
-    std::size_t events() const noexcept { return m_events; }
-
     /// Get the first epoch
-    /// FIXME what if the first data point is flaged outlier or skipped ??
     epoch first_epoch() const noexcept { return m_epochs[0]; }
+
+    /// Get the first epoch **NOT** skipped. Returns the value of the first,
+    /// valid epoch and sets the idx parameter to its index.
+    ///
+    /// \todo Should i allow this to throw?
+    epoch first_valid_epoch(std::size_t idx) const noexcept
+    {
+        auto it = std::find_if(std::cbegin(*m_epochs), std::cend(*m_epochs),
+            [](const entry& i){return !(i.skip());});
+        idx = std::distance(std::cbegin(*m_epochs), it);
+        return *it;
+    }
+
+    /// Get the last epoch **NOT** skipped. Returns the value of the last,
+    /// valid epoch and sets the idx parameter to its index.
+    ///
+    /// \todo Should i allow this to throw?
+    epoch last_valid_epoch(std::size_t idx) const noexcept
+    {
+        auto it = std::find_if(std::crbegin(*m_epochs), std::crend(*m_epochs),
+            [](const entry& i){return !(i.skip());});
+        idx = std::distance(it, std::crend(*m_epochs)) - 1;
+        return *it;
+    }
 
     /// Get the last epoch
     epoch last_epoch() const noexcept { return m_epochs[m_epochs.size()-1]; }
 
     /// Copy constructor. Note that the epoch vector is set to nullptr.
     timeseries(const timeseries& ts, std::size_t start=0, std::size_t end=0)
-    : m_epochs(nullptr), m_mean{ts.m_mean}, m_events{ts.m_events}, m_skiped{ts.m_skiped}
+    : m_epochs(nullptr),
+      m_mean{ts.m_mean},
+      m_skiped{ts.m_skiped}
     {
         if (start || end) {
             if (start && !end) {
@@ -144,11 +176,13 @@ public:
             }
             m_data.reserve(end-start);
             double sz;
-            m_mean = 0.0;
+            m_mean   = 0.0;
+            m_skiped = 0;
             for (std::size_t i = start; i < end; ++i) {
                 sz = i - start;
                 m_data.emplace_back(ts[i]);
                 m_mean = (ts[i].value() + sz*m_mean)/(sz+1.0);
+                if ( m_data[i].skip() ) ++m_skiped;
             }
         } else {
             m_data = ts.m_data;
@@ -157,9 +191,9 @@ public:
 
     /// Move constructor. Note that the epoch vector is set to nullptr.
     timeseries(timeseries&& ts) noexcept
-    : m_epochs(nullptr), m_mean{std::move(ts.m_mean)},
+    : m_epochs(nullptr),
+      m_mean{std::move(ts.m_mean)},
       m_data{std::move(ts.m_data)},
-      m_events{std::move(ts.m_events)},
       m_skiped{std::move(ts.m_skiped)}
     {}
 
@@ -170,7 +204,6 @@ public:
             m_epochs = nullptr;
             m_mean   = ts.m_mean;
             m_data   = ts.m_data;
-            m_events = ts.m_events;
             m_skiped = ts.m_skiped;
         }
         return *this;
@@ -183,14 +216,13 @@ public:
             m_epochs = nullptr;
             m_mean   = std::move(ts.m_mean);
             m_data   = std::move(ts.m_data);
-            m_events = std::move(ts.m_events);
             m_skiped = std::move(ts.m_skiped);
         }
         return *this;
     }
 
     /// Split a time-series; return two new time-series in the interval:
-    /// [0-idx) and [idx-end). Note that the epoch vector s left as is.
+    /// [0-idx) and [idx-end). Note that the epoch vector is left as is.
     auto split(std::size_t idx) const
     {
         timeseries left  (*this, 0, idx);
@@ -198,45 +230,33 @@ public:
         return std::make_tuple(std::move(left), std::move(right));
     }
 
+
     /// Add a data point; returns the new mean value.
-    double add_point(double val, double sigma=1.0, tflag f=tflag{})
+    double add_point(entry&& e)
     {
         double sz = static_cast<double>(m_data.size());
-        m_data.emplace_back(val, sigma, f);
-        m_mean = (val + sz*m_mean)/(sz+1.0);
-        if (   f.check(ts_events::jump)
-            || f.check(ts_events::velocity_change)
-            || f.check(ts_events::earthquake) )
-        {
-            ++m_events;
-        }
-        if ( f.check(ts_events::outlier)
-            || f.check(ts_events::skip) )
-        {
-            ++m_skiped;
-        }
+        m_data.emplace_back(e);
+        m_mean = (e.value + sz*m_mean)/(sz+1.0);
+        if ( e.skip() ) ++m_skipped;
         return m_mean;
     }
 
-    /// Mark a data point given its index.
-    void mark(std::size_t index, ts_events f)
+    /// Add a data point; returns the new mean value.
+    double add_point(double val, double sigma=1.0, tflag f=tflag{})
     {
-        /// FIXME if this point is already marked do NOT augment the counter
-        m_data[index].flag().set(f);
-        if (   f == ts_events::jump
-            || f == ts_events::velocity_change
-            || f == ts_events::earthquake )
-        {
-            ++m_events;
-        }
-        if ( f == ts_events::outlier 
-            || f == ts_events::skip )
-        {
-            ++m_skiped;
-        }
+        return add_point( entry(val, sigma, tflag) );
     }
 
-    /// Compute the mean (i.e. central epoch).
+    /// Mark a data point given its index.
+    void mark(std::size_t index, ts_event f)
+    {
+        tflag previous = m_data[index].flag();
+        m_data[index].flag().set(f);
+        if ( !skip(previous) && skip(tflag{f}) ) ++m_skiped;
+    }
+
+    /// Compute the mean (i.e. central epoch)
+    /*
     epoch
     central_epoch() const noexcept
     {
@@ -245,6 +265,7 @@ public:
             std::get<1>(delta_dt));
         return central_epoch;
     }
+    */
 
 #ifdef KOKO
     /// Solve the least squares via QR (@Eigen)
@@ -291,7 +312,7 @@ private:
     /// The average value of the data points.
     double m_mean;
     /// The vector of data points.
-    std::vector<data_point> m_data;
+    std::vector<entry> m_data;
     /// Number of outliers/skipped points.
     std::size_t m_skiped;
 

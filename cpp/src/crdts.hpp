@@ -15,16 +15,23 @@
 #include "ggeodesy/vincenty.hpp"
 #include "ggeodesy/trnsfdtls.hpp"
 
+// gtms headers
 #include "genflags.hpp"
-#include "tsflagenum.hpp"
-#include "earthquake_cat.hpp"
 #include "timeseries.hpp"
+#include "earthquake_cat.hpp"
 
 namespace ngpt
 {
 
 enum class coordinate_type : char
 { cartesian, topocentric, ellipsoidal, unknown };
+    
+bool is_event(ngpt::flag<ts_event> f) noexcept
+{
+    return f.check(ts_event::jump)
+        || f.check(ts_event::velocity_change)
+        || f.check(ts_event::earthquake);
+}
 
 /// A generic time-series class
 template<class T,
@@ -37,10 +44,13 @@ public:
     using epoch = ngpt::datetime<T>;
     
     /// Simplify the flag type.
-    using tflag = ngpt::flag<ngpt::ts_events>;
+    using tflag = ngpt::flag<ts_event>;
 
     /// An event is described by the event type and a time-stamp (i.e. epoch).
-    using tsevent = std::pair<epoch, ngpt::ts_events>;
+    using tsevent = std::pair<epoch, ts_event>;
+
+    ///
+    using entry = timeseries<T, ts_event>::entry;
     
     /// standard ellipsoid
     // using Ell = ngpt::ellipsoid::grs80;
@@ -134,27 +144,18 @@ public:
         return *this;
     }
 
+
     /// Add a crdts data point.
     void add(const epoch& t, double x, double y, double z, double sx=1.0,
         double sy=1.0, double sz=1.0, tflag fx=tflag{}, tflag fy=tflag{},
         tflag fz=tflag{})
     {
         m_epochs.emplace_back(t);
-        m_x.add_point(x, sx, fx);
-        m_y.add_point(y, sy, fy);
-        m_z.add_point(z, sz, fz);
-        if (   fx.check(ts_events::jump)
-            || fx.check(ts_events::velocity_change)
-            || fx.check(ts_events::earthquake) 
-            || fy.check(ts_events::jump)
-            || fy.check(ts_events::velocity_change)
-            || fy.check(ts_events::earthquake) 
-            || fz.check(ts_events::jump)
-            || fz.check(ts_events::velocity_change)
-            || fz.check(ts_events::earthquake) 
-        )
-        {
-            m_events.emplace_back(epoch, ;
+        m_x.add_point(entry{x, sx, fx});
+        m_y.add_point(entry{y, sy, fy});
+        m_z.add_point(entry{z, sz, fz});
+        if (is_event(fx) || is_event(fy) || is_event(fz)) {
+            m_events.emplace_back(epoch); /// \todo what if more than one events??
         }
         set_epoch_ptr();
     }
@@ -285,7 +286,7 @@ private:
 
     std::string          m_name;         /// name of the timeseries
     std::vector<epoch>   m_epochs;       /// vector of epochs
-    timeseries<T>        m_x, m_y, m_z;  /// the individual components
+    timeseries<T, ngpt::ts_event> m_x, m_y, m_z;  /// the individual components
     std::vector<tsevent> m_events;       /// a vector of events (e.g. earthquakes)
     coordinate_type      m_ctype;        /// the coordinate type
 

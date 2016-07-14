@@ -21,7 +21,6 @@ libgtms_la_CXXFLAGS = \
 
 dist_include_HEADERS = \
 	genflags.hpp \
-	tsflagenum.hpp \
 	timeseries.hpp \
 	crdts.hpp \
 	cts_read.hpp \
