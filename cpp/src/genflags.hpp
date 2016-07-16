@@ -67,7 +67,7 @@ enum class ts_event : char
 /// there should be a function called skip that determines if a data point with
 /// a certain flag should be ignored.
 bool
-skip(flag<ts_event> p) noexcept
+__skip__(flag<ts_event> p) noexcept
 {
     return p.check(ts_event::outlier) || p.check(ts_event::skip);
 }

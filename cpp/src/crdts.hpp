@@ -4,6 +4,7 @@
 // standard headers
 #include <cmath>
 #include <algorithm>
+#include <initializer_list>
 
 // ggdatetime headers
 #include "ggdatetime/dtcalendar.hpp"
@@ -33,6 +34,25 @@ bool is_event(ngpt::flag<ts_event> f) noexcept
         || f.check(ts_event::earthquake);
 }
 
+std::size_t
+split_events(std::vector<ts_event>& events,
+    std::initializer_list<ngpt::flag<ts_event>> f) noexcept
+{
+    events.clear();
+    for (auto i = f.begin(); i != f.end(); ++i) {
+        if (i->check(ts_event::jump)
+            && (std::find(events.cbegin(), events.cend(), ts_event::jump)==events.cend()))
+            events.emplace_back(ts_event::jump);
+        if (i->check(ts_event::velocity_change)
+            && (std::find(events.cbegin(), events.cend(), ts_event::velocity_change)==events.cend()))
+            events.emplace_back(ts_event::velocity_change);
+        if (i->check(ts_event::earthquake)
+            && (std::find(events.cbegin(), events.cend(), ts_event::earthquake)==events.cend()))
+            events.emplace_back(ts_event::earthquake);
+    }
+    return events.size();
+}
+
 /// A generic time-series class
 template<class T,
         typename = std::enable_if_t<T::is_of_sec_type>
@@ -50,7 +70,7 @@ public:
     using tsevent = std::pair<epoch, ts_event>;
 
     ///
-    using entry = timeseries<T, ts_event>::entry;
+    using entry = typename timeseries<T, ts_event>::entry;
     
     /// standard ellipsoid
     // using Ell = ngpt::ellipsoid::grs80;
@@ -150,12 +170,18 @@ public:
         double sy=1.0, double sz=1.0, tflag fx=tflag{}, tflag fy=tflag{},
         tflag fz=tflag{})
     {
+        std::vector<ts_event> events;
+        events.reserve(3);
         m_epochs.emplace_back(t);
         m_x.add_point(entry{x, sx, fx});
         m_y.add_point(entry{y, sy, fy});
         m_z.add_point(entry{z, sz, fz});
         if (is_event(fx) || is_event(fy) || is_event(fz)) {
-            m_events.emplace_back(epoch); /// \todo what if more than one events??
+            split_events(events, {fx, fy, fz});
+            for (auto i = events.begin(); i != events.end(); ++i) {
+                m_events.emplace_back(t, *i);
+                // m_events.push_back(tsevent{t,*i});
+            }
         }
         set_epoch_ptr();
     }
@@ -180,6 +206,10 @@ public:
     /// M >= -5.60 + 2.17 * log_10(d), where d is the distance from the station
     /// to the epicenter (in meters). This is taken from \cite{fodits}
     /// The number of applied earthquakes is returned.
+    /// To 'apply the earthquakes' means that the instance's events records are
+    /// augmented to hold the earthquakes of interest.
+    ///
+    /// \todo Should i also mark the ts records??
     std::size_t
     apply_earthquake_catalogue(earthquake_catalogue<T>& catalogue)
     {
@@ -189,36 +219,34 @@ public:
         earthquake<T> eq;
         std::size_t start_search_at = 0,
                     eq_applied = 0;
+        double faz = 0,
+               baz = 0;
 #ifdef DEBUG
         std::size_t eq_read = 0;
 #endif
 
-        /// The site's coordinates (ellipsoidal)
-        double slat, slon, shgt;
-        double elat, elon/*, ehgt*/;
-        double distance;
-        ngpt::car2ell<ngpt::ellipsoid::grs80>(m_x.mean(), m_y.mean(), m_z.mean(), slat, slon, shgt);
+        double slat, slon, shgt, distance;
+        ngpt::car2ell<ngpt::ellipsoid::grs80>(m_x.mean(), m_y.mean(), m_z.mean(),
+            slat, slon, shgt);
 
-        while ( catalogue.read_next_earthquake(eq) && eq.epoch <= stop) {
+        while ( catalogue.read_next_earthquake(eq) && eq.epoch() <= stop) {
 #ifdef DEBUG
             ++eq_read;
 #endif
-            if (eq.epoch >= start) {
-                elat = eq.latitude;
-                elon = eq.longtitude;
-                //ehgt = -1 * eq.depth;
-                distance = ngpt::haversine(slat, slon, elat, elon);
-                if ( eq.magnitude >= -5.6 + 2.17 * std::log10(distance) ) {
+            if (eq.epoch() >= start) {
+                distance = eq.epicenter_distance(slat, slon, faz, baz);
+                if ( eq.magnitude() >= -5.6 + 2.17 * std::log10(distance) ) {
                     auto lower = std::lower_bound(m_epochs.begin()+start_search_at,
-                                m_epochs.end(), eq.epoch);
+                                m_epochs.end(), eq.epoch());
                     assert(lower != m_epochs.end());
                     auto index = std::distance(m_epochs.begin(), lower);
-                    m_x.mark(index, ts_events::earthquake);
-                    m_y.mark(index, ts_events::earthquake);
-                    m_z.mark(index, ts_events::earthquake);
+                    // m_x.mark(index, ts_events::earthquake);
+                    // m_y.mark(index, ts_events::earthquake);
+                    // m_z.mark(index, ts_events::earthquake);
+                    m_events.emplace_back(eq.epoch(), ts_event::earthquake);
                     ++eq_applied;
 #ifdef DEBUG
-                    std::cout<<"\tAdding earthquake at "<< eq.epoch.stringify() << " (" <<eq.latitude*180/DPI<<", "<<eq.longtitude*180/DPI<<"), of size "<<eq.magnitude<<"M.\n";
+                    std::cout<<"\tAdding earthquake at "<< eq.epoch().stringify() << " (" <<eq.lat()*180/DPI<<", "<<eq.lon()*180/DPI<<"), of size "<<eq.magnitude()<<"M.\n";
 #endif
                 }
             }
@@ -226,18 +254,24 @@ public:
 #ifdef DEBUG
         std::cout<<"\tRead "<<eq_read<<" earthquakes from catalogue\n";
 #endif
+        sort_event_list();
         return eq_applied;
     }
     
-    /// Convert from cartesian to topocentric.
+    /// \brief Convert from cartesian to topocentric.
+    ///
+    /// Usin the mean value as reference point, all points in the time-series
+    /// are transformed to topocentric (i.e. vectors from the reference point in
+    /// a topocentric reference frame) along with their std. deviations.
     void cartesian2topocentric() noexcept
     {
         double lat, lon, hgt;
         double cf[9], cf_s[9];
-        ngpt::data_point px, py, pz;
+        entry px, py, pz;
 
         // Reference point is mean value
-        ngpt::car2ell<ngpt::ellipsoid::grs80>(m_x.mean(), m_y.mean(), m_z.mean(), lat, lon, hgt);
+        ngpt::car2ell<ngpt::ellipsoid::grs80>(m_x.mean(), m_y.mean(), m_z.mean(),
+            lat, lon, hgt);
         double sinf { std::sin(lat) };
         double cosf { std::cos(lat) };
         double sinl { std::sin(lon) };
@@ -247,13 +281,10 @@ public:
         ngpt::detail::car2top_cov_matrix(sinf*sinf, sinl*sinl, cosf*cosf, cosl*cosl, cf);
 
 #ifdef DEBUG
-        assert(
-            m_x.size() == m_epochs.size() &&
-            m_y.size() == m_epochs.size() &&
-            m_z.size() == m_epochs.size() );
+        assert( m_x.size() == m_y.size() && m_y.size() == m_z.size() );
 #endif
         
-        for (std::size_t i = 0; i < m_epochs.size(); ++i) {
+        for (std::size_t i = 0; i < m_x.size(); ++i) {
             px = m_x[i];
             py = m_y[i];
             pz = m_z[i];
@@ -272,6 +303,21 @@ public:
         }
         m_ctype = coordinate_type::topocentric;
         return;
+    }
+
+    /// \brief Sort (in chronological order) the events list and remove duplicates.
+    ///
+    std::size_t
+    sort_event_list() noexcept
+    {
+        if ( m_events.empty() ) return 0;
+        // sort
+        std::sort(m_events.begin(), m_events.end(),
+            [&](const tsevent& a, const tsevent& b){return a.first < b.first;});
+        // remove duplicates
+        m_events.erase(std::unique(m_events.begin(), m_events.end()),
+            m_events.end());
+        return m_events.size();
     }
 
 private:

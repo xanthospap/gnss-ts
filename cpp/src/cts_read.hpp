@@ -13,7 +13,6 @@
 // gtms headers
 #include "crdts.hpp"
 #include "genflags.hpp"
-#include "tsflagenum.hpp"
 #include "crdts.hpp"
 
 namespace ngpt

@@ -66,7 +66,7 @@ public:
     tflag& flag() noexcept { return m_flag; }
 
     /// Should the data point be skipped/ignored?
-    bool skip() const noexcept { return skip(this->m_flag); }
+    bool skip() const noexcept { return /*ngpt::__skip__(this->m_flag);*/false; }
 
 private:
     double m_value; ///< The data point's value
@@ -236,15 +236,15 @@ public:
     {
         double sz = static_cast<double>(m_data.size());
         m_data.emplace_back(e);
-        m_mean = (e.value + sz*m_mean)/(sz+1.0);
-        if ( e.skip() ) ++m_skipped;
+        m_mean = (e.value() + sz * m_mean)/(sz+1.0);
+        if ( e.skip() ) ++m_skiped;
         return m_mean;
     }
 
     /// Add a data point; returns the new mean value.
     double add_point(double val, double sigma=1.0, tflag f=tflag{})
     {
-        return add_point( entry(val, sigma, tflag) );
+        return this->add_point( entry{val, sigma, f} );
     }
 
     /// Mark a data point given its index.
