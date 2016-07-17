@@ -4,12 +4,14 @@
 // standard headers
 #include <vector>
 #include <algorithm>
+#ifdef DEBUG
+#include <iostream>
+#include <cstdio>
+#endif
 
 // Eigen headers
-#ifdef KOKO
-    #include "Eigen/Core"
-    #include "Eigen/QR"
-#endif
+#include "eigen3/Eigen/Core"
+#include "eigen3/Eigen/QR"
 
 // ggdatetime headers
 #include "ggdatetime/dtcalendar.hpp"
@@ -114,10 +116,10 @@ public:
     }
 
     /// Get the (pointer to) epoch vector.
-    std::vector<epoch>*& epochs() noexcept { return m_epochs; }
+    std::vector<epoch>*& epoch_ptr() noexcept { return m_epochs; }
 
     /// Get the (pointer to) epoch vector (const version).
-    const std::vector<epoch>* epochs() const noexcept { return m_epochs; }
+    const std::vector<epoch>* epoch_ptr() const noexcept { return m_epochs; }
 
     /// Get the data point at index i (const version).
     entry operator[](std::size_t i) const { return m_data[i]; }
@@ -131,8 +133,14 @@ public:
     /// Get the number of data points.
     std::size_t size() const noexcept { return m_data.size(); }
 
+    /// Get the number of epochs.
+    std::size_t epochs() const noexcept { return m_epochs ? m_epochs->size() : 0; }
+
     /// Get the first epoch
-    epoch first_epoch() const noexcept { return m_epochs[0]; }
+    epoch first_epoch() const noexcept { return (*m_epochs)[0]; }
+    
+    /// Get the last epoch
+    epoch last_epoch() const noexcept { return (*m_epochs)[m_epochs->size()-1]; }
 
     /// Get the first epoch **NOT** skipped. Returns the value of the first,
     /// valid epoch and sets the idx parameter to its index.
@@ -157,9 +165,6 @@ public:
         idx = std::distance(it, std::crend(*m_epochs)) - 1;
         return *it;
     }
-
-    /// Get the last epoch
-    epoch last_epoch() const noexcept { return m_epochs[m_epochs.size()-1]; }
 
     /// Copy constructor. Note that the epoch vector is set to nullptr.
     timeseries(const timeseries& ts, std::size_t start=0, std::size_t end=0)
@@ -255,56 +260,145 @@ public:
         if ( !skip(previous) && skip(tflag{f}) ) ++m_skiped;
     }
 
-    /// Compute the mean (i.e. central epoch)
-    /*
+    /// \brief Compute the mean (i.e. central epoch)
+    ///
+    /// This version uses the very first and last epochs to compute the mean,
+    /// regardless if they are marked as unused.
+    ///
+    /// \see first_epoch
+    /// \see last_epoch
+    /// \see cenral_valid_epoch
     epoch
     central_epoch() const noexcept
     {
-        auto delta_dt = ngpt::delta_date(first_epoch(), last_epoch());
-        auto central_dt = m_epochs[0].add(std::get<0>(delta_dt),
-            std::get<1>(delta_dt));
+        using K = typename epoch::sec_type;
+        auto delta_dt   = ngpt::delta_date(last_epoch(), first_epoch());
+        auto half_lag   = std::get<0>(delta_dt).as_underlying_type() / 2;
+        auto sec_of_day = std::get<1>(delta_dt) + 
+            ( (std::get<0>(delta_dt).as_underlying_type()%2) ? K{K::max_in_day/2} : K{0} );
+        auto central_epoch = (*m_epochs)[0].add(modified_julian_day{half_lag},
+            sec_of_day);
         return central_epoch;
     }
-    */
-
-#ifdef KOKO
-    /// Solve the least squares via QR (@Eigen)
-    ???
-    qr_ls_solve(std::vector<double>* phases = nullptr)
+    
+    /// \brief Compute the mean (i.e. central epoch)
+    ///
+    /// This version uses the first and last epochs that are not marked as
+    /// unused to compute the mean epoch. I.e., if the first 10 epochs --data
+    /// points-- are marked as outliers, then they shall not be used to compute
+    /// the mean.
+    /// 
+    /// \see first_valid_epoch
+    /// \see last_valid_epoch
+    /// \see cenral_epoch
+    epoch
+    central_valid_epoch() const noexcept
     {
-        if ( !m_epochs ) { throw 1 }
+        using K = typename epoch::sec_type;
+        auto start_epoch = this->first_valid_epoch();
+        auto delta_dt   = ngpt::delta_date(last_valid_epoch(), start_epoch);
+        auto half_lag   = std::get<0>(delta_dt).as_underlying_type() / 2;
+        auto sec_of_day = std::get<1>(delta_dt) + 
+            ( (std::get<0>(delta_dt).as_underlying_type()%2) ? K{K::max_in_day/2} : K{0} );
+        auto central_epoch = start_epoch.add(modified_julian_day{half_lag},
+            sec_of_day);
+        return central_epoch;
+    }
+
+    /// Solve the least squares via QR (@Eigen)
+    /// To set e.g. a period of 1 year, set periods[0] = 365.25
+    /// For 6-months period, periods[0] = 365.25/2
+    // Reformulate the problem : A * x = b, with W**2 = P to
+    //                          (W*A) * x = (W*b), where W*A=N and W*b=y
+    auto
+    qr_ls_solve(std::vector<double>* periods = nullptr, double sigma0 = .001)
+    {
+        if ( !m_epochs ) { throw 1; }
+        assert( epochs() == size() );
 
         /// number of cols/parameters = events + a0 + b0 + 2*(periodic_terms)
-        std::size_t parameters = events() + 1  + 1  + (phases ? 2*phases->size() : 0);
+        std::size_t parameters = /*m_events.size() +*/ 1  + 1  + (periods ? 2*periods->size() : 0);
+
         /// number of rows/observations = size - (outliers + skiped)
         std::size_t observations = m_data.size() - m_skiped;
+        
         /// indexes
-        std::size_t idx{0}, counter{0};
+        std::size_t idx{0}, counter{0}, col{0};
+
+        /// set the phases right (trnaform to omegas: 2 * pi * frequency)
+        std::vector<double> omegas;
+        double freq;
+        if ( periods ) {
+            omegas = *periods;
+            for (auto it = omegas.begin(); it != omegas.end(); ++it) {
+                freq = 1.0e0 / *it;
+                *it = D2PI * freq;
+            }
+        }
 
         if ( !parameters ) { throw 1; }
-        if ( observations < parameters ) { throw 1; }
+        if ( observations < parameters ) { throw 2; }
         
         Eigen::MatrixXd A = Eigen::MatrixXd(observations, parameters);
         Eigen::VectorXd b = Eigen::VectorXd(observations);
+        Eigen::VectorXd x = Eigen::VectorXd(parameters);
 
         // TODO
         // This is cool for a day interval but probably not enough for more
         // dense sampling rates.
-        double mean_epoch { this->central_epoch().as_mjd() };
-        for (const auto& it = m_data.cbegin(); it!= m_data.cend(); ++it)
+        double mean_epoch { this->central_epoch().as_mjd() },
+               dt, weight;
+        // \todo would it be better to fill this column-wise??
+        // Instead of forming A and b, we will form A*sqrt(P) and b*sqrt(P)
+        for (auto it = m_data.cbegin(); it!= m_data.cend(); ++it)
         {
-            if ( !it->flag().check(ts_event::outlier)
-                && !it->flag().check(ts_event::skip) )
-            {
-                A.coeff(idx, 0) = 1.0e0;
-                A.coeff(idx, 1) = m_epochs->[counter] - mean_epoch;
+            if ( !it->skip() ) {
+                // delta days from central epoch
+                dt = (*m_epochs)[counter].as_mjd() - mean_epoch;
+                // weight of observation
+                weight = sigma0 / m_data[counter].sigma();
+
+                // coef for constant (linear) term
+                A(idx, col) = 1.0e0 * weight;
+                ++col;
+                // coef for constant (linear) velocity i.e. m/year
+                A(idx, col) = weight * (dt / 365.25);
+                ++col;
+                // Harmonic coefficients for each period ...
+                for (auto j = omegas.cbegin(); j != omegas.cend(); ++j) {
+                    // cosinus or phase
+                    A(idx, col) = std::cos((*j) * dt) * weight;
+                    ++col;
+                    // sinus or out-of-phase
+                    A(idx, col) = std::sin((*j) * dt) * weight;
+                    ++col;
+                }
+                // observation matrix (vector)
+                b(idx) = m_data[counter].value() * weight;
                 ++idx;
+                col = 0;
             }
             ++counter;
         }
-        ///FIXME
+        std::cout<<"\nNumber of data points: " << size();
+        std::cout<<"\nNumber of epochs:      " << epochs();
+        std::cout<<"\nA : "<<observations<<" * "<<parameters;
+        std::cout<<"\nb : "<<observations;
+        std::cout<<"\nStart: "<<first_epoch().stringify();
+        std::cout<<" Stop: "<<last_epoch().stringify();
+        std::cout<<" Mean: "<<central_epoch().stringify();
+        
+        // Solve via QR
+        x = A.colPivHouseholderQr().solve(b);
+        std::cout<<"\nLS solution vector: \n";
+        for (std::size_t i=0;i<parameters;i++) printf("%+15.5f\n",x(i));
+
+        // residual vector u = A*x - b
+        Eigen::VectorXd u = Eigen::VectorXd(observations);
+        u = A * x - b;
+
+        return x;
     }
-#endif
 
 private:
     /// A pointer to a vector of datetime<T> instances.

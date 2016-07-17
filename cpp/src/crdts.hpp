@@ -5,6 +5,9 @@
 #include <cmath>
 #include <algorithm>
 #include <initializer_list>
+#ifdef DEBUG
+#include <iostream>
+#endif
 
 // ggdatetime headers
 #include "ggdatetime/dtcalendar.hpp"
@@ -163,7 +166,9 @@ public:
         }
         return *this;
     }
-
+    
+    /// Size of the time-series (i.e. number of epochs)
+    std::size_t size() const noexcept { return m_epochs.size(); }
 
     /// Add a crdts data point.
     void add(const epoch& t, double x, double y, double z, double sx=1.0,
@@ -267,7 +272,8 @@ public:
     {
         double lat, lon, hgt;
         double cf[9], cf_s[9];
-        entry px, py, pz;
+        entry  px, py, pz;
+        double dx, dy, dz;
 
         // Reference point is mean value
         ngpt::car2ell<ngpt::ellipsoid::grs80>(m_x.mean(), m_y.mean(), m_z.mean(),
@@ -281,16 +287,19 @@ public:
         ngpt::detail::car2top_cov_matrix(sinf*sinf, sinl*sinl, cosf*cosf, cosl*cosl, cf);
 
 #ifdef DEBUG
-        assert( m_x.size() == m_y.size() && m_y.size() == m_z.size() );
+        assert( m_x.size() == m_y.size() && m_y.size() == m_z.size() && m_x.size() == size() );
 #endif
         
-        for (std::size_t i = 0; i < m_x.size(); ++i) {
+        for (std::size_t i = 0; i < size(); ++i) {
             px = m_x[i];
             py = m_y[i];
             pz = m_z[i];
-            px.value() = cf[0]*m_x[i].value() + cf[1]*m_y[i].value() + cf[2]*m_z[i].value();
-            py.value() = cf[3]*m_x[i].value() + cf[4]*m_y[i].value() + cf[5]*m_z[i].value();
-            pz.value() = cf[6]*m_x[i].value() + cf[7]*m_y[i].value() + cf[8]*m_z[i].value();
+            dx = m_x[i].value() - m_x.mean();
+            dy = m_y[i].value() - m_y.mean();
+            dz = m_z[i].value() - m_z.mean();
+            px.value() = cf[0]*dx + cf[1]*dy + cf[2]*dz;
+            py.value() = cf[3]*dx + cf[4]*dy + cf[5]*dz;
+            pz.value() = cf[6]*dx + cf[7]*dy + cf[8]*dz;
             double xsigma2 = px.sigma() * px.sigma();
             double ysigma2 = py.sigma() * py.sigma();
             double zsigma2 = pz.sigma() * pz.sigma();
@@ -320,14 +329,29 @@ public:
         return m_events.size();
     }
 
+    ///
+    auto
+    qr_fit(std::vector<double>* periods = nullptr)
+    {
+        return m_x.qr_ls_solve(periods);
+    }
+
+    // \todo entr is shit just for debuging
+    epoch depoch(std::size_t i) const { return m_epochs[i]; }
+    std::tuple<entry, entry, entry>
+        ddata(std::size_t i) const
+    {
+        return std::tuple<entry, entry, entry>(m_x[i], m_y[i], m_z[i]);
+    }
+
 private:
 
     /// Set the epoch pointer of each timeseries component.
     void set_epoch_ptr() noexcept
     {
-        m_x.epochs() = &m_epochs;
-        m_y.epochs() = &m_epochs;
-        m_z.epochs() = &m_epochs;
+        m_x.epoch_ptr() = &m_epochs;
+        m_y.epoch_ptr() = &m_epochs;
+        m_z.epoch_ptr() = &m_epochs;
     }
 
     std::string          m_name;         /// name of the timeseries
@@ -337,6 +361,20 @@ private:
     coordinate_type      m_ctype;        /// the coordinate type
 
 }; // end class crdts
+
+template<typename T>
+    std::ostream& operator<<(std::ostream& os, const crdts<T>& ts)
+{
+    std::string s;
+    std::size_t sz = ts.size();
+    for (std::size_t i = 0; i < sz; i++)
+    {
+        // s = ts.depoch(i).stringify();
+        auto t = ts.ddata(i);
+        os << ts.depoch(i).as_mjd() << " " << std::get<0>(t).value() << ", " << std::get<1>(t).value() << ", " << std::get<2>(t).value() << "\n";
+    }
+    return os;
+}
 
 } // end namespace ngpt
 

@@ -34,5 +34,13 @@ main(int argc, char* argv[])
         ts.apply_earthquake_catalogue(eq_cat);
     }
 
+    // fit model via ls (QR)
+    std::vector<double> periods = { 365.25, 365.25/2 };
+    ts.qr_fit( &periods );
+    // ts.qr_fit();
+
+    // print the time-series
+    // std::cout << ts;
+
     return 0;
 }
