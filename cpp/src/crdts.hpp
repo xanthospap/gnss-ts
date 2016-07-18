@@ -29,7 +29,8 @@ namespace ngpt
 
 enum class coordinate_type : char
 { cartesian, topocentric, ellipsoidal, unknown };
-    
+ 
+// Check if a flag is actually an event   
 bool is_event(ngpt::flag<ts_event> f) noexcept
 {
     return f.check(ts_event::jump)
@@ -37,8 +38,12 @@ bool is_event(ngpt::flag<ts_event> f) noexcept
         || f.check(ts_event::earthquake);
 }
 
+// Split a list of flags to individual events; events are filled in the
+// 'events' parameter which is cleared at the start of the function.
+// \todo this is kinda stupid; do i really need this ??
 std::size_t
-split_events(std::vector<ts_event>& events,
+split_events(
+    std::vector<ts_event>& events,
     std::initializer_list<ngpt::flag<ts_event>> f) noexcept
 {
     events.clear();
@@ -55,6 +60,7 @@ split_events(std::vector<ts_event>& events,
     }
     return events.size();
 }
+
 
 /// A generic time-series class
 template<class T,
@@ -245,9 +251,6 @@ public:
                                 m_epochs.end(), eq.epoch());
                     assert(lower != m_epochs.end());
                     auto index = std::distance(m_epochs.begin(), lower);
-                    // m_x.mark(index, ts_events::earthquake);
-                    // m_y.mark(index, ts_events::earthquake);
-                    // m_z.mark(index, ts_events::earthquake);
                     m_events.emplace_back(eq.epoch(), ts_event::earthquake);
                     ++eq_applied;
 #ifdef DEBUG
@@ -259,7 +262,7 @@ public:
 #ifdef DEBUG
         std::cout<<"\tRead "<<eq_read<<" earthquakes from catalogue\n";
 #endif
-        sort_event_list();
+        sort_events_list();
         return eq_applied;
     }
     
@@ -314,26 +317,19 @@ public:
         return;
     }
 
-    /// \brief Sort (in chronological order) the events list and remove duplicates.
-    ///
-    std::size_t
-    sort_event_list() noexcept
-    {
-        if ( m_events.empty() ) return 0;
-        // sort
-        std::sort(m_events.begin(), m_events.end(),
-            [&](const tsevent& a, const tsevent& b){return a.first < b.first;});
-        // remove duplicates
-        m_events.erase(std::unique(m_events.begin(), m_events.end()),
-            m_events.end());
-        return m_events.size();
-    }
 
     ///
     auto
     qr_fit(std::vector<double>* periods = nullptr)
     {
-        return m_x.qr_ls_solve(periods);
+        // sort the events list
+        this->sort_events_list();
+
+        // split the events into seperate vectors
+        std::vector<epoch> jumps, velchgs, earthqs;
+        this->split_events_list(jumps, velchgs, earthqs);
+
+        return m_x.qr_ls_solve(&jumps, &velchgs, periods, 1e-3);
     }
 
     // \todo entr is shit just for debuging
@@ -352,6 +348,45 @@ private:
         m_x.epoch_ptr() = &m_epochs;
         m_y.epoch_ptr() = &m_epochs;
         m_z.epoch_ptr() = &m_epochs;
+    }
+    
+    /// \brief Sort (in chronological order) the events list and remove duplicates.
+    ///
+    std::size_t
+    sort_events_list() noexcept
+    {
+        if ( m_events.empty() ) return 0;
+        // sort
+        std::sort(m_events.begin(), m_events.end(),
+            [&](const tsevent& a, const tsevent& b){return a.first < b.first;});
+        // remove duplicates
+        m_events.erase(std::unique(m_events.begin(), m_events.end()),
+            m_events.end());
+        return m_events.size();
+    }
+
+    // Split a list of events to individual vectors containing:
+    // a: jumps
+    // b: velocity changes
+    // c: earthquakes
+    void
+    split_events_list(std::vector<epoch>& jumps, std::vector<epoch>& vel_changes,
+    std::vector<epoch>& earthquakes) const noexcept
+    {
+        jumps.clear();
+        vel_changes.clear();
+        earthquakes.clear();
+
+        for (auto i = m_events.cbegin(); i != m_events.cend(); ++i) {
+            if (i->second == ts_event::jump ) {
+                jumps.emplace_back(i->first);
+            } else if (i->second == ts_event::velocity_change ) {
+                vel_changes.emplace_back(i->first);
+            } else if (i->second == ts_event::earthquake ) {
+                earthquakes.emplace_back(i->first);
+            }
+        }
+        return;
     }
 
     std::string          m_name;         /// name of the timeseries

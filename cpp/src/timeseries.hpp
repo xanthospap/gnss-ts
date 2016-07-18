@@ -67,8 +67,8 @@ public:
     /// get/set
     tflag& flag() noexcept { return m_flag; }
 
-    /// Should the data point be skipped/ignored?
-    bool skip() const noexcept { return /*ngpt::__skip__(this->m_flag);*/false; }
+    /// Should the data point be skipped/ignored ?
+    bool skip() const noexcept { return ngpt::__skip__(this->m_flag); }
 
 private:
     double m_value; ///< The data point's value
@@ -94,6 +94,9 @@ public:
 
     /// The data points
     using entry = ngpt::data_point<F>;
+    
+    /// An event is described by the event type and a time-stamp (i.e. epoch).
+    using event = std::pair<epoch, tflag>;
 
     /// Constructor. If a vector of epochs is passed in, then we know we have
     /// our epochs.
@@ -304,20 +307,165 @@ public:
             sec_of_day);
         return central_epoch;
     }
+    auto
+    qr_ls_solve(
+        std::vector<epoch>* jumps       = nullptr,
+        std::vector<epoch>* vel_changes = nullptr,
+        std::vector<double>* periods    = nullptr,
+        double              sigma0      = 1e-03
+    )
+    {
+        assert( m_epochs != nullptr && epochs() == size() );
+
+        // Number of parameters to be estimated:
+        std::size_t parameters = 1 + 1                                   // linear velocity terms
+                               + ((jumps) ? jumps->size() : 0)             // jumps/offsets
+                               + ((vel_changes) ? vel_changes->size() : 0) // velocity changes
+                               + ((periods) ? periods->size()*2 : 0);      // harmonic terms
+
+        // Number of observations (ommiting the ones to be skipped)
+        std::size_t observations = m_data.size() - m_skiped;
+        
+        // Can we estimate ?
+        if ( observations < parameters ) {
+            throw std::runtime_error("[ERROR] Too few observations to perform LS"
+            "\n\tNumber of parameters:   "+std::to_string(parameters)+"\n\tNumber of observations: "+std::to_string(observations));
+        }
+
+        // set the phases right (transform to angular frequencies i.e. omegas:
+        //  2 * pi * frequency)
+        std::vector<double> omegas;
+        double freq;
+        if ( periods ) {
+            omegas = *periods;
+            for (auto it = omegas.begin(); it != omegas.end(); ++it) {
+                freq = 1.0e0 / *it;
+                *it = D2PI * freq;
+            }
+        }
+        
+        // Set up the matrices; the model is: A * x = b
+        // since we have uncorrelated variance matric though, we will actually
+        // setup: sqrt(P)*A * x = sqrt(P)*b, where sqrt(Pii) = sigma0/sigma(ii)
+        Eigen::MatrixXd A = Eigen::MatrixXd(observations, parameters);
+        Eigen::VectorXd b = Eigen::VectorXd(observations);
+        Eigen::VectorXd x = Eigen::VectorXd(parameters);
+        
+        // Compute the mean epoch as mjd; all deltatimes are computed as differences
+        // from this (mean) epoch.
+        double mean_epoch { this->central_epoch().as_mjd() };
+
+        // \todo would it be better to fill this column-wise??
+        // Go ahead and form the A and b matrices.
+        // We're gonna need some variables ...
+        double dt, weight;
+        std::size_t idx{0},     // index (i.e. row of A and b matrices)
+                    counter{0}, // index of the current data point (m_data)
+                    col{0};     // the column index
+        epoch current_epoch;    // the current epoch
+
+#ifdef DEBUG
+        std::cout<<"\nNumber of data points: " << size();
+        std::cout<<"\nNumber of epochs:      " << epochs();
+        std::cout<<"\nA : "<<observations<<" * "<<parameters;
+        std::cout<<"\nb : "<<observations;
+        std::cout<<"\nStart: "<<first_epoch().stringify();
+        std::cout<<" Stop: "<<last_epoch().stringify();
+        std::cout<<" Mean: "<<central_epoch().stringify();
+#endif
+
+        for (auto it = m_data.cbegin(); it!= m_data.cend(); ++it)
+        {
+            // only include data that are not marked as 'skip'
+            if ( !it->skip() ) {
+                current_epoch = (*m_epochs)[counter];
+                // delta days from central epoch as mjd.
+                dt = current_epoch.as_mjd() - mean_epoch;
+                // weight of observation
+                weight = sigma0 / m_data[counter].sigma();
+                //
+                // Design Matrix A
+                // ------------------------------------------------------------
+                //
+                // coef for constant (linear) term
+                A(idx, col) = 1.0e0 * weight;
+                ++col;
+                // coef for constant (linear) velocity i.e. m/year
+                A(idx, col) = weight * (dt / 365.25);
+                ++col;
+                // Harmonic coefficients for each period ...
+                for (auto j = omegas.cbegin(); j != omegas.cend(); ++j) {
+                    // cosinus or phase
+                    A(idx, col) = std::cos((*j) * dt) * weight;
+                    ++col;
+                    // sinus or out-of-phase
+                    A(idx, col) = std::sin((*j) * dt) * weight;
+                    ++col;
+                }
+                // Set up jumps ...
+                for (auto j = jumps->cbegin(); j != jumps->cend(); ++j) {
+                    if ( *j >= current_epoch ) {
+                        A(idx, col) = weight;
+                    } else {
+                        A(idx, col) = .0e0;
+                    }
+                    ++col;
+                }
+                // Set up velocity changes ...
+                for (auto j = vel_changes->cbegin(); j != vel_changes->cend(); ++j) {
+                    if ( *j >= current_epoch ) {
+                        A(idx, col) = weight * (dt / 365.25);
+                    } else {
+                        A(idx, col) = .0e0;
+                    }
+                    ++col;
+                }
+
+                //
+                // Observation Matrix (vector b)
+                // ------------------------------------------------------------
+                //
+                b(idx) = m_data[counter].value() * weight;
+
+#ifdef DEBUG
+                assert(col == parameters);
+#endif
+                ++idx;
+                col = 0;
+            }
+            ++counter;
+        }
+#ifdef DEBUG
+        assert(counter <= size());
+#endif
+        
+        // Solve via QR
+        x = A.colPivHouseholderQr().solve(b);
+        std::cout<<"\nLS solution vector: \n";
+        for (std::size_t i=0;i<parameters;i++) printf("%+15.5f\n",x(i));
+
+        // residual vector u = A*x - b
+        Eigen::VectorXd u = Eigen::VectorXd(observations);
+        u = A * x - b;
+
+        return x;
+    }
 
     /// Solve the least squares via QR (@Eigen)
     /// To set e.g. a period of 1 year, set periods[0] = 365.25
     /// For 6-months period, periods[0] = 365.25/2
     // Reformulate the problem : A * x = b, with W**2 = P to
     //                          (W*A) * x = (W*b), where W*A=N and W*b=y
+    /*
     auto
-    qr_ls_solve(std::vector<double>* periods = nullptr, double sigma0 = .001)
+    qr_ls_solve(std::vector<event>* events = nullptr, 
+        std::vector<double>* periods = nullptr, double sigma0 = .001)
     {
         if ( !m_epochs ) { throw 1; }
         assert( epochs() == size() );
 
         /// number of cols/parameters = events + a0 + b0 + 2*(periodic_terms)
-        std::size_t parameters = /*m_events.size() +*/ 1  + 1  + (periods ? 2*periods->size() : 0);
+        std::size_t parameters = m_events.size() + 1  + 1  + (periods ? 2*periods->size() : 0);
 
         /// number of rows/observations = size - (outliers + skiped)
         std::size_t observations = m_data.size() - m_skiped;
@@ -357,7 +505,9 @@ public:
                 dt = (*m_epochs)[counter].as_mjd() - mean_epoch;
                 // weight of observation
                 weight = sigma0 / m_data[counter].sigma();
-
+                //
+                // Design Matrix A
+                //
                 // coef for constant (linear) term
                 A(idx, col) = 1.0e0 * weight;
                 ++col;
@@ -373,8 +523,23 @@ public:
                     A(idx, col) = std::sin((*j) * dt) * weight;
                     ++col;
                 }
-                // observation matrix (vector)
+                // Set up events ...
+                for (auto j = events->cbegin(); j != events->cend(); ++j) {
+                    if ( j->first >= (*m_epochs)[counter] ) {
+                        // handle jumps/offsets
+                        if ( j->second.jump() ) {
+                            A(idx, col) = 1.0;
+                        } else {
+                            A(idx, col) = 0.0e0;
+                        }
+                        // handle velocity changes
+                    }
+                }
+                //
+                // Observation Matrix (vector b)
+                //
                 b(idx) = m_data[counter].value() * weight;
+
                 ++idx;
                 col = 0;
             }
@@ -398,7 +563,7 @@ public:
         u = A * x - b;
 
         return x;
-    }
+    }*/
 
 private:
     /// A pointer to a vector of datetime<T> instances.
@@ -413,4 +578,5 @@ private:
 }; // class timeseries
 
 } // end namespace ngpt
+
 #endif
