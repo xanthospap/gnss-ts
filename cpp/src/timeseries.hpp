@@ -307,6 +307,71 @@ public:
             sec_of_day);
         return central_epoch;
     }
+
+    void
+    make_model_line(
+        const epoch& from,
+        const epoch& to,
+        const epoch& mean_epoch,
+        const std::vector<double>& parameters,
+        const std::vector<epoch>& jumps,
+        const std::vector<epoch>& vel_changes,
+        std::vector<double>& periods,
+        std::vector<double>& model_x,
+        std::vector<double>& model_y
+
+    )
+    {
+        double mindt = from.as_mjd() - mean_epoch.as_mjd(); // in days
+        double maxdt = to.as_mjd() - mean_epoch.as_mjd();   // in days
+        
+        // set the phases right (transform to angular frequencies i.e. omegas:
+        //  2 * pi * frequency)
+        std::vector<double> omegas {periods};
+        double freq;
+        for (auto it = omegas.begin(); it != omegas.end(); ++it) {
+            freq = 1.0e0 / *it;
+            *it = D2PI * freq;
+        }
+
+        std::vector<double> x, y;
+        x.reserve(maxdt - mindt + 2);
+        y.reserve(maxdt - mindt + 2);
+        epoch current_epoch{from};
+        std::size_t col{0};
+
+        for (double t = mindt; t <= maxdt; t += 1) {
+            x.push_back(current_epoch.as_mjd());
+            double fx = parameters[0] + parameters[1]*(t/365.25);
+            col = 2;
+            // Harmonic coefficients for each period ...
+            for (auto j = omegas.cbegin(); j != omegas.cend(); ++j) {
+                fx += ( parameters[col] * std::cos((*j) * t) +
+                    parameters[col+1] * std::sin((*j) * t) );
+                col += 2;
+            }
+            // Set up jumps ...
+            for (auto j = jumps.cbegin(); j != jumps.cend(); ++j) {
+                if ( *j >= current_epoch ) {
+                    fx += parameters[col];
+                }
+                ++col;
+            }
+            // Set up velocity changes ...
+            for (auto j = vel_changes.cbegin(); j != vel_changes.cend(); ++j) {
+                if ( *j >= current_epoch ) {
+                    fx += parameters[col]*(t/365.25);
+                }
+                ++col;
+            }
+            y.push_back(fx);
+            current_epoch = current_epoch.add(modified_julian_day{1}, T{0});
+        }
+        model_x = std::move(x);
+        model_y = std::move(y);
+        return;
+    }
+
     auto
     qr_ls_solve(
         std::vector<epoch>* jumps       = nullptr,
@@ -448,7 +513,11 @@ public:
         Eigen::VectorXd u = Eigen::VectorXd(observations);
         u = A * x - b;
 
-        return x;
+        std::vector<double> xvec;
+        xvec.reserve(parameters);
+        for (std::size_t ii = 0; ii < parameters; ii++) xvec.push_back(x(ii));
+
+        return xvec;
     }
 
     /// Solve the least squares via QR (@Eigen)

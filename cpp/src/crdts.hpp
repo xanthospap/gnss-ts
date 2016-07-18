@@ -21,6 +21,9 @@
 #include "ggeodesy/car2ell.hpp"
 #include "ggeodesy/vincenty.hpp"
 #include "ggeodesy/trnsfdtls.hpp"
+#ifdef DEBUG
+#include "ggeodesy/car2top.hpp"
+#endif
 
 // gtms headers
 #include "genflags.hpp"
@@ -300,6 +303,8 @@ public:
             px = m_x[i];
             py = m_y[i];
             pz = m_z[i];
+            car2top<ngpt::ellipsoid::grs80>(m_x.mean(), m_y.mean(), m_z.mean(), px.value(), py.value(), pz.value(), dx, dy, dz);
+            /*
             dx = m_x[i].value() - m_x.mean();
             dy = m_y[i].value() - m_y.mean();
             dz = m_z[i].value() - m_z.mean();
@@ -315,6 +320,11 @@ public:
             m_x[i] = px;
             m_y[i] = py;
             m_z[i] = pz;
+            */
+            m_x[i].value() = dx;
+            m_y[i].value() = dy;
+            m_z[i].value() = dz;
+
         }
         m_ctype = coordinate_type::topocentric;
         return;
@@ -420,7 +430,25 @@ public:
         std::vector<epoch> jumps, velchgs, earthqs;
         this->split_events_list(jumps, velchgs, earthqs);
 
-        return m_x.qr_ls_solve(&jumps, &velchgs, periods, 1e-3);
+        std::cout<<"\nComponent X:";
+        /*auto xv =*/ m_x.qr_ls_solve(&jumps, &velchgs, periods, 1e-3);
+
+        std::cout<<"\nComponent Y:";
+        /* auto yv =*/ m_y.qr_ls_solve(&jumps, &velchgs, periods, 1e-3);
+        
+        std::cout<<"\nComponent Z:";
+        auto zv = m_z.qr_ls_solve(&jumps, &velchgs, periods, 1e-3);
+    
+        std::vector<double> modelx, modely;
+
+        m_z.make_model_line(first_epoch(), last_epoch(), m_z.central_epoch(),
+            zv, jumps, velchgs, *periods, modelx, modely);
+        std::ofstream fout ("test.mod");
+        for (std::size_t i = 0; i < modelx.size(); ++i)
+        fout << modelx[i] << " " << modely[i] << "\n";
+        fout.close();
+
+        return;
     }
 
     // \todo entr is shit just for debuging
@@ -497,7 +525,7 @@ template<typename T>
     {
         // s = ts.depoch(i).stringify();
         auto t = ts.ddata(i);
-        os << ts.depoch(i).as_mjd() << " " << std::get<0>(t).value() << ", " << std::get<1>(t).value() << ", " << std::get<2>(t).value() << "\n";
+        os << ts.depoch(i).as_mjd() << " " << std::get<0>(t).value() << " " << std::get<1>(t).value() << " " << std::get<2>(t).value() << "\n";
     }
     return os;
 }

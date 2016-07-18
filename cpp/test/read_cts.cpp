@@ -1,4 +1,5 @@
 #include <iostream>
+#include <fstream>
 
 #include "cts_read.hpp"
 #include "crdts.hpp"
@@ -46,7 +47,9 @@ main(int argc, char* argv[])
     // ts.qr_fit();
 
     // print the time-series
-    // std::cout << ts;
+    std::ofstream fout ("test.neu");
+    fout << ts;
+    fout.close();
 
     return 0;
 }
