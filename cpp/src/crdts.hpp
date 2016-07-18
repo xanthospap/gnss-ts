@@ -5,6 +5,9 @@
 #include <cmath>
 #include <algorithm>
 #include <initializer_list>
+#include <fstream>
+#include <cstring>
+#include <stdexcept>
 #ifdef DEBUG
 #include <iostream>
 #endif
@@ -317,6 +320,94 @@ public:
         return;
     }
 
+    bool
+    apply_event_list_file(const char* evnf)
+    {
+        std::ifstream fin (evnf, std::ifstream::in);
+        if ( !fin.is_open() ) {
+#ifdef DEBUG
+            throw std::invalid_argument
+            ("Could not open event catalogue file: \""+std::string(evnf)+"\"");
+#endif
+            return false;
+        }
+
+        char line[256];
+        char *start;
+        epoch t, e_start{this->first_epoch()}, e_stop{this->last_epoch()};
+        std::vector<tsevent> events;
+
+        while ( fin.getline(line, 256) )
+        {
+            if ( *line != '#' && *line != 'Y' && *line != ' ' ) { // if not comment line, empty line, or header ...
+                start = line;
+                t = ngpt::strptime_ymd_hms<T>(line, &start);
+                bool resolved = false;
+                for (int i = 0; i < 14 && !resolved; ++i) {
+                    if ( *start != ' ' ) {
+                        switch (*start) {
+                            case 'J' :
+                                if (t>=e_start && t<=e_stop) events.emplace_back(t, ts_event::jump);
+                                resolved = true;
+                                break;
+                            case 'j' :
+                                if (t>=e_start && t<=e_stop) events.emplace_back(t, ts_event::jump);
+                                resolved = true;
+                                break;
+                            case 'E' :
+                                if (t>=e_start && t<=e_stop) events.emplace_back(t, ts_event::earthquake);
+                                resolved = true;
+                                break;
+                            case 'e' :
+                                if (t>=e_start && t<=e_stop) events.emplace_back(t, ts_event::earthquake);
+                                resolved = true;
+                                break;
+                            case 'V' :
+                                if (t>=e_start && t<=e_stop) events.emplace_back(t, ts_event::velocity_change);
+                                resolved = true;
+                                break;
+                            case 'v' :
+                                if (t>=e_start && t<=e_stop) events.emplace_back(t, ts_event::velocity_change);
+                                resolved = true;
+                                break;
+                            default:
+#ifdef DEBUG
+                                throw std::runtime_error("[ERROR] Invalid event flag in event list file \""+std::string(evnf)+"\""
+                                "\nFlag is \""+ (*start) +"\"");
+#endif
+                                return false;
+                        }
+                    }
+                    ++start;
+                }
+                if (!resolved) {
+#ifdef DEBUG
+                    throw std::runtime_error("[ERROR] Invalid line in event list file \""+std::string(evnf)+"\""
+                        "\nLine is \""+std::string(line)+"\"");
+#endif
+                    return false;
+                }
+                resolved = false;
+            }
+        }
+        if ( !fin.eof() ) {
+#ifdef DEBUG
+                throw std::runtime_error("Error reading events list file: \""+std::string(evnf)+"\".");
+#endif
+                return false;
+        }
+
+#ifdef DEBUG
+    std::cout<<"\nFound and applied "<<events.size()<<" events.";
+#endif
+
+        // add the newly created vector to the vector of events
+        std::move(events.begin(), events.end(), std::back_inserter(m_events));
+        // sort the events list
+        sort_events_list();
+        // all done!
+        return true;
+    }
 
     ///
     auto

@@ -1,5 +1,5 @@
-#ifndef __EARTHQUAKE_CATALOGUE__
-#define __EARTHQUAKE_CATALOGUE__
+#ifndef __NGPT_EARTHQUAKE_CATALOGUE_HPP__
+#define __NGPT_EARTHQUAKE_CATALOGUE_HPP__
 
 // standard headers
 #include <fstream>

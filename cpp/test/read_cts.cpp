@@ -11,8 +11,8 @@
 int
 main(int argc, char* argv[])
 {
-    if (argc < 2 || argc > 3) {
-        std::cerr<<"Usage: read_cts <cts file> [catalogue]\n";
+    if (argc < 2 || argc > 4) {
+        std::cerr<<"Usage: read_cts <cts file> [catalogue [events_file]]\n";
         return 1;
     }
 
@@ -32,6 +32,12 @@ main(int argc, char* argv[])
         ngpt::earthquake_catalogue<ngpt::milliseconds> eq_cat
             {std::string(argv[2])};
         ts.apply_earthquake_catalogue(eq_cat);
+    }
+    
+    // If events file provided, read and apply the events
+    if (argc > 3) {
+        std::cout<<"\nApplying events list file: \""<<argv[3]<<"\".";
+        ts.apply_event_list_file(argv[3]);
     }
 
     // fit model via ls (QR)
