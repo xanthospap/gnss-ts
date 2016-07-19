@@ -293,7 +293,7 @@ public:
         double cosl { std::cos(lon) };
         
         ngpt::detail::car2top_matrix(sinf, sinl, cosf, cosl, cf);
-        ngpt::detail::car2top_cov_matrix(sinf*sinf, sinl*sinl, cosf*cosf, cosl*cosl, cf);
+        ngpt::detail::car2top_cov_matrix(sinf*sinf, sinl*sinl, cosf*cosf, cosl*cosl, cf_s);
 
 #ifdef DEBUG
         assert( m_x.size() == m_y.size() && m_y.size() == m_z.size() && m_x.size() == size() );
@@ -303,28 +303,21 @@ public:
             px = m_x[i];
             py = m_y[i];
             pz = m_z[i];
-            car2top<ngpt::ellipsoid::grs80>(m_x.mean(), m_y.mean(), m_z.mean(), px.value(), py.value(), pz.value(), dx, dy, dz);
-            /*
-            dx = m_x[i].value() - m_x.mean();
-            dy = m_y[i].value() - m_y.mean();
-            dz = m_z[i].value() - m_z.mean();
-            px.value() = cf[0]*dx + cf[1]*dy + cf[2]*dz;
-            py.value() = cf[3]*dx + cf[4]*dy + cf[5]*dz;
-            pz.value() = cf[6]*dx + cf[7]*dy + cf[8]*dz;
+            dx = m_x.mean() - px.value();
+            dy = m_y.mean() - py.value();
+            dz = m_z.mean() - pz.value();
+            px.value() = -(cf[0]*dx + cf[1]*dy + cf[2]*dz);
+            py.value() = -(cf[3]*dx + cf[4]*dy + cf[5]*dz);
+            pz.value() = -(cf[6]*dx + cf[7]*dy + cf[8]*dz);
             double xsigma2 = px.sigma() * px.sigma();
             double ysigma2 = py.sigma() * py.sigma();
             double zsigma2 = pz.sigma() * pz.sigma();
-            px.sigma() = std::sqrt(cf[0]*xsigma2 + cf[1]*ysigma2 + cf[2]*zsigma2);
-            py.sigma() = std::sqrt(cf[3]*xsigma2 + cf[4]*ysigma2 + cf[5]*zsigma2);
-            pz.sigma() = std::sqrt(cf[6]*xsigma2 + cf[7]*ysigma2 + cf[8]*zsigma2);
+            px.sigma() = std::sqrt(cf_s[0]*xsigma2 + cf_s[1]*ysigma2 + cf_s[2]*zsigma2);
+            py.sigma() = std::sqrt(cf_s[3]*xsigma2 + cf_s[4]*ysigma2 + cf_s[5]*zsigma2);
+            pz.sigma() = std::sqrt(cf_s[6]*xsigma2 + cf_s[7]*ysigma2 + cf_s[8]*zsigma2);
             m_x[i] = px;
             m_y[i] = py;
             m_z[i] = pz;
-            */
-            m_x[i].value() = dx;
-            m_y[i].value() = dy;
-            m_z[i].value() = dz;
-
         }
         m_ctype = coordinate_type::topocentric;
         return;

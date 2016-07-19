@@ -372,10 +372,11 @@ public:
         return;
     }
 
+    // change paramters from pointers to refs.
     auto
     qr_ls_solve(
-        std::vector<epoch>* jumps       = nullptr,
-        std::vector<epoch>* vel_changes = nullptr,
+        std::vector<epoch>& jumps       = nullptr,
+        std::vector<epoch>& vel_changes = nullptr,
         std::vector<double>* periods    = nullptr,
         double              sigma0      = 1e-03
     )
