@@ -375,19 +375,19 @@ public:
     // change paramters from pointers to refs.
     auto
     qr_ls_solve(
-        std::vector<epoch>& jumps       = nullptr,
-        std::vector<epoch>& vel_changes = nullptr,
-        std::vector<double>* periods    = nullptr,
-        double              sigma0      = 1e-03
+        const std::vector<epoch>&  jumps,
+        const std::vector<epoch>&  vel_changes,
+        const std::vector<double>& periods,
+        double sigma0 = 1e-03
     )
     {
         assert( m_epochs != nullptr && epochs() == size() );
 
         // Number of parameters to be estimated:
-        std::size_t parameters = 1 + 1                                   // linear velocity terms
-                               + ((jumps) ? jumps->size() : 0)             // jumps/offsets
-                               + ((vel_changes) ? vel_changes->size() : 0) // velocity changes
-                               + ((periods) ? periods->size()*2 : 0);      // harmonic terms
+        std::size_t parameters = 1 + 1              // linear velocity terms
+                               + jumps.size()       // jumps/offsets
+                               + vel_changes.size() // velocity changes
+                               + periods.size()*2;  // harmonic terms
 
         // Number of observations (ommiting the ones to be skipped)
         std::size_t observations = m_data.size() - m_skiped;
@@ -402,8 +402,8 @@ public:
         //  2 * pi * frequency)
         std::vector<double> omegas;
         double freq;
-        if ( periods ) {
-            omegas = *periods;
+        if ( !periods.empty() ) {
+            omegas = periods;
             for (auto it = omegas.begin(); it != omegas.end(); ++it) {
                 freq = 1.0e0 / *it;
                 *it = D2PI * freq;
@@ -469,7 +469,7 @@ public:
                     ++col;
                 }
                 // Set up jumps ...
-                for (auto j = jumps->cbegin(); j != jumps->cend(); ++j) {
+                for (auto j = jumps.begin(); j != jumps.cend(); ++j) {
                     if ( *j >= current_epoch ) {
                         A(idx, col) = weight;
                     } else {
@@ -478,7 +478,7 @@ public:
                     ++col;
                 }
                 // Set up velocity changes ...
-                for (auto j = vel_changes->cbegin(); j != vel_changes->cend(); ++j) {
+                for (auto j = vel_changes.cbegin(); j != vel_changes.cend(); ++j) {
                     if ( *j >= current_epoch ) {
                         A(idx, col) = weight * (dt / 365.25);
                     } else {
@@ -634,6 +634,16 @@ public:
 
         return x;
     }*/
+
+    /// Return a const iterator to the first entry of the data points vector
+    auto
+    citer_start() const noexcept
+    { return m_data.c_begin(); }
+    
+    /// Return a const iterator to the last+1 (=end) entry of the data points vector
+    auto
+    citer_stop() const noexcept
+    { return m_data.c_end(); }
 
 private:
     /// A pointer to a vector of datetime<T> instances.

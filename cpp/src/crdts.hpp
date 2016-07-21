@@ -414,8 +414,12 @@ public:
 
     ///
     auto
-    qr_fit(std::vector<double>* periods = nullptr)
+    qr_fit(std::vector<double>* i_periods = nullptr)
     {
+        // don't let the periods vector be NULL
+        std::vector<double> periods;
+        if ( i_periods ) periods = *i_periods;
+
         // sort the events list
         this->sort_events_list();
 
@@ -424,22 +428,23 @@ public:
         this->split_events_list(jumps, velchgs, earthqs);
 
         std::cout<<"\nComponent X:";
-        /*auto xv =*/ m_x.qr_ls_solve(&jumps, &velchgs, periods, 1e-3);
+        /*auto xv =*/ m_x.qr_ls_solve(jumps, velchgs, periods, 1e-3);
 
         std::cout<<"\nComponent Y:";
-        /* auto yv =*/ m_y.qr_ls_solve(&jumps, &velchgs, periods, 1e-3);
+        /* auto yv =*/ m_y.qr_ls_solve(jumps, velchgs, periods, 1e-3);
         
         std::cout<<"\nComponent Z:";
-        auto zv = m_z.qr_ls_solve(&jumps, &velchgs, periods, 1e-3);
+        auto zv = m_z.qr_ls_solve(jumps, velchgs, periods, 1e-3);
     
+        /*
         std::vector<double> modelx, modely;
-
         m_z.make_model_line(first_epoch(), last_epoch(), m_z.central_epoch(),
             zv, jumps, velchgs, *periods, modelx, modely);
         std::ofstream fout ("test.mod");
         for (std::size_t i = 0; i < modelx.size(); ++i)
         fout << modelx[i] << " " << modely[i] << "\n";
         fout.close();
+        */
 
         return;
     }
