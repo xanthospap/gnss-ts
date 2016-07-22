@@ -24,6 +24,9 @@
 #ifdef DEBUG
 #include "ggeodesy/car2top.hpp"
 #endif
+#ifdef WMULTIT
+#include <thread>
+#endif
 
 // gtms headers
 #include "genflags.hpp"
@@ -429,12 +432,10 @@ public:
 
         std::cout<<"\nComponent X:";
         /*auto xv =*/ m_x.qr_ls_solve(jumps, velchgs, periods, 1e-3);
-
         std::cout<<"\nComponent Y:";
         /* auto yv =*/ m_y.qr_ls_solve(jumps, velchgs, periods, 1e-3);
-        
         std::cout<<"\nComponent Z:";
-        auto zv = m_z.qr_ls_solve(jumps, velchgs, periods, 1e-3);
+        /* auto zv =*/ m_z.qr_ls_solve(jumps, velchgs, periods, 1e-3);
     
         /*
         std::vector<double> modelx, modely;

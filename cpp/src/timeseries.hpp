@@ -244,8 +244,11 @@ public:
     {
         double sz = static_cast<double>(m_data.size());
         m_data.emplace_back(e);
-        m_mean = (e.value() + sz * m_mean)/(sz+1.0);
-        if ( e.skip() ) ++m_skiped;
+        if ( e.skip() ) {
+            ++m_skiped;
+        } else {
+            m_mean = (e.value() + sz * m_mean)/(sz+1.0);
+        }
         return m_mean;
     }
 
@@ -316,7 +319,7 @@ public:
         const std::vector<double>& parameters,
         const std::vector<epoch>& jumps,
         const std::vector<epoch>& vel_changes,
-        std::vector<double>& periods,
+        const std::vector<double>& periods,
         std::vector<double>& model_x,
         std::vector<double>& model_y
 
@@ -379,6 +382,7 @@ public:
         const std::vector<epoch>&  vel_changes,
         const std::vector<double>& periods,
         double sigma0 = 1e-03
+        /*,std::string* print_model_to=nullptr*/
     )
     {
         assert( m_epochs != nullptr && epochs() == size() );
@@ -513,127 +517,40 @@ public:
         // residual vector u = A*x - b
         Eigen::VectorXd u = Eigen::VectorXd(observations);
         u = A * x - b;
-
+    
+        // solution vector to std::vector
         std::vector<double> xvec;
         xvec.reserve(parameters);
         for (std::size_t ii = 0; ii < parameters; ii++) xvec.push_back(x(ii));
 
+        // residuals as time-series
+        timeseries<T, F> res {*this};
+        idx = counter = 0;
+        for (std::size_t i = 0; i < size(); i++) {
+            if ( !m_data[i].skip() ) {
+                data_point<F> dp { u(idx), m_data[i].sigma(),  m_data[i].flag() };
+                ++idx;
+                res[i] = dp;
+            } else {
+                res[i] = m_data[i];
+            }
+        }
+
+        // should we print the model line to a file?
+        /*
+        if ( print_model_to ) {
+            std::ofstream fout { (*print_model_to).c_str() };
+            if ( !fout.is_open() ) {
+                throw std::runtime_error(
+                    "[ERROR] Failed to open file for writing: \""+(*print_model_to)+"\".");
+            }
+            std::vector<double> model_x, model_y;
+            make_model_line(first_epoch(), last_epoch(), central_epoch(),
+                xvec, jumps, vel_changes, periods, model_x, model_y);
+        }
+        */
         return xvec;
     }
-
-    /// Solve the least squares via QR (@Eigen)
-    /// To set e.g. a period of 1 year, set periods[0] = 365.25
-    /// For 6-months period, periods[0] = 365.25/2
-    // Reformulate the problem : A * x = b, with W**2 = P to
-    //                          (W*A) * x = (W*b), where W*A=N and W*b=y
-    /*
-    auto
-    qr_ls_solve(std::vector<event>* events = nullptr, 
-        std::vector<double>* periods = nullptr, double sigma0 = .001)
-    {
-        if ( !m_epochs ) { throw 1; }
-        assert( epochs() == size() );
-
-        /// number of cols/parameters = events + a0 + b0 + 2*(periodic_terms)
-        std::size_t parameters = m_events.size() + 1  + 1  + (periods ? 2*periods->size() : 0);
-
-        /// number of rows/observations = size - (outliers + skiped)
-        std::size_t observations = m_data.size() - m_skiped;
-        
-        /// indexes
-        std::size_t idx{0}, counter{0}, col{0};
-
-        /// set the phases right (trnaform to omegas: 2 * pi * frequency)
-        std::vector<double> omegas;
-        double freq;
-        if ( periods ) {
-            omegas = *periods;
-            for (auto it = omegas.begin(); it != omegas.end(); ++it) {
-                freq = 1.0e0 / *it;
-                *it = D2PI * freq;
-            }
-        }
-
-        if ( !parameters ) { throw 1; }
-        if ( observations < parameters ) { throw 2; }
-        
-        Eigen::MatrixXd A = Eigen::MatrixXd(observations, parameters);
-        Eigen::VectorXd b = Eigen::VectorXd(observations);
-        Eigen::VectorXd x = Eigen::VectorXd(parameters);
-
-        // TODO
-        // This is cool for a day interval but probably not enough for more
-        // dense sampling rates.
-        double mean_epoch { this->central_epoch().as_mjd() },
-               dt, weight;
-        // \todo would it be better to fill this column-wise??
-        // Instead of forming A and b, we will form A*sqrt(P) and b*sqrt(P)
-        for (auto it = m_data.cbegin(); it!= m_data.cend(); ++it)
-        {
-            if ( !it->skip() ) {
-                // delta days from central epoch
-                dt = (*m_epochs)[counter].as_mjd() - mean_epoch;
-                // weight of observation
-                weight = sigma0 / m_data[counter].sigma();
-                //
-                // Design Matrix A
-                //
-                // coef for constant (linear) term
-                A(idx, col) = 1.0e0 * weight;
-                ++col;
-                // coef for constant (linear) velocity i.e. m/year
-                A(idx, col) = weight * (dt / 365.25);
-                ++col;
-                // Harmonic coefficients for each period ...
-                for (auto j = omegas.cbegin(); j != omegas.cend(); ++j) {
-                    // cosinus or phase
-                    A(idx, col) = std::cos((*j) * dt) * weight;
-                    ++col;
-                    // sinus or out-of-phase
-                    A(idx, col) = std::sin((*j) * dt) * weight;
-                    ++col;
-                }
-                // Set up events ...
-                for (auto j = events->cbegin(); j != events->cend(); ++j) {
-                    if ( j->first >= (*m_epochs)[counter] ) {
-                        // handle jumps/offsets
-                        if ( j->second.jump() ) {
-                            A(idx, col) = 1.0;
-                        } else {
-                            A(idx, col) = 0.0e0;
-                        }
-                        // handle velocity changes
-                    }
-                }
-                //
-                // Observation Matrix (vector b)
-                //
-                b(idx) = m_data[counter].value() * weight;
-
-                ++idx;
-                col = 0;
-            }
-            ++counter;
-        }
-        std::cout<<"\nNumber of data points: " << size();
-        std::cout<<"\nNumber of epochs:      " << epochs();
-        std::cout<<"\nA : "<<observations<<" * "<<parameters;
-        std::cout<<"\nb : "<<observations;
-        std::cout<<"\nStart: "<<first_epoch().stringify();
-        std::cout<<" Stop: "<<last_epoch().stringify();
-        std::cout<<" Mean: "<<central_epoch().stringify();
-        
-        // Solve via QR
-        x = A.colPivHouseholderQr().solve(b);
-        std::cout<<"\nLS solution vector: \n";
-        for (std::size_t i=0;i<parameters;i++) printf("%+15.5f\n",x(i));
-
-        // residual vector u = A*x - b
-        Eigen::VectorXd u = Eigen::VectorXd(observations);
-        u = A * x - b;
-
-        return x;
-    }*/
 
     /// Return a const iterator to the first entry of the data points vector
     auto
