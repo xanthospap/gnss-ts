@@ -4,6 +4,7 @@
 // standard headers
 #include <vector>
 #include <algorithm>
+#include <tuple>
 #ifdef DEBUG
 #include <iostream>
 #include <cstdio>
@@ -97,6 +98,9 @@ public:
     
     /// An event is described by the event type and a time-stamp (i.e. epoch).
     using event = std::pair<epoch, tflag>;
+
+    ///
+    using element = std::pair<epoch&, entry&>;
 
     /// Constructor. If a vector of epochs is passed in, then we know we have
     /// our epochs.
@@ -556,11 +560,21 @@ public:
     auto
     citer_start() const noexcept
     { return m_data.c_begin(); }
+
+    /// Return an (non-const) iterator to the first entry of the data points vector
+    auto
+    iter_start() const noexcept
+    { return m_data.begin(); }
     
     /// Return a const iterator to the last+1 (=end) entry of the data points vector
     auto
     citer_stop() const noexcept
     { return m_data.c_end(); }
+    
+    /// Return a (non-const) iterator to the last+1 (=end) entry of the data points vector
+    auto
+    iter_stop() const noexcept
+    { return m_data.end(); }
 
 private:
     /// A pointer to a vector of datetime<T> instances.
@@ -573,6 +587,98 @@ private:
     std::size_t m_skiped;
 
 }; // class timeseries
+
+template<class T,
+        class F,
+        typename = std::enable_if_t<T::is_of_sec_type>
+        >
+    class timeseries_iterator
+{
+public:
+    /// The specific datetime<T> class we will be using.
+    using epoch = ngpt::datetime<T>;
+    
+    /// Simplify the flag type.
+    using tflag = ngpt::flag<F>;
+
+    /// The data points
+    using entry = ngpt::data_point<F>;
+    
+    ///
+    using element = std::pair<epoch&, entry&>;
+
+    explicit
+    timeseries_iterator(timeseries<T, F>& ts)
+    : m_timeseries{ts},
+      m_data_iter{ts.iter_begin()},
+      m_epoch_iter{ts.epoch_ptr()->begin()}
+    {
+        assert( ts.epoch_ptr() && ts.size() == ts.epochs() );
+    }
+
+    //
+    timeseries_iterator(const timeseries_iterator&) = delete;
+
+    //
+    timeseries_iterator& operator=(const timeseries_iterator&) = delete;
+
+    element begin() noexcept
+    {
+        m_data_iter  = m_timeseries.iter_begin();
+        m_epoch_iter = m_timeseries.epoch_ptr()->begin();
+        return std::tie(m_data_iter, m_epoch_iter);
+    }
+
+    element end() noexcept
+    {
+        m_data_iter  = m_timeseries.iter_end();
+        m_epoch_iter = m_timeseries.epoch_ptr()->end();
+        return std::tie(m_data_iter, m_epoch_iter);
+    }
+
+    element advance() noexcept
+    {
+        ++m_data_iter;
+        ++m_epoch_iter;
+        return std::tie(m_data_iter, m_epoch_iter);
+    }
+
+    std::size_t
+    index()
+    {
+        return std::distance(m_timeseries.iter_begin(), m_data_iter);
+    }
+
+private:
+    timeseries<T, F>& m_timeseries;
+    typename std::vector<entry>::iterator m_data_iter;
+    typename std::vector<epoch>::iterator m_epoch_iter;
+};
+
+/*
+template<class T,
+        class F,
+        typename = std::enable_if_t<T::is_of_sec_type>
+        >
+    class running_window
+{
+public:
+    /// The specific datetime<T> class we will be using.
+    using epoch = ngpt::datetime<T>;
+    
+    /// Simplify the flag type.
+    using tflag = ngpt::flag<F>;
+
+    /// The data points
+    using entry = ngpt::data_point<F>;
+
+private:
+    timeseries<T, F>& m_timeseries;
+    epoch             m_window;
+    std::vector<entry>::iterator m_entry_it_begin, m_entry_it_end;
+    std::vector<epoch>::iterator m_epoch_it_begin, m_epoch_it_end;
+};
+*/
 
 } // end namespace ngpt
 
