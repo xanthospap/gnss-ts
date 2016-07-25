@@ -457,6 +457,20 @@ public:
     {
         return std::tuple<entry, entry, entry>(m_x[i], m_y[i], m_z[i]);
     }
+ 
+#ifdef DEBUG   
+    void
+    test_iter()
+    {
+        std::size_t sum = 0;
+        for (auto it = m_x.begin(); it != m_x.end(); ++it)
+        {
+            ++sum;
+            std::cout<<"\nNew element at distance: "<<it.index();
+        }
+        std::cout<<"\nFinal sum = "<<sum<<", size = "<<m_x.size();
+    }
+#endif
 
 private:
 

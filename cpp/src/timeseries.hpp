@@ -3,6 +3,7 @@
 
 // standard headers
 #include <vector>
+#include <iterator>
 #include <algorithm>
 #include <tuple>
 #ifdef DEBUG
@@ -78,6 +79,9 @@ private:
 
 }; // end class data_point
 
+// forward decleration
+template<class T, class F> class timeseries_iterator;
+
 /// A generic time-series class
 /// Mean value and number of skipped points should always be correct (i.e. updated).
 template<class T,
@@ -100,8 +104,8 @@ public:
     using event = std::pair<epoch, tflag>;
 
     ///
-    using element = std::pair<epoch&, entry&>;
-
+    using record = std::tuple<epoch&, entry&>;
+    
     /// Constructor. If a vector of epochs is passed in, then we know we have
     /// our epochs.
     explicit timeseries(std::vector<epoch>* epochs=nullptr) noexcept
@@ -133,6 +137,9 @@ public:
 
     /// Get the data point at index i.
     entry& operator[](std::size_t i) { return m_data[i]; }
+    
+    /// Get the record at index i.
+    record& operator()(std::size_t i) { return std::tie((*m_epochs[i]), m_data[i]); }
 
     /// Get the mean value
     double mean() const noexcept { return m_mean; }
@@ -557,24 +564,38 @@ public:
     }
 
     /// Return a const iterator to the first entry of the data points vector
-    auto
+    typename std::vector<entry>::const_iterator
     citer_start() const noexcept
     { return m_data.c_begin(); }
 
     /// Return an (non-const) iterator to the first entry of the data points vector
-    auto
+    typename std::vector<entry>::iterator
     iter_start() const noexcept
     { return m_data.begin(); }
     
     /// Return a const iterator to the last+1 (=end) entry of the data points vector
-    auto
+    typename std::vector<entry>::const_iterator
     citer_stop() const noexcept
     { return m_data.c_end(); }
     
     /// Return a (non-const) iterator to the last+1 (=end) entry of the data points vector
-    auto
+    typename std::vector<entry>::iterator
     iter_stop() const noexcept
     { return m_data.end(); }
+
+    timeseries_iterator<T, F>
+    begin()
+    {
+        return timeseries_iterator<T, F> {*this};
+    }
+
+    timeseries_iterator<T, F>
+    end()
+    {
+        timeseries_iterator<T, F> it {*this};
+        it.end();
+        return it;
+    }
 
 private:
     /// A pointer to a vector of datetime<T> instances.
@@ -588,10 +609,7 @@ private:
 
 }; // class timeseries
 
-template<class T,
-        class F,
-        typename = std::enable_if_t<T::is_of_sec_type>
-        >
+template<class T, class F>
     class timeseries_iterator
 {
 public:
@@ -605,48 +623,138 @@ public:
     using entry = ngpt::data_point<F>;
     
     ///
-    using element = std::pair<epoch&, entry&>;
+    using record = std::tuple<epoch&, entry&>;
 
     explicit
-    timeseries_iterator(timeseries<T, F>& ts)
-    : m_timeseries{ts},
-      m_data_iter{ts.iter_begin()},
-      m_epoch_iter{ts.epoch_ptr()->begin()}
+    timeseries_iterator(timeseries<T, F, typename std::enable_if_t<T::is_of_sec_type>>& ts)
+    : m_timeseries{ts}
+      /*m_data_iter{ts.iter_start()}*/
+      /*m_epoch_iter{ts.epoch_ptr()->begin()}*/
     {
         assert( ts.epoch_ptr() && ts.size() == ts.epochs() );
+        auto it = ts.epoch_ptr()->begin();
+        m_epoch_iter = it;
+        m_data_iter = ts.iter_start();
     }
 
     //
-    timeseries_iterator(const timeseries_iterator&) = delete;
+    timeseries_iterator(const timeseries_iterator& it) noexcept
+    : m_timeseries{it.m_timeseries},
+      m_data_iter{it.m_data_iter},
+      m_epoch_iter{it.m_epoch_iter}
+    {}
+
+    /*
+    timeseries_iterator(timeseries_iterator&& it) noexcept
+    : m_timeseries{std::move(it.m_timeseries)},
+      m_data_iter{std::move(it.m_data_iter)},
+      m_epoch_iter{std::move(it.m_epoch_iter)}
+    {}
+    */
 
     //
-    timeseries_iterator& operator=(const timeseries_iterator&) = delete;
-
-    element begin() noexcept
+    timeseries_iterator& operator=(const timeseries_iterator& it) noexcept
     {
-        m_data_iter  = m_timeseries.iter_begin();
+        if (*this != it) {
+            m_timeseries = it.m_timeseries;
+            m_data_iter  = it.m_data_iter;
+            m_epoch_iter = it.m_epoch_iter;
+        }
+        return *this;
+    }
+    
+    /*
+    timeseries_iterator& operator=(timeseries_iterator&& it) noexcept
+    {
+        if (*this != it) {
+            m_timeseries = std::move(it.m_timeseries);
+            m_data_iter  = std::move(it.m_data_iter);
+            m_epoch_iter = std::move(it.m_epoch_iter);
+        }
+        return *this;
+    }
+    */
+
+    void begin() noexcept
+    {
+        m_data_iter  = m_timeseries.iter_start();
         m_epoch_iter = m_timeseries.epoch_ptr()->begin();
-        return std::tie(m_data_iter, m_epoch_iter);
+        // return std::tie(m_data_iter, m_epoch_iter);
     }
 
-    element end() noexcept
+    void end() noexcept
     {
-        m_data_iter  = m_timeseries.iter_end();
+        m_data_iter  = m_timeseries.iter_stop();
         m_epoch_iter = m_timeseries.epoch_ptr()->end();
-        return std::tie(m_data_iter, m_epoch_iter);
+        // return std::tie(m_data_iter, m_epoch_iter);
     }
 
-    element advance() noexcept
+    void advance() noexcept
     {
         ++m_data_iter;
         ++m_epoch_iter;
-        return std::tie(m_data_iter, m_epoch_iter);
+        // return std::tie(m_data_iter, m_epoch_iter);
     }
 
     std::size_t
-    index()
+    index() noexcept
     {
-        return std::distance(m_timeseries.iter_begin(), m_data_iter);
+        return 50; //std::distance(m_timeseries.iter_start(), m_data_iter);
+    }
+
+    bool
+    operator==(const timeseries_iterator& it) const noexcept
+    {
+        return ( m_data_iter == it.m_data_iter && m_epoch_iter == it.m_epoch_iter );
+    }
+
+    bool
+    operator!=(const timeseries_iterator& it) const noexcept
+    {
+        return !((*this) == it);
+    }
+
+    bool
+    operator>(const timeseries_iterator& it) const noexcept
+    {
+        return ( m_data_iter > it.m_data_iter && m_epoch_iter > it.m_epoch_iter );
+    }
+    
+    bool
+    operator<(const timeseries_iterator& it) const noexcept
+    {
+        return ( m_data_iter < it.m_data_iter && m_epoch_iter < it.m_epoch_iter );
+    }
+
+    // prefix
+    timeseries_iterator& operator++()
+    {
+        ++m_data_iter;
+        ++m_epoch_iter;
+        return *this;
+    }
+
+    // postfix
+    timeseries_iterator operator++(int)
+    {
+        auto tmp {*this};
+        this->operator++();
+        return tmp;
+    }
+
+    int
+    distance_from(const timeseries_iterator& it) const
+    {
+        assert( m_timeseries == it.m_timeseries );
+        return std::distance(it.m_data_iter, this->m_data_iter);
+    }
+
+    epoch
+    delta_time(const timeseries_iterator& it) const
+    {
+        assert( m_timeseries == it.m_timeseries );
+        auto tpl = it.m_epoch_iter->delta_date( *m_epoch_iter );
+        return epoch{std::get<0>(tpl), std::get<1>(tpl)};
     }
 
 private:
@@ -654,7 +762,6 @@ private:
     typename std::vector<entry>::iterator m_data_iter;
     typename std::vector<epoch>::iterator m_epoch_iter;
 };
-
 /*
 template<class T,
         class F,
@@ -671,15 +778,39 @@ public:
 
     /// The data points
     using entry = ngpt::data_point<F>;
+    
+    ///
+    using record = std::tuple<epoch&, entry&>;
+
+    explicit
+    running_window(timeseries<T, F>& ts, epoch&& w)
+    : m_timeseries{ts},
+      m_window{w},
+      m_entry_it_begin{m_timeseries.iter_start()},
+      m_entry_it_end{m_timeseries.iter_stop()},
+      m_entry_it{m_entry_it_begin},
+      m_epoch_it_begin{m_timeseries.epoch_ptr()->begin()},
+      m_epoch_it_end{m_timeseries.epoch_ptr()->end()},
+      m_epoch_it{m_timeseries.epoch_ptr()->begin()}
+      {
+          assert( ts.size() == ts.epochs() );
+      }
+
+    running_window(const running_window&) = delete;
+
+    running_window& operator=(const running_window&) = delete;
 
 private:
     timeseries<T, F>& m_timeseries;
     epoch             m_window;
-    std::vector<entry>::iterator m_entry_it_begin, m_entry_it_end;
-    std::vector<epoch>::iterator m_epoch_it_begin, m_epoch_it_end;
+    typename std::vector<entry>::iterator m_entry_it_begin,
+                                          m_entry_it_end,
+                                          m_entry_it;
+    typename std::vector<epoch>::iterator m_epoch_it_begin,
+                                          m_epoch_it_end,
+                                          m_epoch_it;
 };
 */
-
 } // end namespace ngpt
 
 #endif
