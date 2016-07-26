@@ -210,11 +210,13 @@ public:
 
     /// Move constructor. Note that the epoch vector is set to nullptr.
     timeseries(timeseries&& ts) noexcept
-    : m_epochs(nullptr),
+    : m_epochs(ts.m_epochs),
       m_mean{std::move(ts.m_mean)},
       m_data{std::move(ts.m_data)},
       m_skiped{std::move(ts.m_skiped)}
-    {}
+    {
+        ts.m_epochs = nullptr;
+    }
 
     /// Assignment operator. Note that the epoch vector is set to nullptr.
     timeseries& operator=(const timeseries& ts) noexcept
@@ -232,10 +234,11 @@ public:
     timeseries& operator=(timeseries&& ts) noexcept
     {
         if (this != &ts) {
-            m_epochs = nullptr;
+            m_epochs = ts.m_epochs;
             m_mean   = std::move(ts.m_mean);
             m_data   = std::move(ts.m_data);
             m_skiped = std::move(ts.m_skiped);
+            ts.m_epochs = nullptr;
         }
         return *this;
     }
@@ -570,7 +573,7 @@ public:
 
     /// Return an (non-const) iterator to the first entry of the data points vector
     typename std::vector<entry>::iterator
-    iter_start() const noexcept
+    iter_start() noexcept
     { return m_data.begin(); }
     
     /// Return a const iterator to the last+1 (=end) entry of the data points vector
@@ -580,7 +583,7 @@ public:
     
     /// Return a (non-const) iterator to the last+1 (=end) entry of the data points vector
     typename std::vector<entry>::iterator
-    iter_stop() const noexcept
+    iter_stop() noexcept
     { return m_data.end(); }
 
     timeseries_iterator<T, F>
@@ -614,7 +617,7 @@ template<class T, class F>
 {
 public:
     /// The specific datetime<T> class we will be using.
-    using epoch = ngpt::datetime<T>;
+    using epoch_td = ngpt::datetime<T>;
     
     /// Simplify the flag type.
     using tflag = ngpt::flag<F>;
@@ -623,18 +626,15 @@ public:
     using entry = ngpt::data_point<F>;
     
     ///
-    using record = std::tuple<epoch&, entry&>;
+    using record = std::tuple<epoch_td&, entry&>;
 
     explicit
     timeseries_iterator(timeseries<T, F, typename std::enable_if_t<T::is_of_sec_type>>& ts)
-    : m_timeseries{ts}
-      /*m_data_iter{ts.iter_start()}*/
-      /*m_epoch_iter{ts.epoch_ptr()->begin()}*/
+    : m_timeseries{ts},
+      m_data_iter{ts.iter_start()},
+      m_epoch_iter{ts.epoch_ptr()->begin()}
     {
         assert( ts.epoch_ptr() && ts.size() == ts.epochs() );
-        auto it = ts.epoch_ptr()->begin();
-        m_epoch_iter = it;
-        m_data_iter = ts.iter_start();
     }
 
     //
@@ -644,13 +644,12 @@ public:
       m_epoch_iter{it.m_epoch_iter}
     {}
 
-    /*
     timeseries_iterator(timeseries_iterator&& it) noexcept
-    : m_timeseries{std::move(it.m_timeseries)},
-      m_data_iter{std::move(it.m_data_iter)},
-      m_epoch_iter{std::move(it.m_epoch_iter)}
-    {}
-    */
+    : m_timeseries{it.m_timeseries},
+      m_data_iter{it.m_data_iter},
+      m_epoch_iter{it.m_epoch_iter}
+    {
+    }
 
     //
     timeseries_iterator& operator=(const timeseries_iterator& it) noexcept
@@ -663,7 +662,6 @@ public:
         return *this;
     }
     
-    /*
     timeseries_iterator& operator=(timeseries_iterator&& it) noexcept
     {
         if (*this != it) {
@@ -673,33 +671,29 @@ public:
         }
         return *this;
     }
-    */
 
     void begin() noexcept
     {
         m_data_iter  = m_timeseries.iter_start();
         m_epoch_iter = m_timeseries.epoch_ptr()->begin();
-        // return std::tie(m_data_iter, m_epoch_iter);
     }
 
     void end() noexcept
     {
         m_data_iter  = m_timeseries.iter_stop();
         m_epoch_iter = m_timeseries.epoch_ptr()->end();
-        // return std::tie(m_data_iter, m_epoch_iter);
     }
 
     void advance() noexcept
     {
         ++m_data_iter;
         ++m_epoch_iter;
-        // return std::tie(m_data_iter, m_epoch_iter);
     }
 
     std::size_t
     index() noexcept
     {
-        return 50; //std::distance(m_timeseries.iter_start(), m_data_iter);
+        return std::distance(m_timeseries.iter_start(), m_data_iter);
     }
 
     bool
@@ -749,18 +743,24 @@ public:
         return std::distance(it.m_data_iter, this->m_data_iter);
     }
 
-    epoch
+    epoch_td
     delta_time(const timeseries_iterator& it) const
     {
         assert( m_timeseries == it.m_timeseries );
         auto tpl = it.m_epoch_iter->delta_date( *m_epoch_iter );
-        return epoch{std::get<0>(tpl), std::get<1>(tpl)};
+        return epoch_td {std::get<0>(tpl), std::get<1>(tpl)};
     }
+
+    epoch_td&
+    epoch() noexcept { return *m_epoch_iter;}
+
+    entry&
+    data() noexcept { return *m_data_iter; }
 
 private:
     timeseries<T, F>& m_timeseries;
     typename std::vector<entry>::iterator m_data_iter;
-    typename std::vector<epoch>::iterator m_epoch_iter;
+    typename std::vector<epoch_td>::iterator m_epoch_iter;
 };
 /*
 template<class T,

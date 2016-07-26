@@ -458,15 +458,28 @@ public:
         return std::tuple<entry, entry, entry>(m_x[i], m_y[i], m_z[i]);
     }
  
-#ifdef DEBUG   
+#ifdef DEBUG
+    //  just to show the use of timeseries_iterator
     void
     test_iter()
     {
+        // auto newts { std::move(m_y) };
         std::size_t sum = 0;
-        for (auto it = m_x.begin(); it != m_x.end(); ++it)
+        for (auto it  = m_x.begin();
+                  it != m_x.end();
+                  ++it)
         {
             ++sum;
-            std::cout<<"\nNew element at distance: "<<it.index();
+            double old_val = it.data().value();
+            it.data().value() = -999.9;
+            std::cout<<"\nNew element at distance: "<<it.index()<<", old value: "<<old_val<<", new value: "<<it.data().value();
+        }
+        sum = 0;
+        for (auto it  = m_x.begin();
+                  it != m_x.end();
+                  ++it)
+        {
+            std::cout<<"\nNew element at distance: "<<it.index()<<", new value: "<<it.data().value();
         }
         std::cout<<"\nFinal sum = "<<sum<<", size = "<<m_x.size();
     }
