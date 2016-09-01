@@ -47,7 +47,7 @@ main(int argc, char* argv[])
     // ts.qr_fit();
 
     // test the iterator
-    ts.test_iter();
+    // ts.test_iter();
 
     // print the time-series
     std::ofstream fout ("test.neu");

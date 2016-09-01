@@ -762,7 +762,7 @@ private:
     typename std::vector<entry>::iterator m_data_iter;
     typename std::vector<epoch_td>::iterator m_epoch_iter;
 };
-/*
+
 template<class T,
         class F,
         typename = std::enable_if_t<T::is_of_sec_type>
@@ -771,7 +771,7 @@ template<class T,
 {
 public:
     /// The specific datetime<T> class we will be using.
-    using epoch = ngpt::datetime<T>;
+    using epoch_td = ngpt::datetime<T>;
     
     /// Simplify the flag type.
     using tflag = ngpt::flag<F>;
@@ -780,10 +780,10 @@ public:
     using entry = ngpt::data_point<F>;
     
     ///
-    using record = std::tuple<epoch&, entry&>;
+    using record = std::tuple<epoch_td&, entry&>;
 
     explicit
-    running_window(timeseries<T, F>& ts, epoch&& w)
+    running_window(timeseries<T, F>& ts, const epoch_td& w)
     : m_timeseries{ts},
       m_window{w},
       m_entry_it_begin{m_timeseries.iter_start()},
@@ -794,23 +794,63 @@ public:
       m_epoch_it{m_timeseries.epoch_ptr()->begin()}
       {
           assert( ts.size() == ts.epochs() );
+          m_half_window = split_window();
       }
 
-    running_window(const running_window&) = delete;
+      void
+      begin()
+      {
+          m_epoch_it_begin = m_timeseries.epoch_ptr()->begin();
+          m_epoch_it_end   = m_timeseries.epoch_ptr()->begin();
 
-    running_window& operator=(const running_window&) = delete;
+          auto start_epoch = *m_epoch_it_end;
+          auto delta_eph_t = delta_date(*m_epoch_it_end, *m_epoch_it_begin);
+          auto delta_eph {std::get<0>(delta_eph_t), std::get<1>(delta_eph_t)};
+          while ( delta_eph <= m_half_window ) {
+            ++m_epoch_it_end;
+            delta_eph_t = delta_date(*m_epoch_it_end, *m_epoch_it_begin);
+            datetime<T> tmp_eph {std::get<0>(delta_eph_t), std::get<1>(delta_eph_t)};
+            delta_eph = tmp_eph;
+          }
+
+          auto index_dif   = std::distance(m_epoch_it_begin, m_epoch_it_end);
+          m_entry_it_begin = m_timeseries.iter_start();
+          m_entry_it_end   = m_timeseries.iter_start() + index_dif;
+          m_entry_it       = m_entry_it_begin + index_dif / 2;
+          m_epoch_it       = m_epoch_it_begin + index_dif / 2;
+      }
 
 private:
+    
+    /// Split the (initial, integral) window into half.
+    epoch_td
+    split_window() noexcept
+    {
+        auto mjd = m_window.mjd();
+        modified_julian_day::underlying_type t_mjd {mjd().as_underlying_type()/2};
+
+        auto sec = m_window.secs();
+        typename T::underlying_type t_sec {sec.as_underlying_type()/2};
+
+        if ( t_mjd % 2 ) t_sec += (T::max_in_day/2);
+
+        epoch_td half_w {modified_julian_day{t_mjd}, T{t_sec}};
+        half_w.normalize();
+
+        return half_w;
+    }
+
     timeseries<T, F>& m_timeseries;
-    epoch             m_window;
+    epoch_td          m_window;
+    epoch_td          m_half_window;
     typename std::vector<entry>::iterator m_entry_it_begin,
                                           m_entry_it_end,
                                           m_entry_it;
-    typename std::vector<epoch>::iterator m_epoch_it_begin,
-                                          m_epoch_it_end,
-                                          m_epoch_it;
+    typename std::vector<epoch_td>::iterator m_epoch_it_begin,
+                                             m_epoch_it_end,
+                                             m_epoch_it;
 };
-*/
+
 } // end namespace ngpt
 
 #endif
