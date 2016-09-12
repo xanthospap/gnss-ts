@@ -542,6 +542,8 @@ private:
 
 }; // end class crdts
 
+/// TODO use iterators
+/// also print std. dev and flag
 template<typename T>
     std::ostream& operator<<(std::ostream& os, const crdts<T>& ts)
 {
@@ -551,7 +553,10 @@ template<typename T>
     {
         // s = ts.depoch(i).stringify();
         auto t = ts.ddata(i);
-        os << ts.depoch(i).as_mjd() << " " << std::get<0>(t).value() << " " << std::get<1>(t).value() << " " << std::get<2>(t).value() << "\n";
+        os << ts.depoch(i).as_mjd() << " " 
+            << std::get<0>(t).value() << " " 
+            << std::get<1>(t).value() << " " 
+            << std::get<2>(t).value() << "\n";
     }
     return os;
 }

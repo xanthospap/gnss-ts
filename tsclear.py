@@ -51,10 +51,10 @@ args = parser.parse_args()
 ##  The time-series file
 ts_file = args.tsf + '.cts'
 
-## read in the time-series file
+##  read in the time-series file
 ots = gts.readers.read_cts(ts_file, args.reccom)
 
-## trasnform to topocentric if needed
+##  trasnform to topocentric if needed
 if args.totopo:
     ots = ots.transform(ts.CoordinateType.Topocentric)
 
