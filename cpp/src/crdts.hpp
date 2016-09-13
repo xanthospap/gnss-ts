@@ -485,6 +485,28 @@ public:
     }
 #endif
 
+    // TODO this should be const!
+    std::ostream& dump(std::ostream& os)/*const*/
+    {
+        auto x_iter = m_x.begin(),
+             y_iter = m_y.begin(),
+             z_iter = m_z.begin();
+
+        for (; x_iter != m_x.end(); ++x_iter, ++y_iter, ++z_iter) {
+            os << x_iter.epoch().as_mjd() << " "
+                << x_iter.data().value() << " " 
+                << x_iter.data().sigma() << " " 
+                << x_iter.data().flag()  << " "
+                << y_iter.data().value() << " " 
+                << y_iter.data().sigma() << " " 
+                << y_iter.data().flag()  << " ";
+                << z_iter.data().value() << " " 
+                << z_iter.data().sigma() << " " 
+                << z_iter.data().flag()  << "\n";
+        }
+        return os;
+    }
+
 private:
 
     /// Set the epoch pointer of each timeseries component.
@@ -541,25 +563,6 @@ private:
     coordinate_type      m_ctype;        /// the coordinate type
 
 }; // end class crdts
-
-/// TODO use iterators
-/// also print std. dev and flag
-template<typename T>
-    std::ostream& operator<<(std::ostream& os, const crdts<T>& ts)
-{
-    std::string s;
-    std::size_t sz = ts.size();
-    for (std::size_t i = 0; i < sz; i++)
-    {
-        // s = ts.depoch(i).stringify();
-        auto t = ts.ddata(i);
-        os << ts.depoch(i).as_mjd() << " " 
-            << std::get<0>(t).value() << " " 
-            << std::get<1>(t).value() << " " 
-            << std::get<2>(t).value() << "\n";
-    }
-    return os;
-}
 
 } // end namespace ngpt
 

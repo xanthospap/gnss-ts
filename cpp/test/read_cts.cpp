@@ -51,7 +51,8 @@ main(int argc, char* argv[])
 
     // print the time-series
     std::ofstream fout ("test.neu");
-    fout << ts;
+    // fout << ts;
+    ts.dump( fout );
     fout.close();
 
     return 0;
