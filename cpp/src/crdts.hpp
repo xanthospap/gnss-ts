@@ -499,7 +499,7 @@ public:
                 << x_iter.data().flag()  << " "
                 << y_iter.data().value() << " " 
                 << y_iter.data().sigma() << " " 
-                << y_iter.data().flag()  << " ";
+                << y_iter.data().flag()  << " "
                 << z_iter.data().value() << " " 
                 << z_iter.data().sigma() << " " 
                 << z_iter.data().flag()  << "\n";
