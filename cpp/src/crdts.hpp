@@ -14,6 +14,7 @@
 
 // ggdatetime headers
 #include "ggdatetime/dtcalendar.hpp"
+#include "ggdatetime/datetime_write.hpp"
 
 // ggeodesy headers
 #include "ggeodesy/ellipsoid.hpp"
@@ -503,6 +504,16 @@ public:
                 << z_iter.data().value() << " " 
                 << z_iter.data().sigma() << " " 
                 << z_iter.data().flag()  << "\n";
+        }
+        return os;
+    }
+
+    std::ostream&
+    dump_event_list(std::ostream& os) 
+    {
+        os << "YYYY MM DD HH mm SS **** EVENT *** COMMENT";
+        for (auto i = m_events.cbegin(); i != m_events.cend(); ++i) {
+            os << "\n" << strftime_ymd_hms(i->first) << "       " << event2char(i->second) << "     ";
         }
         return os;
     }

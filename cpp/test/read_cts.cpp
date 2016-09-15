@@ -50,10 +50,13 @@ main(int argc, char* argv[])
     // ts.test_iter();
 
     // print the time-series
-    std::ofstream fout ("test.neu");
-    // fout << ts;
-    ts.dump( fout );
-    fout.close();
+    std::ofstream fout_neu ("test.neu");
+    ts.dump( fout_neu );
+    fout_neu.close();
+    // print the time-series event list
+    std::ofstream fout_evn ("test.evn");
+    ts.dump_event_list( fout_evn );
+    fout_evn.close();
 
     return 0;
 }
