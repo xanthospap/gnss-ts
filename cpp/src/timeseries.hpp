@@ -780,6 +780,9 @@ template<class T,
 public:
     /// The specific datetime<T> class we will be using.
     using epoch_td = ngpt::datetime<T>;
+
+    ///
+    using interval_td = ngpt::datetime_interval<T>;
     
     /// Simplify the flag type.
     using tflag = ngpt::flag<F>;
@@ -791,7 +794,7 @@ public:
     using record = std::tuple<epoch_td&, entry&>;
 
     explicit
-    running_window(timeseries<T, F>& ts, const epoch_td& w)
+    running_window(timeseries<T, F>& ts, const interval_td& w)
     : m_timeseries{ts},
       m_window{w},
       m_entry_it_begin{m_timeseries.iter_start()},
@@ -832,9 +835,10 @@ public:
 private:
     
     /// Split the (initial, integral) window into half.
-    epoch_td
+    interval_td
     split_window() noexcept
     {
+        // TODO should assert that the interval is > 0
         auto mjd = m_window.mjd();
         modified_julian_day::underlying_type t_mjd {mjd().as_underlying_type()/2};
 
@@ -843,15 +847,14 @@ private:
 
         if ( t_mjd % 2 ) t_sec += (T::max_in_day/2);
 
-        epoch_td half_w {modified_julian_day{t_mjd}, T{t_sec}};
-        half_w.normalize();
+        interval_td half_w {modified_julian_day{t_mjd}, T{t_sec}};
 
         return half_w;
     }
 
     timeseries<T, F>& m_timeseries;
-    epoch_td          m_window;
-    epoch_td          m_half_window;
+    interval_td       m_window;
+    interval_td       m_half_window;
     typename std::vector<entry>::iterator m_entry_it_begin,
                                           m_entry_it_end,
                                           m_entry_it;
