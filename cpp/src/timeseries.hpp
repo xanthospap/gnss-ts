@@ -291,13 +291,17 @@ public:
     epoch
     central_epoch() const noexcept
     {
-        using K = typename epoch::sec_type;
-        auto delta_dt   = ngpt::delta_date(last_epoch(), first_epoch());
+        // using K = typename epoch::sec_type;
+        auto delta_dt = ngpt::delta_date(last_epoch(), first_epoch());
+        auto central_epoch { first_epoch() };
+        central_epoch += delta_dt;
+        /*
         auto half_lag   = std::get<0>(delta_dt).as_underlying_type() / 2;
         auto sec_of_day = std::get<1>(delta_dt) + 
             ( (std::get<0>(delta_dt).as_underlying_type()%2) ? K{K::max_in_day/2} : K{0} );
         auto central_epoch = (*m_epochs)[0].add(modified_julian_day{half_lag},
             sec_of_day);
+        */
         return central_epoch;
     }
     
@@ -314,15 +318,19 @@ public:
     epoch
     central_valid_epoch() const noexcept
     {
-        using K = typename epoch::sec_type;
+        // using K = typename epoch::sec_type;
         auto start_epoch = this->first_valid_epoch();
-        auto delta_dt   = ngpt::delta_date(last_valid_epoch(), start_epoch);
+        auto delta_dt    = ngpt::delta_date(start_epoch, last_valid_epoch());
+        start_epoch     += delta_dt;
+        return start_epoch;
+        /*
         auto half_lag   = std::get<0>(delta_dt).as_underlying_type() / 2;
         auto sec_of_day = std::get<1>(delta_dt) + 
             ( (std::get<0>(delta_dt).as_underlying_type()%2) ? K{K::max_in_day/2} : K{0} );
         auto central_epoch = start_epoch.add(modified_julian_day{half_lag},
             sec_of_day);
         return central_epoch;
+        */
     }
 
     void
@@ -796,13 +804,13 @@ public:
           assert( ts.size() == ts.epochs() );
           m_half_window = split_window();
       }
-
+        /*
       void
       begin()
       {
-          m_epoch_it_begin = m_timeseries.epoch_ptr()->begin();
-          m_epoch_it_end   = m_timeseries.epoch_ptr()->begin();
-
+          m_epoch_it_begin = m_epoch_it_end  = m_epoch_it = 
+              m_timeseries.epoch_ptr()->begin();
+            
           auto start_epoch = *m_epoch_it_end;
           auto delta_eph_t = delta_date(*m_epoch_it_end, *m_epoch_it_begin);
           auto delta_eph {std::get<0>(delta_eph_t), std::get<1>(delta_eph_t)};
@@ -819,6 +827,7 @@ public:
           m_entry_it       = m_entry_it_begin + index_dif / 2;
           m_epoch_it       = m_epoch_it_begin + index_dif / 2;
       }
+      */
 
 private:
     
