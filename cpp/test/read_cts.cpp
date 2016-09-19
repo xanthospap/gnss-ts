@@ -48,6 +48,10 @@ main(int argc, char* argv[])
 
     // test the iterator
     // ts.test_iter();
+    
+    // test the running window
+    ngpt::datetime_interval<ngpt::milliseconds> window {ngpt::modified_julian_day{30}, ngpt::milliseconds{0}};
+    ts.test_running_window(window);
 
     // print the time-series
     std::ofstream fout_neu ("test.neu");

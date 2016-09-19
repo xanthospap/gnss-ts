@@ -460,6 +460,35 @@ public:
     }
  
 #ifdef DEBUG
+    // just to show the use of running_window
+    void
+    test_running_window(datetime_interval<T> window)
+    {
+        std::size_t sum = 0;
+        datetime_interval<T> from, to, vto;
+
+        for (auto rw_it  = m_x.rw_begin(window);
+                  !rw_it.hit_the_end();
+                  ++rw_it)
+        {
+            auto first  = rw_it.first(),
+                 centre = rw_it.centre(),
+                 last   = rw_it.last();
+
+            auto vlast  = rw_it.vlast();
+
+            from = centre.delta_time(first);
+            to   = last.delta_time(centre);
+            vto  = vlast.delta_time(centre);
+
+            std::cout << "\nFirst : " << strftime_ymd_hms(first.epoch());
+            std::cout << " Centre: "  << strftime_ymd_hms(centre.epoch());
+            std::cout << " Last : "   << strftime_ymd_hms(vlast.epoch());
+            std::cout<<" [-" << from.days().as_underlying_type() <<", +"<< vto.days().as_underlying_type() <<" (" << to.days().as_underlying_type() << ")]";
+        }
+        return;
+    }
+
     //  just to show the use of timeseries_iterator
     void
     test_iter()

@@ -81,6 +81,7 @@ private:
 
 // forward decleration
 template<class T, class F> class timeseries_iterator;
+template<class T, class F> class running_window;
 
 /// A generic time-series class
 /// Mean value and number of skipped points should always be correct (i.e. updated).
@@ -608,6 +609,22 @@ public:
         return it;
     }
 
+    running_window<T, F>
+    rw_begin(const datetime_interval<T>& window)
+    {
+        running_window<T, F> it {*this, window};
+        it.begin();
+        return it;
+    }
+
+    running_window<T, F>
+    rw_end(const datetime_interval<T>& window)
+    {
+        running_window<T, F> it {*this, window};
+        it.end();
+        return it;
+    }
+
 private:
     /// A pointer to a vector of datetime<T> instances.
     std::vector<epoch>* m_epochs;
@@ -626,6 +643,9 @@ template<class T, class F>
 public:
     /// The specific datetime<T> class we will be using.
     using epoch_td = ngpt::datetime<T>;
+
+    ///
+    using interval_td = ngpt::datetime_interval<T>;
     
     /// Simplify the flag type.
     using tflag = ngpt::flag<F>;
@@ -723,9 +743,38 @@ public:
     }
     
     bool
+    operator>=(const timeseries_iterator& it) const noexcept
+    {
+        return ( m_data_iter >= it.m_data_iter && m_epoch_iter >= it.m_epoch_iter );
+    }
+    
+    bool
     operator<(const timeseries_iterator& it) const noexcept
     {
         return ( m_data_iter < it.m_data_iter && m_epoch_iter < it.m_epoch_iter );
+    }
+    
+    bool
+    operator<=(const timeseries_iterator& it) const noexcept
+    {
+        return ( m_data_iter <= it.m_data_iter && m_epoch_iter <= it.m_epoch_iter );
+    }
+
+    timeseries_iterator /* pointer arithmetic */
+    operator+(int n) const noexcept
+    {
+        timeseries_iterator ti {*this};
+        ti.m_data_iter + n;
+        ti.m_epoch_iter + n;
+        return ti;
+    }
+    timeseries_iterator /* pointer arithmetic */
+    operator-(int n) const noexcept
+    {
+        timeseries_iterator ti {*this};
+        ti.m_data_iter - n;
+        ti.m_epoch_iter - n;
+        return ti;
     }
 
     // prefix
@@ -733,6 +782,14 @@ public:
     {
         ++m_data_iter;
         ++m_epoch_iter;
+        return *this;
+    }
+    
+    // prefix
+    timeseries_iterator& operator--()
+    {
+        --m_data_iter;
+        --m_epoch_iter;
         return *this;
     }
 
@@ -751,12 +808,11 @@ public:
         return std::distance(it.m_data_iter, this->m_data_iter);
     }
 
-    epoch_td
+    interval_td
     delta_time(const timeseries_iterator& it) const
     {
-        assert( m_timeseries == it.m_timeseries );
-        auto tpl = it.m_epoch_iter->delta_date( *m_epoch_iter );
-        return epoch_td {std::get<0>(tpl), std::get<1>(tpl)};
+        assert( &m_timeseries == &(it.m_timeseries) );
+        return m_epoch_iter->delta_date( *(it.m_epoch_iter) );
     }
 
     epoch_td&
@@ -765,16 +821,21 @@ public:
     entry&
     data() noexcept { return *m_data_iter; }
 
+    timeseries<T, F>&
+    timeseries_ref() noexcept
+    { return m_timeseries; }
+
 private:
     timeseries<T, F>& m_timeseries;
     typename std::vector<entry>::iterator m_data_iter;
     typename std::vector<epoch_td>::iterator m_epoch_iter;
 };
 
-template<class T,
-        class F,
-        typename = std::enable_if_t<T::is_of_sec_type>
-        >
+
+// TODO
+// when loping i must use hit_the_end() else it wont work!
+// wtf?
+template<class T, class F>
     class running_window
 {
 public:
@@ -783,54 +844,115 @@ public:
 
     ///
     using interval_td = ngpt::datetime_interval<T>;
-    
+
     /// Simplify the flag type.
     using tflag = ngpt::flag<F>;
 
     /// The data points
     using entry = ngpt::data_point<F>;
-    
+
     ///
     using record = std::tuple<epoch_td&, entry&>;
 
     explicit
     running_window(timeseries<T, F>& ts, const interval_td& w)
-    : m_timeseries{ts},
-      m_window{w},
-      m_entry_it_begin{m_timeseries.iter_start()},
-      m_entry_it_end{m_timeseries.iter_stop()},
-      m_entry_it{m_entry_it_begin},
-      m_epoch_it_begin{m_timeseries.epoch_ptr()->begin()},
-      m_epoch_it_end{m_timeseries.epoch_ptr()->end()},
-      m_epoch_it{m_timeseries.epoch_ptr()->begin()}
-      {
-          assert( ts.size() == ts.epochs() );
-          m_half_window = split_window();
-      }
-        /*
-      void
-      begin()
-      {
-          m_epoch_it_begin = m_epoch_it_end  = m_epoch_it = 
-              m_timeseries.epoch_ptr()->begin();
-            
-          auto start_epoch = *m_epoch_it_end;
-          auto delta_eph_t = delta_date(*m_epoch_it_end, *m_epoch_it_begin);
-          auto delta_eph {std::get<0>(delta_eph_t), std::get<1>(delta_eph_t)};
-          while ( delta_eph <= m_half_window ) {
-            ++m_epoch_it_end;
-            delta_eph_t = delta_date(*m_epoch_it_end, *m_epoch_it_begin);
-            datetime<T> tmp_eph {std::get<0>(delta_eph_t), std::get<1>(delta_eph_t)};
-            delta_eph = tmp_eph;
-          }
+    : m_window{w},
+      m_half_window{w},
+      m_iterator_begin{ts},
+      m_iterator{ts},
+      m_iterator_end{ts},
+      m_END{ts.end()}
+    {
+        assert( ts.size() == ts.epochs() );
+        m_half_window = split_window();
+        m_END = ts.end();
+    }
 
-          auto index_dif   = std::distance(m_epoch_it_begin, m_epoch_it_end);
-          m_entry_it_begin = m_timeseries.iter_start();
-          m_entry_it_end   = m_timeseries.iter_start() + index_dif;
-          m_entry_it       = m_entry_it_begin + index_dif / 2;
-          m_epoch_it       = m_epoch_it_begin + index_dif / 2;
-      }
-      */
+    void
+    begin()
+    {
+        m_iterator_begin.begin();
+        m_iterator.begin();
+        m_iterator_end.begin();
+        while (   (m_iterator_end != m_END)
+               && (m_iterator_end.delta_time(m_iterator) < m_half_window) ) {
+            ++m_iterator_end;
+        }
+        return;
+    }
+
+    void
+    end()
+    {
+        m_iterator_begin.end();
+        m_iterator.end();
+        m_iterator_end.end();
+
+        timeseries_iterator<T, F> it_start {m_iterator_begin.timeseries_ref()};
+        it_start.begin();
+        
+        while (  (m_iterator_begin >= it_start)
+              && (m_iterator.delta_time(m_iterator_begin) < m_half_window) ) {
+            --m_iterator_begin;
+        }
+        return;
+    }
+
+    bool
+    hit_the_end() const noexcept { return m_iterator == m_END;}
+    
+    // prefix
+    running_window& operator++()
+    {
+        ++m_iterator;
+
+        while (  (m_iterator > m_iterator_begin)
+              && (m_iterator.delta_time(m_iterator_begin) > m_half_window) )
+            ++m_iterator_begin;
+        
+        while (  (m_iterator_end != m_END)
+              && (m_iterator_end.delta_time(m_iterator) < m_half_window) )
+            ++m_iterator_end;
+        
+        return *this;
+    }
+
+    // postfix
+    running_window operator++(int)
+    {
+        auto tmp {*this};
+        this->operator++();
+        return tmp;
+    }
+
+    bool
+    operator==(const running_window& other) const noexcept
+    { return (     m_iterator_begin == other.m_iterator_begin 
+                && m_iterator == other.m_iterator
+                && m_iterator_end == other.m_iterator_end ); }
+    
+    bool
+    operator!=(const running_window& other) const noexcept
+    { return !(this->operator==(other)); }
+
+    timeseries_iterator<T, F>
+    first() noexcept
+    { return m_iterator_begin; }
+    
+    timeseries_iterator<T, F>
+    last() noexcept
+    { return m_iterator_end; }
+
+    timeseries_iterator<T, F>
+    vlast() noexcept
+    { 
+        auto it { m_iterator_end };
+        return --it;
+    }
+    
+    timeseries_iterator<T, F>
+    centre() noexcept
+    { return m_iterator; }
 
 private:
     
@@ -839,8 +961,8 @@ private:
     split_window() noexcept
     {
         // TODO should assert that the interval is > 0
-        auto mjd = m_window.mjd();
-        modified_julian_day::underlying_type t_mjd {mjd().as_underlying_type()/2};
+        auto mjd = m_window.days();
+        modified_julian_day::underlying_type t_mjd {mjd.as_underlying_type()/2};
 
         auto sec = m_window.secs();
         typename T::underlying_type t_sec {sec.as_underlying_type()/2};
@@ -852,15 +974,12 @@ private:
         return half_w;
     }
 
-    timeseries<T, F>& m_timeseries;
-    interval_td       m_window;
-    interval_td       m_half_window;
-    typename std::vector<entry>::iterator m_entry_it_begin,
-                                          m_entry_it_end,
-                                          m_entry_it;
-    typename std::vector<epoch_td>::iterator m_epoch_it_begin,
-                                             m_epoch_it_end,
-                                             m_epoch_it;
+    interval_td                m_window,
+                               m_half_window;
+    timeseries_iterator<T, F>  m_iterator_begin,
+                               m_iterator,
+                               m_iterator_end,
+                               m_END;
 };
 
 } // end namespace ngpt
