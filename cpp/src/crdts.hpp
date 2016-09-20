@@ -481,10 +481,12 @@ public:
             to   = last.delta_time(centre);
             vto  = vlast.delta_time(centre);
 
-            std::cout << "\nFirst : " << strftime_ymd_hms(first.epoch());
-            std::cout << " Centre: "  << strftime_ymd_hms(centre.epoch());
-            std::cout << " Last : "   << strftime_ymd_hms(vlast.epoch());
-            std::cout<<" [-" << from.days().as_underlying_type() <<", +"<< vto.days().as_underlying_type() <<" (" << to.days().as_underlying_type() << ")]";
+            //std::cout << "\nFirst : " << strftime_ymd_hms(first.epoch());
+            //std::cout << " Centre: "  << strftime_ymd_hms(centre.epoch());
+            //std::cout << " Last : "   << strftime_ymd_hms(vlast.epoch());
+            //std::cout<<" [-" << from.days().as_underlying_type() <<", +"<< vto.days().as_underlying_type() <<" (" << to.days().as_underlying_type() << ")]";
+            auto data = rw_it.clean_average();
+            std::cout << "\n" << centre.epoch().as_mjd() << " " << data.value() << " " << data.sigma();
         }
         return;
     }

@@ -292,17 +292,9 @@ public:
     epoch
     central_epoch() const noexcept
     {
-        // using K = typename epoch::sec_type;
         auto delta_dt = ngpt::delta_date(last_epoch(), first_epoch());
         auto central_epoch { first_epoch() };
         central_epoch += delta_dt;
-        /*
-        auto half_lag   = std::get<0>(delta_dt).as_underlying_type() / 2;
-        auto sec_of_day = std::get<1>(delta_dt) + 
-            ( (std::get<0>(delta_dt).as_underlying_type()%2) ? K{K::max_in_day/2} : K{0} );
-        auto central_epoch = (*m_epochs)[0].add(modified_julian_day{half_lag},
-            sec_of_day);
-        */
         return central_epoch;
     }
     
@@ -319,19 +311,10 @@ public:
     epoch
     central_valid_epoch() const noexcept
     {
-        // using K = typename epoch::sec_type;
         auto start_epoch = this->first_valid_epoch();
         auto delta_dt    = ngpt::delta_date(start_epoch, last_valid_epoch());
         start_epoch     += delta_dt;
         return start_epoch;
-        /*
-        auto half_lag   = std::get<0>(delta_dt).as_underlying_type() / 2;
-        auto sec_of_day = std::get<1>(delta_dt) + 
-            ( (std::get<0>(delta_dt).as_underlying_type()%2) ? K{K::max_in_day/2} : K{0} );
-        auto central_epoch = start_epoch.add(modified_julian_day{half_lag},
-            sec_of_day);
-        return central_epoch;
-        */
     }
 
     void
@@ -953,6 +936,35 @@ public:
     timeseries_iterator<T, F>
     centre() noexcept
     { return m_iterator; }
+
+    entry
+    average() const noexcept
+    {
+        double mean{0}, sigma{0};
+        int size{0};
+        for (auto it = m_iterator_begin; it != m_iterator_end; ++it) {
+            mean  += it.data().value();
+            sigma += it.data().sigma();
+            ++size;
+        }
+        return entry{mean/size, sigma/size};
+    }
+    
+    entry
+    clean_average() const noexcept
+    {
+        double mean{0}, sigma{0};
+        int size{0};
+        for (auto it = m_iterator_begin; it != m_iterator_end; ++it) {
+            if ( !it.data().skip() ) {
+                mean  += it.data().value();
+                sigma += it.data().sigma();
+                ++size;
+            }
+        }
+        return entry{mean/size, sigma/size};
+    }
+
 
 private:
     
