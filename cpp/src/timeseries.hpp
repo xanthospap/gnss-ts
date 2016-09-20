@@ -381,7 +381,7 @@ public:
         return;
     }
 
-    // change paramters from pointers to refs.
+    // change parameters from pointers to refs.
     auto
     qr_ls_solve(
         const std::vector<epoch>&  jumps,
@@ -531,6 +531,7 @@ public:
 
         // residuals as time-series
         timeseries<T, F> res {*this};
+        res.epoch_ptr() = this->epoch_ptr();
         idx = counter = 0;
         for (std::size_t i = 0; i < size(); i++) {
             if ( !m_data[i].skip() ) {
@@ -541,6 +542,14 @@ public:
                 res[i] = m_data[i];
             }
         }
+
+        // apply outlier detection algorithm and mark them
+        // datetime_interval<T> window {modified_julian_day{90}, T{0}};
+        // nikolaidis(res, *this, window);
+        double sigma = (u.transpose() * u);
+        sigma /= u.rows() - parameters;
+        std::cout<<"\nA-posteriri sigma = "<<sigma;
+        three_sigma(res, *this, std::sqrt(sigma));
 
         // should we print the model line to a file?
         /*
@@ -787,7 +796,7 @@ public:
     int
     distance_from(const timeseries_iterator& it) const
     {
-        assert( m_timeseries == it.m_timeseries );
+        assert( &m_timeseries == &it.m_timeseries );
         return std::distance(it.m_data_iter, this->m_data_iter);
     }
 
@@ -918,11 +927,11 @@ public:
     operator!=(const running_window& other) const noexcept
     { return !(this->operator==(other)); }
 
-    timeseries_iterator<T, F>
+    timeseries_iterator<T, F>&
     first() noexcept
     { return m_iterator_begin; }
     
-    timeseries_iterator<T, F>
+    timeseries_iterator<T, F>&
     last() noexcept
     { return m_iterator_end; }
 
@@ -933,7 +942,7 @@ public:
         return --it;
     }
     
-    timeseries_iterator<T, F>
+    timeseries_iterator<T, F>&
     centre() noexcept
     { return m_iterator; }
 
@@ -943,11 +952,11 @@ public:
         double mean{0}, sigma{0};
         int size{0};
         for (auto it = m_iterator_begin; it != m_iterator_end; ++it) {
-            mean  += it.data().value();
-            sigma += it.data().sigma();
+            mean  = (it.data().value() + size*mean)/(size+1.0e0);
+            sigma = (it.data().sigma() + size*mean)/(size+1.0e0);
             ++size;
         }
-        return entry{mean/size, sigma/size};
+        return entry{mean, sigma};
     }
     
     entry
@@ -957,12 +966,155 @@ public:
         int size{0};
         for (auto it = m_iterator_begin; it != m_iterator_end; ++it) {
             if ( !it.data().skip() ) {
-                mean  += it.data().value();
-                sigma += it.data().sigma();
+                mean  = (it.data().value() + size*mean)/(size+1.0e0);
+                sigma = (it.data().sigma() + size*mean)/(size+1.0e0);
                 ++size;
             }
         }
-        return entry{mean/size, sigma/size};
+        return entry{mean, sigma};
+    }
+
+    entry
+    iqr() const noexcept
+    {
+        std::vector<double> vals, sigmas;
+        int size = m_iterator_end.distance_from(m_iterator_begin);
+        vals.reserve(size);
+        sigmas.reserve(size);
+
+        for (auto it = m_iterator_begin; it != m_iterator_end; ++it) {
+            vals.push_back(it.data().value()); 
+            sigmas.push_back(it.data().sigma()); 
+        }
+
+#ifdef debug
+        assert( vals.size() == sigmas.size() && vals.size() == size );
+#endif
+        if (size == 1) return entry{vals[0], sigmas[0]};
+
+        std::sort(vals.begin(), vals.end());
+        std::sort(sigmas.begin(), sigmas.end());
+        std::size_t half_size = size/2;
+        if (size%2) { /* odd size */
+            double vq1 = vals[half_size/2];
+            double vq3 = vals[half_size+half_size/2+1];
+            double sq1 = sigmas[half_size/2];
+            double sq3 = sigmas[half_size+half_size/2+1];
+            return entry {vq3-vq1, sq3-sq1};
+        } else {
+            double vq1 = vals[half_size/2];
+            double vq3 = vals[half_size+half_size/2];
+            double sq1 = sigmas[half_size/2];
+            double sq3 = sigmas[half_size+half_size/2];
+            return entry {vq3-vq1, sq3-sq1};
+        }
+    }
+
+    entry
+    median() const noexcept
+    {
+        std::vector<double> vals, sigmas;
+        int size = m_iterator_end.distance_from(m_iterator_begin);
+        vals.reserve(size);
+        sigmas.reserve(size);
+
+        for (auto it = m_iterator_begin; it != m_iterator_end; ++it) {
+            vals.push_back(it.data().value()); 
+            sigmas.push_back(it.data().sigma()); 
+        }
+
+#ifdef debug
+        assert( vals.size() == sigmas.size() && vals.size() == size );
+#endif
+
+        if (size%2) { /* odd size */
+            std::nth_element(vals.begin(), vals.begin() + size/2, vals.end());
+            std::nth_element(sigmas.begin(), sigmas.begin() + size/2, sigmas.end());
+            return entry {vals[size/2], sigmas[size/2]};
+        } else {
+            std::nth_element(vals.begin(), vals.begin() + size/2+1, vals.end());
+            std::nth_element(sigmas.begin(), sigmas.begin() + size/2+1, sigmas.end());
+            return entry {(vals[size/2]+vals[size/2-1])/2.0,
+                (sigmas[size/2]+sigmas[size/2-1])/2.0};
+        }
+    }
+    
+    entry
+    clean_iqr() const noexcept
+    {
+        std::vector<double> vals, sigmas;
+        int size = m_iterator_end.distance_from(m_iterator_begin);
+        vals.reserve(size);
+        sigmas.reserve(size);
+
+        for (auto it = m_iterator_begin; it != m_iterator_end; ++it) {
+            if ( !it.data().skip() ) {
+                vals.push_back(it.data().value()); 
+                sigmas.push_back(it.data().sigma());
+            }
+        }
+        
+        //std::cout<<"\n";
+        //for (auto i : vals) std::cout<<i<<", ";
+
+        size = vals.size();
+        if (size == 1) {
+            std::cout<<"------ZERO SIZE VECTOR--------------";
+            return entry{vals[0], sigmas[0]};
+        }
+
+        std::sort(vals.begin(), vals.end());
+        std::sort(sigmas.begin(), sigmas.end());
+        std::size_t half_size = size/2;
+        if (size%2) { /* odd size */
+            double vq1 = vals[half_size/2];
+            double vq3 = vals[half_size+half_size/2+1];
+            double sq1 = sigmas[half_size/2];
+            double sq3 = sigmas[half_size+half_size/2+1];
+            //std::cout<<" IQR (odd): "<<vq3-vq1;
+            return entry {vq3-vq1, sq3-sq1};
+        } else {
+            double vq1 = vals[half_size/2];
+            double vq3 = vals[half_size+half_size/2];
+            double sq1 = sigmas[half_size/2];
+            double sq3 = sigmas[half_size+half_size/2];
+            //std::cout<<" IQR (even): "<<vq3-vq1;
+            return entry {vq3-vq1, sq3-sq1};
+        }
+    }
+    
+    entry
+    clean_median() const noexcept
+    {
+        std::vector<double> vals, sigmas;
+        int size = m_iterator_end.distance_from(m_iterator_begin);
+        vals.reserve(size);
+        sigmas.reserve(size);
+
+        for (auto it = m_iterator_begin; it != m_iterator_end; ++it) {
+            if ( !it.data().skip() ) {
+                vals.push_back(it.data().value()); 
+                sigmas.push_back(it.data().sigma());
+            }
+        }
+
+        size = vals.size();
+        //std::cout<<"\n";
+        //for (auto i : vals) std::cout<<i<<", ";
+        if (size<5) std::cout<<"\nToo few points:";
+
+        if (size%2) { /* odd size */
+            std::nth_element(vals.begin(), vals.begin() + size/2+1, vals.end());
+            std::nth_element(sigmas.begin(), sigmas.begin() + size/2+1, sigmas.end());
+            //std::cout<<"Median (odd): "<<vals[size/2];
+            return entry {vals[size/2], sigmas[size/2]};
+        } else {
+            std::nth_element(vals.begin(), vals.begin() + size/2+1, vals.end());
+            std::nth_element(sigmas.begin(), sigmas.begin() + size/2+1, sigmas.end());
+            //std::cout<<"Median (even): "<< (vals[size/2]+vals[size/2-1])/2.0;
+            return entry {(vals[size/2]+vals[size/2-1])/2.0,
+                (sigmas[size/2]+sigmas[size/2-1])/2.0};
+        }
     }
 
 
@@ -993,6 +1145,85 @@ private:
                                m_iterator_end,
                                m_END;
 };
+
+template<class T, class F>
+    void
+    nikolaidis(timeseries<T, F>& residuals, timeseries<T, F>& original_ts, const datetime_interval<T>& window)
+{
+#ifdef DEBUG
+    std::size_t num_of_outliers = 0, valid_pts = 0;
+#endif
+    using entry = typename timeseries<T, F>::entry;
+    double res;
+    entry median, iqr;
+    std::size_t counter = 0;
+
+    for (auto rw_it  = residuals.rw_begin(window);
+              !rw_it.hit_the_end();
+              ++rw_it)
+    {
+        if ( !rw_it.centre().data().skip() ) {
+#ifdef DEBUG
+            ++valid_pts;
+#endif
+            res    = rw_it.centre().data().value();
+            median = rw_it.clean_median();
+            iqr    = rw_it.clean_iqr();
+            if ( std::abs(res-median.value()) > 3.0*iqr.value() ) {
+                rw_it.centre().data().flag().set(ts_event::outlier);
+                // std::cout<<"\nmarking cause: |" << res << "-"<< median.value() << "| > 3.0 * " << iqr.value();
+                original_ts[counter].flag().set(ts_event::outlier);
+#ifdef DEBUG
+                ++num_of_outliers;
+#endif
+            }
+        }
+        ++counter;
+    }
+    assert( counter == original_ts.size() );
+#ifdef DEBUG
+    std::cout<<"\nOutliers: " << num_of_outliers << "/" << valid_pts << " = " << ((double)num_of_outliers/valid_pts)*100;
+#endif
+    return;
+}
+template<class T, class F>
+    void
+    three_sigma(timeseries<T, F>& residuals, timeseries<T, F>& original_ts, double sigma)
+{
+#ifdef DEBUG
+    std::size_t num_of_outliers = 0, valid_pts = 0;
+#endif
+    double res;
+    std::size_t counter = 0;
+
+    for (auto rw_it  = residuals.begin();
+              rw_it != residuals.end();
+              ++rw_it)
+    {
+        if ( !rw_it.data().skip() ) {
+#ifdef DEBUG
+            ++valid_pts;
+#endif
+            res    = rw_it.data().value();
+            //median = rw_it.clean_median();
+            //iqr    = rw_it.clean_iqr();
+            if ( std::abs(res) > 3.0*sigma ) {
+                rw_it.data().flag().set(ts_event::outlier);
+                // std::cout<<"\nmarking cause: |" << res << "-"<< median.value() << "| > 3.0 * " << iqr.value();
+                original_ts[counter].flag().set(ts_event::outlier);
+#ifdef DEBUG
+                ++num_of_outliers;
+#endif
+            }
+        }
+        ++counter;
+    }
+    assert( counter == original_ts.size() );
+#ifdef DEBUG
+    std::cout<<"\nOutliers: " << num_of_outliers << "/" << valid_pts << " = " << ((double)num_of_outliers/valid_pts)*100;
+#endif
+    return;
+}
 
 } // end namespace ngpt
 

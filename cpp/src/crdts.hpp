@@ -486,7 +486,14 @@ public:
             //std::cout << " Last : "   << strftime_ymd_hms(vlast.epoch());
             //std::cout<<" [-" << from.days().as_underlying_type() <<", +"<< vto.days().as_underlying_type() <<" (" << to.days().as_underlying_type() << ")]";
             auto data = rw_it.clean_average();
-            std::cout << "\n" << centre.epoch().as_mjd() << " " << data.value() << " " << data.sigma();
+            auto median = rw_it.median();
+            auto iqr = rw_it.iqr();
+            // std::cout << "\n" << centre.epoch().as_mjd() << " " << data.value() << " " << data.sigma();
+            std::cout << " Centre: "  << strftime_ymd_hms(centre.epoch()) << "\n";
+            for (auto i = rw_it.first(); i!=rw_it.last(); ++i) {
+                std::cout<<i.data().value() << ",";
+            }
+            std::cout<<"\nMedian: "<<median.value()<<", IQR: "<<iqr.value()<<", Average: "<<data.value()<<"\n";
         }
         return;
     }

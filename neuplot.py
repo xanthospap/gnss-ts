@@ -84,6 +84,19 @@ def read_evn_input(filename):
     print '## Number of events in ts: {0:3d}'.format(len(event_list))
     return event_list
 
+def get_outliers(epochs, x, sigma_x, flag_x):
+    new_epochs = []
+    new_x = []
+    new_sigma_x = []
+    counter = 0
+    for i in flag_x:
+        if "o" in i:
+            new_epochs.append(epochs[counter])
+            new_x.append(x[counter])
+            new_sigma_x.append(sigma_x[counter])
+        counter += 1
+    return new_epochs, new_x, new_sigma_x
+
 def read_new_input(filename):
     """ Read in a cts file; this needs more checking ...
         Returns a list (of lists) as:
@@ -196,6 +209,8 @@ if args.time_format == 'ymd':
 ## Plot (or subplot)
 plt.subplot(3, 1, 1)
 plt.plot(t, n, 'yo-')
+oe, ox, osx = get_outliers(t, n, sn, fn)
+plt.plot(oe, ox, 'ro')
 if events:
     for event in events:
         plt.axvline(event[0], linewidth=.5, color=flag_dict[event[1]]['color'])
@@ -204,6 +219,8 @@ plt.ylabel('North (m)')
 
 plt.subplot(3, 1, 2)
 plt.plot(t, e, 'r.-')
+oe, ox, osx = get_outliers(t, e, se, fe)
+plt.plot(oe, ox, 'bo')
 if events:
     for event in events:
         plt.axvline(event[0], linewidth=.5, color=flag_dict[event[1]]['color'])
@@ -211,6 +228,8 @@ plt.ylabel('East (m)')
 
 plt.subplot(3, 1, 3)
 plt.plot(t, u, 'r.-')
+oe, ox, osx = get_outliers(t, u, su, fu)
+plt.plot(oe, ox, 'bo')
 if events:
     for event in events:
         plt.axvline(event[0], linewidth=.5, color=flag_dict[event[1]]['color'])

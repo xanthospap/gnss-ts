@@ -43,6 +43,7 @@ main(int argc, char* argv[])
 
     // fit model via ls (QR)
     std::vector<double> periods = { 365.25, 365.25/2 };
+    for (int i=0;i<5;++i)
     ts.qr_fit( &periods );
     // ts.qr_fit();
 
@@ -50,8 +51,8 @@ main(int argc, char* argv[])
     // ts.test_iter();
     
     // test the running window
-    ngpt::datetime_interval<ngpt::milliseconds> window {ngpt::modified_julian_day{30}, ngpt::milliseconds{0}};
-    ts.test_running_window(window);
+    // ngpt::datetime_interval<ngpt::milliseconds> window {ngpt::modified_julian_day{30}, ngpt::milliseconds{0}};
+    // ts.test_running_window(window);
 
     // print the time-series
     std::ofstream fout_neu ("test.neu");
