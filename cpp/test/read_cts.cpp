@@ -43,9 +43,7 @@ main(int argc, char* argv[])
 
     // fit model via ls (QR)
     std::vector<double> periods = { 365.25, 365.25/2 };
-    for (int i=0;i<5;++i)
     ts.qr_fit( &periods );
-    // ts.qr_fit();
 
     // test the iterator
     // ts.test_iter();
@@ -53,7 +51,7 @@ main(int argc, char* argv[])
     // test the running window
     // ngpt::datetime_interval<ngpt::milliseconds> window {ngpt::modified_julian_day{30}, ngpt::milliseconds{0}};
     // ts.test_running_window(window);
-
+    
     // print the time-series
     std::ofstream fout_neu ("test.neu");
     ts.dump( fout_neu );
@@ -62,6 +60,60 @@ main(int argc, char* argv[])
     std::ofstream fout_evn ("test.evn");
     ts.dump_event_list( fout_evn );
     fout_evn.close();
+
+    /*
+    ngpt::data_point<ngpt::ts_event> dp;
+    std::cout<<"\nEmpty data point flag is: " << dp.flag();
+    std::cout<<"\nData point is earthquake? "<<dp.flag().check(ngpt::ts_event::earthquake);
+    std::cout<<"\nData point is vel.change? "<<dp.flag().check(ngpt::ts_event::velocity_change);
+    std::cout<<"\nData point is outlier   ? "<<dp.flag().check(ngpt::ts_event::outlier);
+    std::cout<<"\nData point is jump      ? "<<dp.flag().check(ngpt::ts_event::jump);
+    std::cout<<"\nData point is skip      ? "<<dp.flag().check(ngpt::ts_event::skip);
+    dp.flag().set(ngpt::ts_event::outlier);
+    std::cout<<"\nAfter setting outlier flag is: "<<dp.flag();
+    std::cout<<"\nData point is earthquake? "<<dp.flag().check(ngpt::ts_event::earthquake);
+    std::cout<<"\nData point is vel.change? "<<dp.flag().check(ngpt::ts_event::velocity_change);
+    std::cout<<"\nData point is outlier   ? "<<dp.flag().check(ngpt::ts_event::outlier);
+    std::cout<<"\nData point is jump      ? "<<dp.flag().check(ngpt::ts_event::jump);
+    std::cout<<"\nData point is skip      ? "<<dp.flag().check(ngpt::ts_event::skip);
+    ngpt::flag<ngpt::ts_event> flg;
+    std::cout<<"\nEmpty data point flag is: " << flg;
+    std::cout<<"\nData point is earthquake? "<<flg.check(ngpt::ts_event::earthquake);
+    std::cout<<"\nData point is vel.change? "<<flg.check(ngpt::ts_event::velocity_change);
+    std::cout<<"\nData point is outlier   ? "<<flg.check(ngpt::ts_event::outlier);
+    std::cout<<"\nData point is jump      ? "<<flg.check(ngpt::ts_event::jump);
+    std::cout<<"\nData point is skip      ? "<<flg.check(ngpt::ts_event::skip);
+    flg.set(ngpt::ts_event::outlier);
+    std::cout<<"\nAfter setting outlier flag is: "<<flg;
+    std::cout<<"\nData point is earthquake? "<<flg.check(ngpt::ts_event::earthquake);
+    std::cout<<"\nData point is vel.change? "<<flg.check(ngpt::ts_event::velocity_change);
+    std::cout<<"\nData point is outlier   ? "<<flg.check(ngpt::ts_event::outlier);
+    std::cout<<"\nData point is jump      ? "<<flg.check(ngpt::ts_event::jump);
+    std::cout<<"\nData point is skip      ? "<<flg.check(ngpt::ts_event::skip);
+    flg.clear(ngpt::ts_event::outlier);
+    std::cout<<"\nAfter clearing outlier flag is: "<<flg;
+    std::cout<<"\nData point is earthquake? "<<flg.check(ngpt::ts_event::earthquake);
+    std::cout<<"\nData point is vel.change? "<<flg.check(ngpt::ts_event::velocity_change);
+    std::cout<<"\nData point is outlier   ? "<<flg.check(ngpt::ts_event::outlier);
+    std::cout<<"\nData point is jump      ? "<<flg.check(ngpt::ts_event::jump);
+    std::cout<<"\nData point is skip      ? "<<flg.check(ngpt::ts_event::skip);
+    flg.set(ngpt::ts_event::skip);
+    std::cout<<"\nAfter setting skip flag is: "<<flg;
+    std::cout<<"\nData point is earthquake? "<<flg.check(ngpt::ts_event::earthquake);
+    std::cout<<"\nData point is vel.change? "<<flg.check(ngpt::ts_event::velocity_change);
+    std::cout<<"\nData point is outlier   ? "<<flg.check(ngpt::ts_event::outlier);
+    std::cout<<"\nData point is jump      ? "<<flg.check(ngpt::ts_event::jump);
+    std::cout<<"\nData point is skip      ? "<<flg.check(ngpt::ts_event::skip);
+    flg.set(ngpt::ts_event::earthquake);
+    std::cout<<"\nAfter setting earthquake flag is: "<<flg;
+    std::cout<<"\nData point is earthquake? "<<flg.check(ngpt::ts_event::earthquake);
+    std::cout<<"\nData point is vel.change? "<<flg.check(ngpt::ts_event::velocity_change);
+    std::cout<<"\nData point is outlier   ? "<<flg.check(ngpt::ts_event::outlier);
+    std::cout<<"\nData point is jump      ? "<<flg.check(ngpt::ts_event::jump);
+    std::cout<<"\nData point is skip      ? "<<flg.check(ngpt::ts_event::skip);
+    */
+
+    std::cout<<"\n";
 
     return 0;
 }

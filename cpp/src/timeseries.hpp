@@ -544,12 +544,13 @@ public:
         }
 
         // apply outlier detection algorithm and mark them
-        // datetime_interval<T> window {modified_julian_day{90}, T{0}};
-        // nikolaidis(res, *this, window);
-        double sigma = (u.transpose() * u);
-        sigma /= u.rows() - parameters;
-        std::cout<<"\nA-posteriri sigma = "<<sigma;
-        three_sigma(res, *this, std::sqrt(sigma));
+        datetime_interval<T> window {modified_julian_day{90}, T{0}};
+        nikolaidis(res, *this, window);
+
+        // double sigma = (u.transpose() * u);
+        // sigma /= u.rows() - parameters;
+        // std::cout<<"\nA-posteriri sigma = "<<sigma;
+        // three_sigma(res, *this, std::sqrt(sigma));
 
         // should we print the model line to a file?
         /*

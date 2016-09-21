@@ -85,16 +85,20 @@ def read_evn_input(filename):
     return event_list
 
 def get_outliers(epochs, x, sigma_x, flag_x):
+    outlier_char = ''
+    for i in flag_dict:
+        if flag_dict[i]['what'] == 'outlier':
+            outlier_char = i
+            break
+    assert outlier_char != ''
     new_epochs = []
     new_x = []
     new_sigma_x = []
-    counter = 0
-    for i in flag_x:
-        if "o" in i:
-            new_epochs.append(epochs[counter])
-            new_x.append(x[counter])
-            new_sigma_x.append(sigma_x[counter])
-        counter += 1
+    for index, flag in enumerate(flag_x):
+        if outlier_char in flag:
+            new_epochs.append(epochs[index])
+            new_x.append(x[index])
+            new_sigma_x.append(sigma_x[index])
     return new_epochs, new_x, new_sigma_x
 
 def read_new_input(filename):
