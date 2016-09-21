@@ -55,13 +55,13 @@ public:
 }; // class flag<FlagEnum>
 
 /// An enumeration type to hold possible flags for coordinate time-series.
-enum class ts_event : char
+enum class ts_event : int
 {
-    jump,
-    earthquake,
-    velocity_change,
-    outlier,
-    skip
+    jump               = 1,
+    earthquake         = 2,
+    velocity_change    = 4,
+    outlier            = 8,
+    skip               = 16
 };
 
 /// Convert a ts_event to its identifing character.
