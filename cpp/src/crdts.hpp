@@ -431,12 +431,15 @@ public:
         std::vector<epoch> jumps, velchgs, earthqs;
         this->split_events_list(jumps, velchgs, earthqs);
 
+        // a-posteriori std. devs
+        double x_stddev, y_stddev, z_stddev;
+
         std::cout<<"\nComponent X:";
-        /*auto xv =*/ m_x.qr_ls_solve(jumps, velchgs, periods, 1e-3);
+        /*auto xv =*/ m_x.qr_ls_solve(jumps, velchgs, periods, x_stddev, 1e-3);
         std::cout<<"\nComponent Y:";
-        /* auto yv =*/ m_y.qr_ls_solve(jumps, velchgs, periods, 1e-3);
+        /*auto yv =*/ m_y.qr_ls_solve(jumps, velchgs, periods, y_stddev, 1e-3);
         std::cout<<"\nComponent Z:";
-        /* auto zv =*/ m_z.qr_ls_solve(jumps, velchgs, periods, 1e-3);
+        /*auto zv =*/ m_z.qr_ls_solve(jumps, velchgs, periods, y_stddev, 1e-3);
     
         /*
         std::vector<double> modelx, modely;

@@ -384,9 +384,10 @@ public:
     // change parameters from pointers to refs.
     auto
     qr_ls_solve(
-        const std::vector<epoch>&  jumps,
-        const std::vector<epoch>&  vel_changes,
-        const std::vector<double>& periods,
+        const  std::vector<epoch>&  jumps,
+        const  std::vector<epoch>&  vel_changes,
+        const  std::vector<double>& periods,
+        double& a_posteriori_std_dev,
         double sigma0 = 1e-03
         /*,std::string* print_model_to=nullptr*/
     )
@@ -529,19 +530,24 @@ public:
         xvec.reserve(parameters);
         for (std::size_t ii = 0; ii < parameters; ii++) xvec.push_back(x(ii));
 
-        // residuals as time-series
+        a_posteriori_std_dev = 0;
+        // cast residuals to time-series and compute a-posteriori std. dev
         timeseries<T, F> res {*this};
         res.epoch_ptr() = this->epoch_ptr();
         idx = counter = 0;
         for (std::size_t i = 0; i < size(); i++) {
             if ( !m_data[i].skip() ) {
                 data_point<F> dp { u(idx), m_data[i].sigma(),  m_data[i].flag() };
-                ++idx;
+                a_posteriori_std_dev += u(idx)*u(idx);
                 res[i] = dp;
+                ++idx;
             } else {
                 res[i] = m_data[i];
             }
         }
+        a_posteriori_std_dev = std::sqrt(a_posteriori_std_dev)
+            /(double)(idx-parameters);
+        std::cout<<"\nA-posteriori std. deviation: " << a_posteriori_std_dev << "(m).";
 
         // apply outlier detection algorithm and mark them
         datetime_interval<T> window {modified_julian_day{90}, T{0}};
