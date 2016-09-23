@@ -16,10 +16,10 @@ SEC_PER_DAY       = 86400.0e0
 
 ## Mapping characteristics for each possible flag
 flag_dict = {
-    'j': {'what': 'jump', 'color': 'k'},
-    'e': {'what': 'earthquake', 'color': 'g'},
-    'o': {'what': 'outlier', 'color': 'm'},
-    'v': {'what': 'velocity_change', 'color': 'b'}
+    'j': {'what': 'jump', 'color': 'g'},
+    'e': {'what': 'earthquake', 'color': 'b'},
+    'o': {'what': 'outlier', 'color': 'y'},
+    'v': {'what': 'velocity_change', 'color': 'k'}
 }
 
 ## Default x-label
@@ -212,9 +212,10 @@ if args.time_format == 'ymd':
 
 ## Plot (or subplot)
 plt.subplot(3, 1, 1)
-plt.plot(t, n, 'yo-')
+plt.plot(t, n, 'c.')
+
 oe, ox, osx = get_outliers(t, n, sn, fn)
-plt.plot(oe, ox, 'ro')
+plt.plot(oe, ox, 'yo')
 if events:
     for event in events:
         plt.axvline(event[0], linewidth=.5, color=flag_dict[event[1]]['color'])
@@ -222,18 +223,18 @@ plt.title('A tale of 2 subplots')
 plt.ylabel('North (m)')
 
 plt.subplot(3, 1, 2)
-plt.plot(t, e, 'r.-')
+plt.plot(t, e, 'r.')
 oe, ox, osx = get_outliers(t, e, se, fe)
-plt.plot(oe, ox, 'bo')
+plt.plot(oe, ox, 'yo')
 if events:
     for event in events:
         plt.axvline(event[0], linewidth=.5, color=flag_dict[event[1]]['color'])
 plt.ylabel('East (m)')
 
 plt.subplot(3, 1, 3)
-plt.plot(t, u, 'r.-')
+plt.plot(t, u, 'g.')
 oe, ox, osx = get_outliers(t, u, su, fu)
-plt.plot(oe, ox, 'bo')
+plt.plot(oe, ox, 'yo')
 if events:
     for event in events:
         plt.axvline(event[0], linewidth=.5, color=flag_dict[event[1]]['color'])
