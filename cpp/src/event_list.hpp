@@ -209,6 +209,14 @@ public:
         return os;
     }
 
+    typename std::vector<event>::const_iterator
+    it_begin() const noexcept
+    { return m_events.cbegin(); }
+    
+    typename std::vector<event>::const_iterator
+    it_end() const noexcept
+    { return m_events.cend(); }
+
 private:
 
     /// Insert an event (aka std::pair<datetime<T>, ts_event>) into the
