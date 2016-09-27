@@ -24,11 +24,11 @@ public:
         for (auto it = events.it_begin(); it != events.it_end(); ++it)
         {
             if ( it->second == ts_event::jump ) {
-                m_jumps.emplace_back(it->first, 0e0);
+                m_jumps.emplace_back(it->first);
             } else if ( it->second == ts_event::velocity_change ) {
-                md_velocity_change.emplace_back(it->first, it->first, 0e0);
+                md_velocity_change.emplace_back(it->first);
             } else if ( it->second == ts_event::earthquake ) {
-                m_jumps.emplace_back(it->first, 0e0);
+                m_jumps.emplace_back(it->first);
             }
         }
     }
@@ -36,9 +36,12 @@ public:
     void
     add_periods(const cstd::vector<double>& periods) noexcept
     {
-        for (auto i : periods)
-            m_harmonics.push_back()
+        for (auto i : periods) m_harmonics.push_back(i)
     }
+
+    std::size_t
+    parameters() const noexcept
+    { return  2 + m_jumps.size() + m_vel_changes.size() + 2*m_harmonics.size(); }
 
 private:
     double                          m_x0, m_vx;
@@ -64,7 +67,7 @@ private:
     ngpt::datetime<T> m_start;
     double            m_offset; // meters
 
-}; // jump
+}; // md_jump
 
 template<class T,
         typename = std::enable_if_t<T::is_of_sec_type>
@@ -73,8 +76,9 @@ template<class T,
 {
 public:
     explicit
-    md_harmonics(ngpt::datetime<T> start, ngpt::datetime<T> stop,
-        double period_in_days, double in_phase_val=0, double out_phase_val=0)
+    md_harmonics(double period_in_days, ngpt::datetime<T> start = ngpt::datetime<T>::min(),
+            ngpt::datetime<T> stop = ngpt::datetime<T>::max(), double in_phase_val=0,
+            double out_phase_val=0)
     noexcept
     : m_start{start},
       m_stop{stop},
@@ -98,7 +102,7 @@ template<class T,
 {
 public:
     explicit
-    md_velocity_change(ngpt::datetime<T> start, ngpt::datetime<T> stop,
+    md_velocity_change(ngpt::datetime<T> start, ngpt::datetime<T> stop = ngpt::datetime<T>::max(),
         double new_vel=0)
     noexcept
     : m_start{start},
