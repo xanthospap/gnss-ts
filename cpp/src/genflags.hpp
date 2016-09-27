@@ -52,27 +52,37 @@ public:
     /// Check if a flag is set.
     bool check(FlagEnum f) const noexcept { return _f & static_cast<ft>(f); }
 
+    /// Check if a flag is clean (nothing is set)
+    bool is_clean() const noexcept { return !static_cast<ft>(_f); }
+
 }; // class flag<FlagEnum>
 
-/// An enumeration type to hold possible flags for coordinate time-series.
+/// An enumeration type to hold possible flags for coordinate time-series data
+/// points.
+enum class pt_marker : int
+{
+    outlier           = 1,
+    skip              = 2
+};
+
+/// An enumeration type to hold possible flags for coordinate time-series events.
 enum class ts_event : int
 {
     jump               = 1,
     earthquake         = 2,
-    velocity_change    = 4,
-    outlier            = 8,
-    skip               = 16
+    velocity_change    = 4
 };
 
 /// Convert a ts_event to its identifing character.
 char event2char(ts_event event) noexcept
 {
-    switch (event) {
+    switch (event)
+    {
         case ngpt::ts_event::jump: return 'j';
         case ngpt::ts_event::earthquake: return 'e';
         case ngpt::ts_event::velocity_change: return 'v';
-        case ngpt::ts_event::outlier: return 'o';
-        case ngpt::ts_event::skip: return 's';
+        /*case ngpt::ts_event::outlier: return 'o';*/
+        /*case ngpt::ts_event::skip: return 's';*/
         default: return 'x';
     }
 }
@@ -81,24 +91,20 @@ char event2char(ts_event event) noexcept
 /// there should be a function called skip that determines if a data point with
 /// a certain flag should be ignored.
 bool
-__skip__(flag<ts_event> p) noexcept
+__skip__(flag<pt_marker> p) noexcept
 {
-    return p.check(ts_event::outlier) || p.check(ts_event::skip);
+    return /* p.check(pt_marker::outlier) || p.check(pt_marker::skip);
+              or more simply ... */
+           !p.is_clean();
 }
 
 /// For any enumerationtype that can be wrapped around the flag (template) class,
 /// there should be an overload for the '<<' operator.
 std::ostream&
-operator<<(std::ostream& os, const flag<ts_event>& event)
+operator<<(std::ostream& os, const flag<pt_marker>& marker)
 {
-    std::vector<ts_event> events = {
-        ts_event::jump,
-        ts_event::earthquake,
-        ts_event::velocity_change,
-        ts_event::outlier,
-        ts_event::skip };
-
-    for (auto i : events) if ( event.check(i) ) os << event2char(i);
+    if ( marker.check(pt_marker::outlier) ) os << 'o';
+    if ( marker.check(pt_marker::skip) ) os << 's';
 
     return os;
 }

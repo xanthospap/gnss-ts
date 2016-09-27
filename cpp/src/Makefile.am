@@ -24,6 +24,7 @@ dist_include_HEADERS = \
 	timeseries.hpp \
 	crdts.hpp \
 	cts_read.hpp \
-	earthquake_cat.hpp
+	earthquake_cat.hpp \
+	event_list.hpp
 
 dist_libgtms_la_SOURCES =

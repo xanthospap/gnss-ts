@@ -33,6 +33,7 @@
 #include "genflags.hpp"
 #include "timeseries.hpp"
 #include "earthquake_cat.hpp"
+#include "event_list.hpp"
 
 namespace ngpt
 {
@@ -40,38 +41,6 @@ namespace ngpt
 enum class coordinate_type : char
 { cartesian, topocentric, ellipsoidal, unknown };
  
-// Check if a flag is actually an event   
-bool is_event(ngpt::flag<ts_event> f) noexcept
-{
-    return f.check(ts_event::jump)
-        || f.check(ts_event::velocity_change)
-        || f.check(ts_event::earthquake);
-}
-
-// Split a list of flags to individual events; events are filled in the
-// 'events' parameter which is cleared at the start of the function.
-// \todo this is kinda stupid; do i really need this ??
-std::size_t
-split_events(
-    std::vector<ts_event>& events,
-    std::initializer_list<ngpt::flag<ts_event>> f) noexcept
-{
-    events.clear();
-    for (auto i = f.begin(); i != f.end(); ++i) {
-        if (i->check(ts_event::jump)
-            && (std::find(events.cbegin(), events.cend(), ts_event::jump)==events.cend()))
-            events.emplace_back(ts_event::jump);
-        if (i->check(ts_event::velocity_change)
-            && (std::find(events.cbegin(), events.cend(), ts_event::velocity_change)==events.cend()))
-            events.emplace_back(ts_event::velocity_change);
-        if (i->check(ts_event::earthquake)
-            && (std::find(events.cbegin(), events.cend(), ts_event::earthquake)==events.cend()))
-            events.emplace_back(ts_event::earthquake);
-    }
-    return events.size();
-}
-
-
 /// A generic time-series class
 template<class T,
         typename = std::enable_if_t<T::is_of_sec_type>
@@ -79,23 +48,14 @@ template<class T,
     class crdts
 {
 public:
-    /// The specific datetime<T> class we will be using.
-    using epoch = ngpt::datetime<T>;
-    
-    /// Simplify the flag type.
-    using tflag = ngpt::flag<ts_event>;
 
-    /// An event is described by the event type and a time-stamp (i.e. epoch).
-    using tsevent = std::pair<epoch, ts_event>;
-
-    ///
-    using entry = typename timeseries<T, ts_event>::entry;
-    
-    /// standard ellipsoid
-    // using Ell = ngpt::ellipsoid::grs80;
+    using epoch = typename timeseries<T, pt_marker>::epoch;
+    using tflag = typename timeseries<T, pt_marker>::tflag;
+    using entry = typename timeseries<T, pt_marker>::entry;
 
     /// Constructor
-    explicit crdts(std::string name="") noexcept
+    explicit
+    crdts(std::string name="") noexcept
     : m_name{name},
       m_epochs{},
       m_x{}, m_y{}, m_z{},
@@ -130,10 +90,8 @@ public:
                                        ts.m_epochs.cbegin()+end};
             m_epochs = std::move(newvec);
             // leave the events within the new time interval
-            std::vector<tsevent> new_events;
             std::size_t sz = m_epochs.size();
-            std::copy_if(m_events.cbegin(), m_events.cend(), new_events.begin(),
-                [&](const tsevent& it){it.first>=m_epochs[0] && it.second<=m_epochs[sz-1];});
+            m_events = m_events.limit_copy(m_epochs[0], m_epochs[sz-1]);
         }
         set_epoch_ptr();
     }
@@ -184,27 +142,22 @@ public:
     }
     
     /// Size of the time-series (i.e. number of epochs)
-    std::size_t size() const noexcept { return m_epochs.size(); }
+    std::size_t
+    size() const noexcept { return m_epochs.size(); }
 
     /// Add a crdts data point.
-    void add(const epoch& t, double x, double y, double z, double sx=1.0,
-        double sy=1.0, double sz=1.0, tflag fx=tflag{}, tflag fy=tflag{},
-        tflag fz=tflag{})
+    void add(
+        const epoch& t,
+        double x,          double y,         double z,
+        double sx=1.0,     double sy=1.0,    double sz=1.0,
+        tflag  fx=tflag{}, tflag fy=tflag{}, tflag fz=tflag{}
+        )
     {
-        std::vector<ts_event> events;
-        events.reserve(3);
         m_epochs.emplace_back(t);
+        set_epoch_ptr();
         m_x.add_point(entry{x, sx, fx});
         m_y.add_point(entry{y, sy, fy});
         m_z.add_point(entry{z, sz, fz});
-        if (is_event(fx) || is_event(fy) || is_event(fz)) {
-            split_events(events, {fx, fy, fz});
-            for (auto i = events.begin(); i != events.end(); ++i) {
-                m_events.emplace_back(t, *i);
-                // m_events.push_back(tsevent{t,*i});
-            }
-        }
-        set_epoch_ptr();
     }
 
     /// Return the first date
@@ -238,8 +191,7 @@ public:
         datetime<T> start {this->first_epoch()},
                     stop {this->last_epoch()};
         earthquake<T> eq;
-        std::size_t start_search_at = 0,
-                    eq_applied = 0;
+        std::size_t /*start_search_at = 0,*/eq_applied = 0;
         double faz = 0,
                baz = 0;
 #ifdef DEBUG
@@ -257,11 +209,7 @@ public:
             if (eq.epoch() >= start) {
                 distance = eq.epicenter_distance(slat, slon, faz, baz);
                 if ( eq.magnitude() >= -5.6 + 2.17 * std::log10(distance) ) {
-                    auto lower = std::lower_bound(m_epochs.begin()+start_search_at,
-                                m_epochs.end(), eq.epoch());
-                    assert(lower != m_epochs.end());
-                    auto index = std::distance(m_epochs.begin(), lower);
-                    m_events.emplace_back(eq.epoch(), ts_event::earthquake);
+                    m_events.apply(ts_event::earthquake, eq.epoch());
                     ++eq_applied;
 #ifdef DEBUG
                     std::cout<<"\tAdding earthquake at "<< eq.epoch().stringify() << " (" <<eq.lat()*180/DPI<<", "<<eq.lon()*180/DPI<<"), of size "<<eq.magnitude()<<"M.\n";
@@ -272,7 +220,6 @@ public:
 #ifdef DEBUG
         std::cout<<"\tRead "<<eq_read<<" earthquakes from catalogue\n";
 #endif
-        sort_events_list();
         return eq_applied;
     }
     
@@ -281,7 +228,8 @@ public:
     /// Usin the mean value as reference point, all points in the time-series
     /// are transformed to topocentric (i.e. vectors from the reference point in
     /// a topocentric reference frame) along with their std. deviations.
-    void cartesian2topocentric() noexcept
+    void
+    cartesian2topocentric() noexcept
     {
         double lat, lon, hgt;
         double cf[9], cf_s[9];
@@ -327,93 +275,10 @@ public:
         return;
     }
 
-    bool
-    apply_event_list_file(const char* evnf)
+    void
+    apply_event_list_file(const char* evn_file)
     {
-        std::ifstream fin (evnf, std::ifstream::in);
-        if ( !fin.is_open() ) {
-#ifdef DEBUG
-            throw std::invalid_argument
-            ("Could not open event catalogue file: \""+std::string(evnf)+"\"");
-#endif
-            return false;
-        }
-
-        char line[256];
-        char *start;
-        epoch t, e_start{this->first_epoch()}, e_stop{this->last_epoch()};
-        std::vector<tsevent> events;
-
-        while ( fin.getline(line, 256) )
-        {
-            if ( *line != '#' && *line != 'Y' && *line != ' ' ) { // if not comment line, empty line, or header ...
-                start = line;
-                t = ngpt::strptime_ymd_hms<T>(line, &start);
-                bool resolved = false;
-                for (int i = 0; i < 14 && !resolved; ++i) {
-                    if ( *start != ' ' ) {
-                        switch (*start) {
-                            case 'J' :
-                                if (t>=e_start && t<=e_stop) events.emplace_back(t, ts_event::jump);
-                                resolved = true;
-                                break;
-                            case 'j' :
-                                if (t>=e_start && t<=e_stop) events.emplace_back(t, ts_event::jump);
-                                resolved = true;
-                                break;
-                            case 'E' :
-                                if (t>=e_start && t<=e_stop) events.emplace_back(t, ts_event::earthquake);
-                                resolved = true;
-                                break;
-                            case 'e' :
-                                if (t>=e_start && t<=e_stop) events.emplace_back(t, ts_event::earthquake);
-                                resolved = true;
-                                break;
-                            case 'V' :
-                                if (t>=e_start && t<=e_stop) events.emplace_back(t, ts_event::velocity_change);
-                                resolved = true;
-                                break;
-                            case 'v' :
-                                if (t>=e_start && t<=e_stop) events.emplace_back(t, ts_event::velocity_change);
-                                resolved = true;
-                                break;
-                            default:
-#ifdef DEBUG
-                                throw std::runtime_error("[ERROR] Invalid event flag in event list file \""+std::string(evnf)+"\""
-                                "\nFlag is \""+ (*start) +"\"");
-#endif
-                                return false;
-                        }
-                    }
-                    ++start;
-                }
-                if (!resolved) {
-#ifdef DEBUG
-                    throw std::runtime_error("[ERROR] Invalid line in event list file \""+std::string(evnf)+"\""
-                        "\nLine is \""+std::string(line)+"\"");
-#endif
-                    return false;
-                }
-                resolved = false;
-            }
-        }
-        if ( !fin.eof() ) {
-#ifdef DEBUG
-                throw std::runtime_error("Error reading events list file: \""+std::string(evnf)+"\".");
-#endif
-                return false;
-        }
-
-#ifdef DEBUG
-    std::cout<<"\nFound and applied "<<events.size()<<" events.";
-#endif
-
-        // add the newly created vector to the vector of events
-        std::move(events.begin(), events.end(), std::back_inserter(m_events));
-        // sort the events list
-        sort_events_list();
-        // all done!
-        return true;
+        m_events.apply_event_list_file(evn_file, first_epoch(), last_epoch());
     }
 
     ///
@@ -424,12 +289,9 @@ public:
         std::vector<double> periods;
         if ( i_periods ) periods = *i_periods;
 
-        // sort the events list
-        this->sort_events_list();
-
         // split the events into seperate vectors
         std::vector<epoch> jumps, velchgs, earthqs;
-        this->split_events_list(jumps, velchgs, earthqs);
+        m_events.split_event_list(jumps, velchgs, earthqs);
 
         // a-posteriori std. devs
         double x_stddev, y_stddev, z_stddev;
@@ -441,16 +303,6 @@ public:
         std::cout<<"\nComponent Z:";
         /*auto zv =*/ m_z.qr_ls_solve(jumps, velchgs, periods, y_stddev, 1e-3);
     
-        /*
-        std::vector<double> modelx, modely;
-        m_z.make_model_line(first_epoch(), last_epoch(), m_z.central_epoch(),
-            zv, jumps, velchgs, *periods, modelx, modely);
-        std::ofstream fout ("test.mod");
-        for (std::size_t i = 0; i < modelx.size(); ++i)
-        fout << modelx[i] << " " << modely[i] << "\n";
-        fout.close();
-        */
-
         return;
     }
 
@@ -552,11 +404,7 @@ public:
     std::ostream&
     dump_event_list(std::ostream& os) 
     {
-        os << "YYYY MM DD HH mm SS **** EVENT *** COMMENT";
-        for (auto i = m_events.cbegin(); i != m_events.cend(); ++i) {
-            os << "\n" << strftime_ymd_hms(i->first) << "       " << event2char(i->second) << "     ";
-        }
-        return os;
+        return m_events.dump_event_list(os);
     }
 
 private:
@@ -569,49 +417,10 @@ private:
         m_z.epoch_ptr() = &m_epochs;
     }
     
-    /// \brief Sort (in chronological order) the events list and remove duplicates.
-    ///
-    std::size_t
-    sort_events_list() noexcept
-    {
-        if ( m_events.empty() ) return 0;
-        // sort
-        std::sort(m_events.begin(), m_events.end(),
-            [&](const tsevent& a, const tsevent& b){return a.first < b.first;});
-        // remove duplicates
-        m_events.erase(std::unique(m_events.begin(), m_events.end()),
-            m_events.end());
-        return m_events.size();
-    }
-
-    // Split a list of events to individual vectors containing:
-    // a: jumps
-    // b: velocity changes
-    // c: earthquakes
-    void
-    split_events_list(std::vector<epoch>& jumps, std::vector<epoch>& vel_changes,
-    std::vector<epoch>& earthquakes) const noexcept
-    {
-        jumps.clear();
-        vel_changes.clear();
-        earthquakes.clear();
-
-        for (auto i = m_events.cbegin(); i != m_events.cend(); ++i) {
-            if (i->second == ts_event::jump ) {
-                jumps.emplace_back(i->first);
-            } else if (i->second == ts_event::velocity_change ) {
-                vel_changes.emplace_back(i->first);
-            } else if (i->second == ts_event::earthquake ) {
-                earthquakes.emplace_back(i->first);
-            }
-        }
-        return;
-    }
-
     std::string          m_name;         /// name of the timeseries
     std::vector<epoch>   m_epochs;       /// vector of epochs
-    timeseries<T, ngpt::ts_event> m_x, m_y, m_z;  /// the individual components
-    std::vector<tsevent> m_events;       /// a vector of events (e.g. earthquakes)
+    timeseries<T, ngpt::pt_marker> m_x, m_y, m_z;  /// the individual components
+    event_list<T>        m_events;
     coordinate_type      m_ctype;        /// the coordinate type
 
 }; // end class crdts

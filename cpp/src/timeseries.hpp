@@ -24,12 +24,16 @@
 namespace ngpt
 {
 
+/// Forward declerations
+template<class T, class F> class timeseries_iterator;
+template<class T, class F> class running_window;
+
 /// A time-series is a series of data points. This data_point class is designed
 /// to assist the handling of timeseries. The class itself does very little 
 /// and is pretty generic. The only limitation is that the F template parameter
 /// is a enumeration class that can act as a flag, i.e. ngpt::flag<F> makes sense
 /// and has a default constructor.
-/// For example, coordinate time-series, could use: ngpt::ts_events (as the F
+/// For example, coordinate time-series, could use: ngpt::pt_marker (as the F
 /// parameter).
 ///
 /// \see ngpt::flag template class
@@ -79,9 +83,6 @@ private:
 
 }; // end class data_point
 
-// forward decleration
-template<class T, class F> class timeseries_iterator;
-template<class T, class F> class running_window;
 
 /// A generic time-series class
 /// Mean value and number of skipped points should always be correct (i.e. updated).
@@ -92,24 +93,25 @@ template<class T,
     class timeseries
 {
 public:
+
     /// The specific datetime<T> class we will be using.
     using epoch = ngpt::datetime<T>;
-    
-    /// Simplify the flag type.
+
+    /// Simplify the flag type (usually consider ngpt::flag<pt_marker>). This
+    /// acts like a flag for each time-series data point (a point can be an
+    /// outlier or marked as skiped).
     using tflag = ngpt::flag<F>;
 
-    /// The data points
+    /// The type of the time-series data points.
     using entry = ngpt::data_point<F>;
-    
-    /// An event is described by the event type and a time-stamp (i.e. epoch).
-    using event = std::pair<epoch, tflag>;
 
-    ///
+    /// The type of a time-series data entry, i.e. a pair of epoch and data-point.
     using record = std::tuple<epoch&, entry&>;
     
     /// Constructor. If a vector of epochs is passed in, then we know we have
     /// our epochs.
-    explicit timeseries(std::vector<epoch>* epochs=nullptr) noexcept
+    explicit
+    timeseries(std::vector<epoch>* epochs=nullptr) noexcept
     : m_epochs(epochs),
       m_mean{0.0},
       m_skiped{0}
@@ -119,7 +121,8 @@ public:
     
     /// Constructor. Use this constructor if we don't know how many elements the
     /// time-series will have, but we do have a clue.
-    explicit timeseries(std::size_t size_hint) noexcept
+    explicit
+    timeseries(std::size_t size_hint) noexcept
     : m_epochs(nullptr),
       m_mean{0.0},
       m_skiped{0}
@@ -161,7 +164,8 @@ public:
     /// valid epoch and sets the idx parameter to its index.
     ///
     /// \todo Should i allow this to throw?
-    epoch first_valid_epoch(std::size_t idx) const noexcept
+    epoch
+    first_valid_epoch(std::size_t idx) const noexcept
     {
         auto it = std::find_if(std::cbegin(*m_epochs), std::cend(*m_epochs),
             [](const entry& i){return !(i.skip());});
@@ -173,7 +177,8 @@ public:
     /// valid epoch and sets the idx parameter to its index.
     ///
     /// \todo Should i allow this to throw?
-    epoch last_valid_epoch(std::size_t idx) const noexcept
+    epoch
+    last_valid_epoch(std::size_t idx) const noexcept
     {
         auto it = std::find_if(std::crbegin(*m_epochs), std::crend(*m_epochs),
             [](const entry& i){return !(i.skip());});
@@ -246,7 +251,8 @@ public:
 
     /// Split a time-series; return two new time-series in the interval:
     /// [0-idx) and [idx-end). Note that the epoch vector is left as is.
-    auto split(std::size_t idx) const
+    auto
+    split(std::size_t idx) const
     {
         timeseries left  (*this, 0, idx);
         timeseries right (*this, idx);
@@ -255,7 +261,8 @@ public:
 
 
     /// Add a data point; returns the new mean value.
-    double add_point(entry&& e)
+    double
+    add_point(entry&& e)
     {
         double sz = static_cast<double>(m_data.size());
         m_data.emplace_back(e);
@@ -268,17 +275,19 @@ public:
     }
 
     /// Add a data point; returns the new mean value.
-    double add_point(double val, double sigma=1.0, tflag f=tflag{})
+    double
+    add_point(double val, double sigma=1.0, tflag f=tflag{})
     {
         return this->add_point( entry{val, sigma, f} );
     }
 
     /// Mark a data point given its index.
-    void mark(std::size_t index, ts_event f)
+    void
+    mark(std::size_t index, pt_marker f)
     {
         tflag previous = m_data[index].flag();
         m_data[index].flag().set(f);
-        if ( !skip(previous) && skip(tflag{f}) ) ++m_skiped;
+        if ( !skip(previous) && skip(tflag{f}) ) { ++m_skiped; }
     }
 
     /// \brief Compute the mean (i.e. central epoch)
@@ -640,20 +649,13 @@ template<class T, class F>
     class timeseries_iterator
 {
 public:
+
     /// The specific datetime<T> class we will be using.
-    using epoch_td = ngpt::datetime<T>;
-
-    ///
+    using epoch_td    = ngpt::datetime<T>;
     using interval_td = ngpt::datetime_interval<T>;
-    
-    /// Simplify the flag type.
-    using tflag = ngpt::flag<F>;
-
-    /// The data points
-    using entry = ngpt::data_point<F>;
-    
-    ///
-    using record = std::tuple<epoch_td&, entry&>;
+    using tflag       = ngpt::flag<F>;
+    using entry       = ngpt::data_point<F>;
+    using record      = std::tuple<epoch_td&, entry&>;
 
     explicit
     timeseries_iterator(timeseries<T, F, typename std::enable_if_t<T::is_of_sec_type>>& ts)
@@ -825,8 +827,8 @@ public:
     { return m_timeseries; }
 
 private:
-    timeseries<T, F>& m_timeseries;
-    typename std::vector<entry>::iterator m_data_iter;
+    timeseries<T, F>&                        m_timeseries;
+    typename std::vector<entry>::iterator    m_data_iter;
     typename std::vector<epoch_td>::iterator m_epoch_iter;
 };
 
@@ -838,20 +840,12 @@ template<class T, class F>
     class running_window
 {
 public:
-    /// The specific datetime<T> class we will be using.
-    using epoch_td = ngpt::datetime<T>;
 
-    ///
+    using epoch_td    = ngpt::datetime<T>;
     using interval_td = ngpt::datetime_interval<T>;
-
-    /// Simplify the flag type.
-    using tflag = ngpt::flag<F>;
-
-    /// The data points
-    using entry = ngpt::data_point<F>;
-
-    ///
-    using record = std::tuple<epoch_td&, entry&>;
+    using tflag       = ngpt::flag<F>;
+    using entry       = ngpt::data_point<F>;
+    using record      = std::tuple<epoch_td&, entry&>;
 
     explicit
     running_window(timeseries<T, F>& ts, const interval_td& w)
@@ -1177,9 +1171,9 @@ template<class T, class F>
             median = rw_it.clean_median();
             iqr    = rw_it.clean_iqr();
             if ( std::abs(res-median.value()) > 3.0*iqr.value() ) {
-                rw_it.centre().data().flag().set(ts_event::outlier);
+                rw_it.centre().data().flag().set(pt_marker::outlier);
                 // std::cout<<"\nmarking cause: |" << res << "-"<< median.value() << "| > 3.0 * " << iqr.value();
-                original_ts[counter].flag().set(ts_event::outlier);
+                original_ts[counter].flag().set(pt_marker::outlier);
 #ifdef DEBUG
                 ++num_of_outliers;
 #endif
@@ -1215,9 +1209,9 @@ template<class T, class F>
             //median = rw_it.clean_median();
             //iqr    = rw_it.clean_iqr();
             if ( std::abs(res) > 3.0*sigma ) {
-                rw_it.data().flag().set(ts_event::outlier);
+                rw_it.data().flag().set(pt_marker::outlier);
                 // std::cout<<"\nmarking cause: |" << res << "-"<< median.value() << "| > 3.0 * " << iqr.value();
-                original_ts[counter].flag().set(ts_event::outlier);
+                original_ts[counter].flag().set(pt_marker::outlier);
 #ifdef DEBUG
                 ++num_of_outliers;
 #endif
