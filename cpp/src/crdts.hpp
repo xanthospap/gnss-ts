@@ -248,7 +248,7 @@ public:
         ngpt::detail::car2top_cov_matrix(sinf*sinf, sinl*sinl, cosf*cosf, cosl*cosl, cf_s);
 
 #ifdef DEBUG
-        assert( m_x.size() == m_y.size() && m_y.size() == m_z.size() && m_x.size() == size() );
+        assert( m_x.data_pts() == m_y.data_pts() && m_y.data_pts() == m_z.data_pts() && m_x.data_pts() == size() );
 #endif
         
         for (std::size_t i = 0; i < size(); ++i) {

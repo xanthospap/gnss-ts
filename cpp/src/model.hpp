@@ -82,14 +82,14 @@ public:
     noexcept
     : m_start{start},
       m_stop{stop},
-      m_period{period_in_days},
+      m_afreq{D2PI/period_in_days},
       m_in_phase{in_phase_val},
       m_out_phase{out_phase_val}
     {};
 
 private:
     ngpt::datetime<T> m_start, m_stop;
-    double            m_period;       // e.g. for half a year: 365.25/2
+    double            m_afreq;        // angular frequency i.e. omegas: 2 * pi * frequency)
     double            m_in_phase,     // meters
                       m_out_phase;    // meters
 

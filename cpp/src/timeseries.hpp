@@ -26,6 +26,7 @@ namespace ngpt
 
 /// Forward declerations
 template<class T, class F> class timeseries_iterator;
+template<class T, class F> class timeseries_const_iterator;
 template<class T, class F> class running_window;
 
 /// A time-series is a series of data points. This data_point class is designed
@@ -114,7 +115,7 @@ public:
     timeseries(std::vector<epoch>* epochs=nullptr) noexcept
     : m_epochs(epochs),
       m_mean{0.0},
-      m_skiped{0}
+      m_skipped{0}
     {
         if ( m_epochs ) m_data.reserve(m_epochs->size());
     }
@@ -125,7 +126,7 @@ public:
     timeseries(std::size_t size_hint) noexcept
     : m_epochs(nullptr),
       m_mean{0.0},
-      m_skiped{0}
+      m_skipped{0}
     {
         m_data.reserve(size_hint);
     }
@@ -149,10 +150,13 @@ public:
     double mean() const noexcept { return m_mean; }
 
     /// Get the number of data points.
-    std::size_t size() const noexcept { return m_data.size(); }
+    std::size_t data_pts() const noexcept { return m_data.size(); }
 
     /// Get the number of epochs.
     std::size_t epochs() const noexcept { return m_epochs ? m_epochs->size() : 0; }
+    
+    /// Get the number of data points that are skipped.
+    std::size_t skipped_pts() const noexcept { return m_skipped; }
 
     /// Get the first epoch
     epoch first_epoch() const noexcept { return (*m_epochs)[0]; }
@@ -190,7 +194,7 @@ public:
     timeseries(const timeseries& ts, std::size_t start=0, std::size_t end=0)
     : m_epochs(nullptr),
       m_mean{ts.m_mean},
-      m_skiped{ts.m_skiped}
+      m_skipped{ts.m_skipped}
     {
         if (start || end) {
             if (start && !end) {
@@ -202,12 +206,12 @@ public:
             m_data.reserve(end-start);
             double sz;
             m_mean   = 0.0;
-            m_skiped = 0;
+            m_skipped = 0;
             for (std::size_t i = start; i < end; ++i) {
                 sz = i - start;
                 m_data.emplace_back(ts[i]);
                 m_mean = (ts[i].value() + sz*m_mean)/(sz+1.0);
-                if ( m_data[i].skip() ) ++m_skiped;
+                if ( m_data[i].skip() ) ++m_skipped;
             }
         } else {
             m_data = ts.m_data;
@@ -219,7 +223,7 @@ public:
     : m_epochs(ts.m_epochs),
       m_mean{std::move(ts.m_mean)},
       m_data{std::move(ts.m_data)},
-      m_skiped{std::move(ts.m_skiped)}
+      m_skipped{std::move(ts.m_skipped)}
     {
         ts.m_epochs = nullptr;
     }
@@ -231,7 +235,7 @@ public:
             m_epochs = nullptr;
             m_mean   = ts.m_mean;
             m_data   = ts.m_data;
-            m_skiped = ts.m_skiped;
+            m_skipped = ts.m_skipped;
         }
         return *this;
     }
@@ -243,7 +247,7 @@ public:
             m_epochs = ts.m_epochs;
             m_mean   = std::move(ts.m_mean);
             m_data   = std::move(ts.m_data);
-            m_skiped = std::move(ts.m_skiped);
+            m_skipped = std::move(ts.m_skipped);
             ts.m_epochs = nullptr;
         }
         return *this;
@@ -267,7 +271,7 @@ public:
         double sz = static_cast<double>(m_data.size());
         m_data.emplace_back(e);
         if ( e.skip() ) {
-            ++m_skiped;
+            ++m_skipped;
         } else {
             m_mean = (e.value() + sz * m_mean)/(sz+1.0);
         }
@@ -287,7 +291,7 @@ public:
     {
         tflag previous = m_data[index].flag();
         m_data[index].flag().set(f);
-        if ( !skip(previous) && skip(tflag{f}) ) { ++m_skiped; }
+        if ( !skip(previous) && skip(tflag{f}) ) { ++m_skipped; }
     }
 
     /// \brief Compute the mean (i.e. central epoch)
@@ -401,7 +405,7 @@ public:
         /*,std::string* print_model_to=nullptr*/
     )
     {
-        assert( m_epochs != nullptr && epochs() == size() );
+        assert( m_epochs != nullptr && epochs() == data_pts() );
 
         // Number of parameters to be estimated:
         std::size_t parameters = 1 + 1              // linear velocity terms
@@ -410,7 +414,7 @@ public:
                                + periods.size()*2;  // harmonic terms
 
         // Number of observations (ommiting the ones to be skipped)
-        std::size_t observations = m_data.size() - m_skiped;
+        std::size_t observations = m_data.size() - m_skipped;
         
         // Can we estimate ?
         if ( observations < parameters ) {
@@ -451,7 +455,7 @@ public:
         epoch current_epoch;    // the current epoch
 
 #ifdef DEBUG
-        std::cout<<"\nNumber of data points: " << size();
+        std::cout<<"\nNumber of data points: " << data_pts();
         std::cout<<"\nNumber of epochs:      " << epochs();
         std::cout<<"\nA : "<<observations<<" * "<<parameters;
         std::cout<<"\nb : "<<observations;
@@ -522,7 +526,7 @@ public:
             ++counter;
         }
 #ifdef DEBUG
-        assert(counter <= size());
+        assert(counter <= epochs());
 #endif
         
         // Solve via QR
@@ -544,7 +548,7 @@ public:
         timeseries<T, F> res {*this};
         res.epoch_ptr() = this->epoch_ptr();
         idx = counter = 0;
-        for (std::size_t i = 0; i < size(); i++) {
+        for (std::size_t i = 0; i < epochs(); i++) {
             if ( !m_data[i].skip() ) {
                 data_point<F> dp { u(idx), m_data[i].sigma(),  m_data[i].flag() };
                 a_posteriori_std_dev += u(idx)*u(idx);
@@ -562,24 +566,6 @@ public:
         datetime_interval<T> window {modified_julian_day{90}, T{0}};
         nikolaidis(res, *this, window);
 
-        // double sigma = (u.transpose() * u);
-        // sigma /= u.rows() - parameters;
-        // std::cout<<"\nA-posteriri sigma = "<<sigma;
-        // three_sigma(res, *this, std::sqrt(sigma));
-
-        // should we print the model line to a file?
-        /*
-        if ( print_model_to ) {
-            std::ofstream fout { (*print_model_to).c_str() };
-            if ( !fout.is_open() ) {
-                throw std::runtime_error(
-                    "[ERROR] Failed to open file for writing: \""+(*print_model_to)+"\".");
-            }
-            std::vector<double> model_x, model_y;
-            make_model_line(first_epoch(), last_epoch(), central_epoch(),
-                xvec, jumps, vel_changes, periods, model_x, model_y);
-        }
-        */
         return xvec;
     }
 
@@ -616,6 +602,20 @@ public:
         it.end();
         return it;
     }
+    
+    timeseries_const_iterator<T, F>
+    cbegin()
+    {
+        return timeseries_iterator<T, F> {*this};
+    }
+
+    timeseries_const_iterator<T, F>
+    cend()
+    {
+        timeseries_iterator<T, F> it {*this};
+        it.end();
+        return it;
+    }
 
     running_window<T, F>
     rw_begin(const datetime_interval<T>& window)
@@ -641,7 +641,7 @@ private:
     /// The vector of data points.
     std::vector<entry> m_data;
     /// Number of outliers/skipped points.
-    std::size_t m_skiped;
+    std::size_t m_skipped;
 
 }; // class timeseries
 
@@ -663,7 +663,7 @@ public:
       m_data_iter{ts.iter_start()},
       m_epoch_iter{ts.epoch_ptr()->begin()}
     {
-        assert( ts.epoch_ptr() && ts.size() == ts.epochs() );
+        assert( ts.epoch_ptr() && ts.data_pts() == ts.epochs() );
     }
 
     //
@@ -832,6 +832,190 @@ private:
     typename std::vector<epoch_td>::iterator m_epoch_iter;
 };
 
+template<class T, class F>
+    class timeseries_const_iterator
+{
+public:
+
+    /// The specific datetime<T> class we will be using.
+    using epoch_td    = ngpt::datetime<T>;
+    using interval_td = ngpt::datetime_interval<T>;
+    using tflag       = ngpt::flag<F>;
+    using entry       = ngpt::data_point<F>;
+    using record      = std::tuple<epoch_td&, entry&>;
+
+    explicit
+    timeseries_const_iterator(const timeseries<T, F, typename std::enable_if_t<T::is_of_sec_type>>& ts)
+    : m_timeseries{ts},
+      m_data_iter{ts.citer_start()},
+      m_epoch_iter{ts.epoch_ptr()->cbegin()}
+    {
+        assert( ts.epoch_ptr() && ts.data_pts() == ts.epochs() );
+    }
+
+    //
+    timeseries_const_iterator(const timeseries_const_iterator& it) noexcept
+    : m_timeseries{it.m_timeseries},
+      m_data_iter{it.m_data_iter},
+      m_epoch_iter{it.m_epoch_iter}
+    {}
+
+    timeseries_const_iterator(timeseries_const_iterator&& it) noexcept
+    : m_timeseries{it.m_timeseries},
+      m_data_iter{it.m_data_iter},
+      m_epoch_iter{it.m_epoch_iter}
+    {
+    }
+
+    //
+    timeseries_const_iterator& operator=(const timeseries_const_iterator& it) noexcept
+    {
+        if (*this != it) {
+            m_timeseries = it.m_timeseries;
+            m_data_iter  = it.m_data_iter;
+            m_epoch_iter = it.m_epoch_iter;
+        }
+        return *this;
+    }
+    
+    timeseries_const_iterator& operator=(timeseries_const_iterator&& it) noexcept
+    {
+        if (*this != it) {
+            m_timeseries = std::move(it.m_timeseries);
+            m_data_iter  = std::move(it.m_data_iter);
+            m_epoch_iter = std::move(it.m_epoch_iter);
+        }
+        return *this;
+    }
+
+    void begin() noexcept
+    {
+        m_data_iter  = m_timeseries.citer_start();
+        m_epoch_iter = m_timeseries.epoch_ptr()->cbegin();
+    }
+
+    void end() noexcept
+    {
+        m_data_iter  = m_timeseries.citer_stop();
+        m_epoch_iter = m_timeseries.epoch_ptr()->cend();
+    }
+
+    void advance() noexcept
+    {
+        ++m_data_iter;
+        ++m_epoch_iter;
+    }
+
+    std::size_t
+    index() noexcept
+    {
+        return std::distance(m_timeseries.citer_start(), m_data_iter);
+    }
+
+    bool
+    operator==(const timeseries_const_iterator& it) const noexcept
+    {
+        return ( m_data_iter == it.m_data_iter && m_epoch_iter == it.m_epoch_iter );
+    }
+
+    bool
+    operator!=(const timeseries_const_iterator& it) const noexcept
+    {
+        return !((*this) == it);
+    }
+
+    bool
+    operator>(const timeseries_const_iterator& it) const noexcept
+    {
+        return ( m_data_iter > it.m_data_iter && m_epoch_iter > it.m_epoch_iter );
+    }
+    
+    bool
+    operator>=(const timeseries_const_iterator& it) const noexcept
+    {
+        return ( m_data_iter >= it.m_data_iter && m_epoch_iter >= it.m_epoch_iter );
+    }
+    
+    bool
+    operator<(const timeseries_const_iterator& it) const noexcept
+    {
+        return ( m_data_iter < it.m_data_iter && m_epoch_iter < it.m_epoch_iter );
+    }
+    
+    bool
+    operator<=(const timeseries_const_iterator& it) const noexcept
+    {
+        return ( m_data_iter <= it.m_data_iter && m_epoch_iter <= it.m_epoch_iter );
+    }
+
+    timeseries_const_iterator /* pointer arithmetic */
+    operator+(int n) const noexcept
+    {
+        timeseries_const_iterator ti {*this};
+        ti.m_data_iter + n;
+        ti.m_epoch_iter + n;
+        return ti;
+    }
+
+    timeseries_const_iterator /* pointer arithmetic */
+    operator-(int n) const noexcept
+    {
+        timeseries_const_iterator ti {*this};
+        ti.m_data_iter - n;
+        ti.m_epoch_iter - n;
+        return ti;
+    }
+
+    // prefix
+    timeseries_const_iterator& operator++()
+    {
+        ++m_data_iter;
+        ++m_epoch_iter;
+        return *this;
+    }
+    
+    // prefix
+    timeseries_const_iterator& operator--()
+    {
+        --m_data_iter;
+        --m_epoch_iter;
+        return *this;
+    }
+
+    // postfix
+    timeseries_const_iterator operator++(int)
+    {
+        auto tmp {*this};
+        this->operator++();
+        return tmp;
+    }
+
+    int
+    distance_from(const timeseries_const_iterator& it) const
+    {
+        assert( &m_timeseries == &it.m_timeseries );
+        return std::distance(it.m_data_iter, this->m_data_iter);
+    }
+
+    interval_td
+    delta_time(const timeseries_const_iterator& it) const
+    {
+        assert( &m_timeseries == &(it.m_timeseries) );
+        return m_epoch_iter->delta_date( *(it.m_epoch_iter) );
+    }
+
+    epoch_td
+    epoch() noexcept { return *m_epoch_iter;}
+
+    entry
+    data() noexcept { return *m_data_iter; }
+
+private:
+    const timeseries<T, F>&                        m_timeseries;
+    typename std::vector<entry>::const_iterator    m_data_iter;
+    typename std::vector<epoch_td>::const_iterator m_epoch_iter;
+};
+
 
 // TODO
 // when loping i must use hit_the_end() else it wont work!
@@ -856,7 +1040,7 @@ public:
       m_iterator_end{ts},
       m_END{ts.end()}
     {
-        assert( ts.size() == ts.epochs() );
+        assert( ts.data_pts() == ts.epochs() );
         m_half_window = split_window();
         m_END = ts.end();
     }
@@ -1181,7 +1365,7 @@ template<class T, class F>
         }
         ++counter;
     }
-    assert( counter == original_ts.size() );
+    assert( counter == original_ts.data_pts() );
 #ifdef DEBUG
     std::cout<<"\nOutliers: " << num_of_outliers << "/" << valid_pts << " = " << ((double)num_of_outliers/valid_pts)*100;
 #endif
@@ -1219,7 +1403,7 @@ template<class T, class F>
         }
         ++counter;
     }
-    assert( counter == original_ts.size() );
+    assert( counter == original_ts.data_pts() );
 #ifdef DEBUG
     std::cout<<"\nOutliers: " << num_of_outliers << "/" << valid_pts << " = " << ((double)num_of_outliers/valid_pts)*100;
 #endif
