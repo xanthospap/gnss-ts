@@ -18,8 +18,10 @@ namespace ngpt
 template<class T, class F>
     void
     construct_ls_matrices(
-            const timeseries<T, F>& ts,
-            const ts_model<T>&      model,
+            const ngpt::timeseries<T, F>& ts,
+            const ngpt::ts_model<T>&      model,
+            Eigen::MatrixXd&        A,
+            Eigen::VectorXd&        b,
             datetime<T>*            central_epoch = nullptr)
 {
     // is the timeseries valid ?
@@ -40,15 +42,16 @@ template<class T, class F>
     // Set the central epoch. If given, just assign it, else
     // compute the mean epoch; all deltatimes are computed as differences
     // from this (mean) epoch.
-    double mean_epoch { central_epoch ? *central_epoch : central_epoch().as_mjd() };
+    double mean_epoch { central_epoch ? 
+                       *central_epoch : 
+                        ts.central_epoch().as_mjd() };
 
     // TODO would it be better to fill this column-wise??
     // Go ahead and form the A and b matrices.
     // We're gonna need some variables ...
     double dt, weight;
     std::size_t idx{0},       // index (i.e. row of A and b matrices)
-                counter{0},   // index of the current data point (m_data)
-                col{0};       // the column index
+                counter{0};   // index of the current data point (m_data)
     datetime<T> current_epoch;// the current epoch
     timeseries_const_iterator<T, F> it     = ts.cbegin(),
                                     it_end = ts.cend();
@@ -59,67 +62,18 @@ template<class T, class F>
         current_epoch = it.epoch();
         // only include data that are not marked as 'skip'
         if ( !entry.skip() ) {
-            // current_epoch = (*m_epochs)[counter];
-            // delta days from central epoch as mjd.
             dt = current_epoch.as_mjd() - mean_epoch;
-            // weight of observation
-            // weight = sigma0 / m_data[counter].sigma();
             weight = sigma0 / entry.sigma();
-            //
-            // Design Matrix A
-            // ------------------------------------------------------------
-            //
-            // coef for constant (linear) term
-            A(idx, col) = 1.0e0 * weight;
-            ++col;
-            // coef for constant (linear) velocity i.e. m/year
-            A(idx, col) = weight * (dt / 365.25);
-            ++col;
-            // Harmonic coefficients for each period ...
-            for (auto j = omegas.cbegin(); j != omegas.cend(); ++j) {
-                // cosinus or phase
-                A(idx, col) = std::cos((*j) * dt) * weight;
-                ++col;
-                // sinus or out-of-phase
-                A(idx, col) = std::sin((*j) * dt) * weight;
-                ++col;
-            }
-            // Set up jumps ...
-            for (auto j = jumps.begin(); j != jumps.cend(); ++j) {
-                if ( *j >= current_epoch ) {
-                    A(idx, col) = weight;
-                } else {
-                    A(idx, col) = .0e0;
-                }
-                ++col;
-            }
-            // Set up velocity changes ...
-            for (auto j = vel_changes.cbegin(); j != vel_changes.cend(); ++j) {
-                if ( *j >= current_epoch ) {
-                    A(idx, col) = weight * (dt / 365.25);
-                } else {
-                    A(idx, col) = .0e0;
-                }
-                ++col;
-            }
-
-            //
-            // Observation Matrix (vector b)
-            // ------------------------------------------------------------
-            //
-            b(idx) = m_data[counter].value() * weight;
-
-#ifdef DEBUG
-            assert(col == parameters);
-#endif
+            model.assign_row(A, b, current_epoch, weight, dt, entry.value(), idx);
             ++idx;
-            col = 0;
         }
         ++counter;
     }
 #ifdef DEBUG
-        assert(counter <= size());
+        assert(counter == ts.data_pts());
 #endif
+
+    return;
 }
 
 } // end namespace ngpt

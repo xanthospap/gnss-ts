@@ -20,6 +20,8 @@
 
 // gtms headers
 #include "genflags.hpp"
+#include "fit_details.hpp"
+#include "model.hpp"
 
 namespace ngpt
 {
@@ -405,7 +407,6 @@ public:
         /*,std::string* print_model_to=nullptr*/
     )
     {
-        assert( m_epochs != nullptr && epochs() == data_pts() );
 
         // Number of parameters to be estimated:
         std::size_t parameters = 1 + 1              // linear velocity terms
@@ -415,24 +416,6 @@ public:
 
         // Number of observations (ommiting the ones to be skipped)
         std::size_t observations = m_data.size() - m_skipped;
-        
-        // Can we estimate ?
-        if ( observations < parameters ) {
-            throw std::runtime_error("[ERROR] Too few observations to perform LS"
-            "\n\tNumber of parameters:   "+std::to_string(parameters)+"\n\tNumber of observations: "+std::to_string(observations));
-        }
-
-        // set the phases right (transform to angular frequencies i.e. omegas:
-        //  2 * pi * frequency)
-        std::vector<double> omegas;
-        double freq;
-        if ( !periods.empty() ) {
-            omegas = periods;
-            for (auto it = omegas.begin(); it != omegas.end(); ++it) {
-                freq = 1.0e0 / *it;
-                *it = D2PI * freq;
-            }
-        }
         
         // Set up the matrices; the model is: A * x = b
         // since we have uncorrelated variance matric though, we will actually
@@ -444,91 +427,9 @@ public:
         // Compute the mean epoch as mjd; all deltatimes are computed as differences
         // from this (mean) epoch.
         double mean_epoch { this->central_epoch().as_mjd() };
+    
+        construct_ls_matrices(*this, model, A, b, &mean_epoch);
 
-        // \todo would it be better to fill this column-wise??
-        // Go ahead and form the A and b matrices.
-        // We're gonna need some variables ...
-        double dt, weight;
-        std::size_t idx{0},     // index (i.e. row of A and b matrices)
-                    counter{0}, // index of the current data point (m_data)
-                    col{0};     // the column index
-        epoch current_epoch;    // the current epoch
-
-#ifdef DEBUG
-        std::cout<<"\nNumber of data points: " << data_pts();
-        std::cout<<"\nNumber of epochs:      " << epochs();
-        std::cout<<"\nA : "<<observations<<" * "<<parameters;
-        std::cout<<"\nb : "<<observations;
-        std::cout<<"\nStart: "<<first_epoch().stringify();
-        std::cout<<" Stop: "<<last_epoch().stringify();
-        std::cout<<" Mean: "<<central_epoch().stringify();
-#endif
-
-        for (auto it = m_data.cbegin(); it!= m_data.cend(); ++it)
-        {
-            // only include data that are not marked as 'skip'
-            if ( !it->skip() ) {
-                current_epoch = (*m_epochs)[counter];
-                // delta days from central epoch as mjd.
-                dt = current_epoch.as_mjd() - mean_epoch;
-                // weight of observation
-                weight = sigma0 / m_data[counter].sigma();
-                //
-                // Design Matrix A
-                // ------------------------------------------------------------
-                //
-                // coef for constant (linear) term
-                A(idx, col) = 1.0e0 * weight;
-                ++col;
-                // coef for constant (linear) velocity i.e. m/year
-                A(idx, col) = weight * (dt / 365.25);
-                ++col;
-                // Harmonic coefficients for each period ...
-                for (auto j = omegas.cbegin(); j != omegas.cend(); ++j) {
-                    // cosinus or phase
-                    A(idx, col) = std::cos((*j) * dt) * weight;
-                    ++col;
-                    // sinus or out-of-phase
-                    A(idx, col) = std::sin((*j) * dt) * weight;
-                    ++col;
-                }
-                // Set up jumps ...
-                for (auto j = jumps.begin(); j != jumps.cend(); ++j) {
-                    if ( *j >= current_epoch ) {
-                        A(idx, col) = weight;
-                    } else {
-                        A(idx, col) = .0e0;
-                    }
-                    ++col;
-                }
-                // Set up velocity changes ...
-                for (auto j = vel_changes.cbegin(); j != vel_changes.cend(); ++j) {
-                    if ( *j >= current_epoch ) {
-                        A(idx, col) = weight * (dt / 365.25);
-                    } else {
-                        A(idx, col) = .0e0;
-                    }
-                    ++col;
-                }
-
-                //
-                // Observation Matrix (vector b)
-                // ------------------------------------------------------------
-                //
-                b(idx) = m_data[counter].value() * weight;
-
-#ifdef DEBUG
-                assert(col == parameters);
-#endif
-                ++idx;
-                col = 0;
-            }
-            ++counter;
-        }
-#ifdef DEBUG
-        assert(counter <= epochs());
-#endif
-        
         // Solve via QR
         x = A.colPivHouseholderQr().solve(b);
         std::cout<<"\nLS solution vector: \n";
@@ -547,7 +448,7 @@ public:
         // cast residuals to time-series and compute a-posteriori std. dev
         timeseries<T, F> res {*this};
         res.epoch_ptr() = this->epoch_ptr();
-        idx = counter = 0;
+        std::size_t idx{0}, counter{0};
         for (std::size_t i = 0; i < epochs(); i++) {
             if ( !m_data[i].skip() ) {
                 data_point<F> dp { u(idx), m_data[i].sigma(),  m_data[i].flag() };

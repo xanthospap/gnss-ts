@@ -25,6 +25,8 @@ dist_include_HEADERS = \
 	crdts.hpp \
 	cts_read.hpp \
 	earthquake_cat.hpp \
-	event_list.hpp
+	event_list.hpp \
+	model.hpp \
+	fit_details.hpp
 
 dist_libgtms_la_SOURCES =
