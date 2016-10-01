@@ -158,6 +158,9 @@ public:
     
     /// Get the number of data points that are skipped.
     std::size_t skipped_pts() const noexcept { return m_skipped; }
+    
+    /// Get the number of data points that are skipped.
+    std::size_t& skipped_pts() noexcept { return m_skipped; }
 
     /// Get the first epoch
     epoch first_epoch() const noexcept { return (*m_epochs)[0]; }
@@ -288,11 +291,11 @@ public:
 
     /// Mark a data point given its index.
     void
-    mark(std::size_t index, pt_marker f)
+    mark(std::size_t index, F f)
     {
         tflag previous = m_data[index].flag();
         m_data[index].flag().set(f);
-        if ( !skip(previous) && skip(tflag{f}) ) { ++m_skipped; }
+        if ( !__skip__(previous) && __skip__(tflag{f}) ) { ++m_skipped; }
     }
 
     /// \brief Compute the mean (i.e. central epoch)
@@ -446,20 +449,14 @@ public:
 
         // Solve via QR
         x = A.colPivHouseholderQr().solve(b);
-        std::cout<<"\nLS solution vector: \n";
-        for (std::size_t i=0;i<parameters;i++) printf("%+15.5f\n",x(i));
 
         // residual vector u = A*x - b
         Eigen::VectorXd u = Eigen::VectorXd(observations);
         u = A * x - b;
     
-        // solution vector to std::vector and assign it to the model.
+        // assign solution vector to the model.
         model.assign_solution_vector(x);
-        std::vector<double> xvec;
-        xvec.reserve(parameters);
-        for (std::size_t ii = 0; ii < parameters; ii++) {
-            xvec.push_back(x(ii));
-        }
+        model.dump(std::cout);
 
         a_posteriori_std_dev = 0;
         // cast residuals to time-series and compute a-posteriori std. dev
@@ -484,7 +481,7 @@ public:
         datetime_interval<T> window {modified_julian_day{90}, T{0}};
         nikolaidis(res, *this, window);
 
-        return xvec;
+        return;
     }
 
     /// Return a const iterator to the first entry of the data points vector
@@ -739,6 +736,16 @@ public:
 
     entry&
     data() noexcept { return *m_data_iter; }
+    
+    void
+    mark(F f)
+    {
+        tflag previous = m_data_iter->flag();
+        m_data_iter->flag().set(f);
+        if ( !__skip__(previous) && __skip__(tflag{f}) ) {
+            m_timeseries.skipped_pts() = m_timeseries.skipped_pts() + 1;
+        }
+    }
 
     timeseries<T, F>&
     timeseries_ref() noexcept
@@ -1157,9 +1164,6 @@ public:
             }
         }
         
-        //std::cout<<"\n";
-        //for (auto i : vals) std::cout<<i<<", ";
-
         size = vals.size();
         if (size == 1) {
             std::cout<<"------ZERO SIZE VECTOR--------------";
@@ -1174,14 +1178,12 @@ public:
             double vq3 = vals[half_size+half_size/2+1];
             double sq1 = sigmas[half_size/2];
             double sq3 = sigmas[half_size+half_size/2+1];
-            //std::cout<<" IQR (odd): "<<vq3-vq1;
             return entry {vq3-vq1, sq3-sq1};
         } else {
             double vq1 = vals[half_size/2];
             double vq3 = vals[half_size+half_size/2];
             double sq1 = sigmas[half_size/2];
             double sq3 = sigmas[half_size+half_size/2];
-            //std::cout<<" IQR (even): "<<vq3-vq1;
             return entry {vq3-vq1, sq3-sq1};
         }
     }
@@ -1202,19 +1204,15 @@ public:
         }
 
         size = vals.size();
-        //std::cout<<"\n";
-        //for (auto i : vals) std::cout<<i<<", ";
         if (size<5) std::cout<<"\nToo few points:";
 
         if (size%2) { /* odd size */
             std::nth_element(vals.begin(), vals.begin() + size/2+1, vals.end());
             std::nth_element(sigmas.begin(), sigmas.begin() + size/2+1, sigmas.end());
-            //std::cout<<"Median (odd): "<<vals[size/2];
             return entry {vals[size/2], sigmas[size/2]};
         } else {
             std::nth_element(vals.begin(), vals.begin() + size/2+1, vals.end());
             std::nth_element(sigmas.begin(), sigmas.begin() + size/2+1, sigmas.end());
-            //std::cout<<"Median (even): "<< (vals[size/2]+vals[size/2-1])/2.0;
             return entry {(vals[size/2]+vals[size/2-1])/2.0,
                 (sigmas[size/2]+sigmas[size/2-1])/2.0};
         }
@@ -1273,9 +1271,12 @@ template<class T, class F>
             median = rw_it.clean_median();
             iqr    = rw_it.clean_iqr();
             if ( std::abs(res-median.value()) > 3.0*iqr.value() ) {
+                /*
                 rw_it.centre().data().flag().set(pt_marker::outlier);
-                // std::cout<<"\nmarking cause: |" << res << "-"<< median.value() << "| > 3.0 * " << iqr.value();
                 original_ts[counter].flag().set(pt_marker::outlier);
+                */
+                rw_it.centre().mark(pt_marker::outlier);
+                original_ts.mark(counter, pt_marker::outlier);
 #ifdef DEBUG
                 ++num_of_outliers;
 #endif
@@ -1289,6 +1290,7 @@ template<class T, class F>
 #endif
     return;
 }
+
 template<class T, class F>
     void
     three_sigma(timeseries<T, F>& residuals, timeseries<T, F>& original_ts, double sigma)

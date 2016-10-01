@@ -1,6 +1,8 @@
 #ifndef __NGPT_TS_MODEL__
 #define __NGPT_TS_MODEL__
 
+#include <iostream>
+
 // Eigen headers
 #include "eigen3/Eigen/Core"
 
@@ -67,6 +69,9 @@ public:
 
     double
     angular_frequency() const noexcept { return m_afreq; }
+
+    double
+    period() const noexcept { return D2PI/m_afreq;}
 
     double
     in_phase() const noexcept { return m_in_phase; }
@@ -166,9 +171,39 @@ public:
     }
 
     void
+    dump(std::ostream& os) const
+    {
+        os << "Linear Coefficients:";
+        os << "\n\t" << m_x0 << "\n\t" << m_vx;
+        
+        if ( m_harmonics.size() ) os << "\nHarmonic Coefficients:";
+        for (auto j = m_harmonics.begin(); j != m_harmonics.end(); ++j) {
+            os << "\n\t" << j->in_phase()     << " (in-phase)   ";
+            os << "From: " << (j->start()==datetime<T>::min()?"start":strftime_ymd_hms<T>(j->start()) );
+            os << " To: "  << (j->stop()==datetime<T>::max()?"end":strftime_ymd_hms<T>(j->stop()) );
+            os << " Period: " << j->period();
+            os << "\n\t" << j->out_of_phase() << " (out-of-pase)";
+        }
+        
+        if ( m_jumps.size() ) os << "\nJumps/Offsets:";
+        for (auto j = m_jumps.begin(); j != m_jumps.end(); ++j) {
+            os << "\n\t" << j->value() << " at " << strftime_ymd_hms<T>(j->start());
+        }
+
+        if ( m_vel_changes.size() ) os << "\nVelocity Changes:";
+        for (auto j = m_vel_changes.begin(); j != m_vel_changes.end(); ++j) {
+            os << "\n\t" << j->value();
+            os << " From: " << (j->start()==datetime<T>::min()?"start":strftime_ymd_hms<T>(j->start()) );
+            os << " To: "  << (j->stop()==datetime<T>::max()?"end":strftime_ymd_hms<T>(j->stop()) );
+        }
+
+        return;
+    }
+
+    void
     add_periods(const std::vector<double>& periods) noexcept
     {
-        for (auto i : periods) m_harmonics.push_back(i);
+        for (auto i : periods) m_harmonics.emplace_back(i);
     }
 
     std::size_t
