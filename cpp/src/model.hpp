@@ -30,6 +30,9 @@ public:
 
     double
     value() const noexcept { return m_offset; }
+    
+    double&
+    value() noexcept { return m_offset; }
 
 private:
     ngpt::datetime<T> m_start;
@@ -70,6 +73,12 @@ public:
 
     double
     out_of_phase() const noexcept { return m_out_phase; }
+    
+    double&
+    in_phase() noexcept { return m_in_phase; }
+
+    double&
+    out_of_phase() noexcept { return m_out_phase; }
 
 private:
     ngpt::datetime<T> m_start, m_stop;
@@ -102,6 +111,9 @@ public:
 
     double
     value() const noexcept { return m_newvel; }
+    
+    double&
+    value() noexcept { return m_newvel; }
 private:
 
     ngpt::datetime<T> m_start, m_stop;
@@ -114,18 +126,17 @@ template<class T> class ts_model
 public:
 
     ts_model() noexcept {};
-    
+      
     explicit
     ts_model(const event_list<T>& events) noexcept
-    : m_x0{0},
-      m_vx{0},
+    : m_x0{0}, m_vx{0}
     {
         for (auto it = events.it_begin(); it != events.it_end(); ++it)
         {
             if ( it->second == ts_event::jump ) {
                 m_jumps.emplace_back(it->first);
             } else if ( it->second == ts_event::velocity_change ) {
-                md_velocity_change<T>.emplace_back(it->first);
+                m_vel_changes.emplace_back(it->first);
             } else if ( it->second == ts_event::earthquake ) {
                 m_jumps.emplace_back(it->first);
             }
@@ -133,9 +144,31 @@ public:
     }
 
     void
-    add_periods(const cstd::vector<double>& periods) noexcept
+    assign_solution_vector(const Eigen::VectorXd& x_estim)
     {
-        for (auto i : periods) m_harmonics.push_back(i)
+        assert( x_estim.size() >= 2 
+                && (int)x_estim.size() == (int)this->parameters() );
+
+        std::size_t idx = 0;
+        m_x0 = x_estim(idx); ++idx;
+        m_vx = x_estim(idx); ++idx;
+        for (auto j = m_harmonics.begin(); j != m_harmonics.end(); ++j) {
+            j->in_phase()     = x_estim(idx); ++idx;
+            j->out_of_phase() = x_estim(idx); ++idx;
+        }
+        for (auto j = m_jumps.begin(); j != m_jumps.end(); ++j) {
+            j->value() = x_estim(idx); ++idx;
+        }
+        for (auto j = m_vel_changes.begin(); j != m_vel_changes.end(); ++j) {
+            j->value() = x_estim(idx); ++idx;
+        }
+        return;
+    }
+
+    void
+    add_periods(const std::vector<double>& periods) noexcept
+    {
+        for (auto i : periods) m_harmonics.push_back(i);
     }
 
     std::size_t
@@ -155,18 +188,19 @@ public:
         ++col;
         
         // Harmonic coefficients for each period ...
+        // typename std::vector<md_harmonics<T>>::const_iterator j;
         for (auto j = m_harmonics.cbegin(); j != m_harmonics.cend(); ++j) {
             // cosinus or phase
-            A(row, col) = std::cos(j.angular_frequency() * dt) * weight;
+            A(row, col) = std::cos(j->angular_frequency() * dt) * weight;
             ++col;
             // sinus or out-of-phase
-            A(row, col) = std::sin(j.angular_frequency() * dt) * weight;
+            A(row, col) = std::sin(j->angular_frequency() * dt) * weight;
             ++col;
         }
 
         // Set up jumps ...
         for (auto j = m_jumps.cbegin(); j != m_jumps.cend(); ++j) {
-            if ( j.start() >= current_epoch ) {
+            if ( j->start() >= current_epoch ) {
                 A(row, col) = weight;
             } else {
                 A(row, col) = .0e0;
@@ -176,7 +210,7 @@ public:
         
         // Set up velocity changes ...
         for (auto j = m_vel_changes.cbegin(); j != m_vel_changes.cend(); ++j) {
-            if ( j.start() >= current_epoch && j.stop() < current_epoch ) {
+            if ( j->start() >= current_epoch && j->stop() < current_epoch ) {
                 A(row, col) = weight * (dt / 365.25);
             } else {
                 A(row, col) = .0e0;
@@ -186,12 +220,12 @@ public:
 
         // Observation Matrix (vector b)
         b(row) = obs_val * weight;
-
         return;
     }
 
 private:
-    double                             m_x0, m_vx;
+    double                             m_x0,
+                                       m_vx;
     std::vector<md_jump<T>>            m_jumps;
     std::vector<md_harmonics<T>>       m_harmonics;
     std::vector<md_velocity_change<T>> m_vel_changes;

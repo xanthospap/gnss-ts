@@ -34,6 +34,7 @@
 #include "timeseries.hpp"
 #include "earthquake_cat.hpp"
 #include "event_list.hpp"
+#include "model.hpp"
 
 namespace ngpt
 {
@@ -174,6 +175,14 @@ public:
     /// Return the coordinate type
     coordinate_type& crd_type() noexcept { return m_ctype; }
 
+    /// Return the event list
+    event_list<T>
+    events() const noexcept { return m_events; }
+    
+    /// Return the event list
+    event_list<T>&
+    events() noexcept { return m_events; }
+
     /// Given an earthquake_catalogue, read it through and apply the earthquakes
     /// of interest. For an earthquake to be applied, the following condition
     /// must be met:
@@ -283,25 +292,17 @@ public:
 
     ///
     auto
-    qr_fit(std::vector<double>* i_periods = nullptr)
+    qr_fit(ngpt::ts_model<T>& model)
     {
-        // don't let the periods vector be NULL
-        std::vector<double> periods;
-        if ( i_periods ) periods = *i_periods;
-
-        // split the events into seperate vectors
-        std::vector<epoch> jumps, velchgs, earthqs;
-        m_events.split_event_list(jumps, velchgs, earthqs);
-
         // a-posteriori std. devs
         double x_stddev, y_stddev, z_stddev;
 
         std::cout<<"\nComponent X:";
-        /*auto xv =*/ m_x.qr_ls_solve(jumps, velchgs, periods, x_stddev, 1e-3);
+        m_x.qr_ls_solve(model, x_stddev, 1e-3);
         std::cout<<"\nComponent Y:";
-        /*auto yv =*/ m_y.qr_ls_solve(jumps, velchgs, periods, y_stddev, 1e-3);
+        m_y.qr_ls_solve(model, y_stddev, 1e-3);
         std::cout<<"\nComponent Z:";
-        /*auto zv =*/ m_z.qr_ls_solve(jumps, velchgs, periods, y_stddev, 1e-3);
+        m_z.qr_ls_solve(model, y_stddev, 1e-3);
     
         return;
     }

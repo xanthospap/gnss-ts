@@ -20,7 +20,6 @@
 
 // gtms headers
 #include "genflags.hpp"
-#include "fit_details.hpp"
 #include "model.hpp"
 
 namespace ngpt
@@ -399,23 +398,18 @@ public:
     // change parameters from pointers to refs.
     auto
     qr_ls_solve(
-        const  std::vector<epoch>&  jumps,
-        const  std::vector<epoch>&  vel_changes,
-        const  std::vector<double>& periods,
-        double& a_posteriori_std_dev,
-        double sigma0 = 1e-03
-        /*,std::string* print_model_to=nullptr*/
+        ngpt::ts_model<T>&    model,
+        double&               a_posteriori_std_dev,
+        double sigma0         = 1e-03
     )
     {
-
         // Number of parameters to be estimated:
-        std::size_t parameters = 1 + 1              // linear velocity terms
-                               + jumps.size()       // jumps/offsets
-                               + vel_changes.size() // velocity changes
-                               + periods.size()*2;  // harmonic terms
+        std::size_t parameters = model.parameters();
+        assert( parameters > 0 );
 
         // Number of observations (ommiting the ones to be skipped)
         std::size_t observations = m_data.size() - m_skipped;
+        assert( observations > parameters );
         
         // Set up the matrices; the model is: A * x = b
         // since we have uncorrelated variance matric though, we will actually
@@ -428,7 +422,27 @@ public:
         // from this (mean) epoch.
         double mean_epoch { this->central_epoch().as_mjd() };
     
-        construct_ls_matrices(*this, model, A, b, &mean_epoch);
+        double dt, weight;
+        std::size_t idx{0},       // index (i.e. row of A and b matrices)
+                    counter{0};   // index of the current data point (m_data)
+        datetime<T> current_epoch;// the current epoch
+        timeseries_const_iterator<T, F> it = cbegin(),
+                                    it_end = cend();
+        data_point<F> entry;
+
+        for (; it != it_end; ++it) {
+            entry         = it.data();
+            current_epoch = it.epoch();
+            // only include data that are not marked as 'skip'
+            if ( !entry.skip() ) {
+                dt = current_epoch.as_mjd() - mean_epoch;
+                weight = sigma0 / entry.sigma();
+                model.assign_row(A, b, current_epoch, weight, dt, entry.value(), idx);
+                ++idx;
+            }
+            ++counter;
+        }
+        assert( counter == data_pts() );
 
         // Solve via QR
         x = A.colPivHouseholderQr().solve(b);
@@ -439,16 +453,19 @@ public:
         Eigen::VectorXd u = Eigen::VectorXd(observations);
         u = A * x - b;
     
-        // solution vector to std::vector
+        // solution vector to std::vector and assign it to the model.
+        model.assign_solution_vector(x);
         std::vector<double> xvec;
         xvec.reserve(parameters);
-        for (std::size_t ii = 0; ii < parameters; ii++) xvec.push_back(x(ii));
+        for (std::size_t ii = 0; ii < parameters; ii++) {
+            xvec.push_back(x(ii));
+        }
 
         a_posteriori_std_dev = 0;
         // cast residuals to time-series and compute a-posteriori std. dev
         timeseries<T, F> res {*this};
         res.epoch_ptr() = this->epoch_ptr();
-        std::size_t idx{0}, counter{0};
+        idx =  counter = 0;
         for (std::size_t i = 0; i < epochs(); i++) {
             if ( !m_data[i].skip() ) {
                 data_point<F> dp { u(idx), m_data[i].sigma(),  m_data[i].flag() };
@@ -473,7 +490,7 @@ public:
     /// Return a const iterator to the first entry of the data points vector
     typename std::vector<entry>::const_iterator
     citer_start() const noexcept
-    { return m_data.c_begin(); }
+    { return m_data.cbegin(); }
 
     /// Return an (non-const) iterator to the first entry of the data points vector
     typename std::vector<entry>::iterator
@@ -483,7 +500,7 @@ public:
     /// Return a const iterator to the last+1 (=end) entry of the data points vector
     typename std::vector<entry>::const_iterator
     citer_stop() const noexcept
-    { return m_data.c_end(); }
+    { return m_data.cend(); }
     
     /// Return a (non-const) iterator to the last+1 (=end) entry of the data points vector
     typename std::vector<entry>::iterator
@@ -507,13 +524,13 @@ public:
     timeseries_const_iterator<T, F>
     cbegin()
     {
-        return timeseries_iterator<T, F> {*this};
+        return timeseries_const_iterator<T, F> {*this};
     }
 
     timeseries_const_iterator<T, F>
     cend()
     {
-        timeseries_iterator<T, F> it {*this};
+        timeseries_const_iterator<T, F> it {*this};
         it.end();
         return it;
     }

@@ -22,11 +22,10 @@ libgtms_la_CXXFLAGS = \
 dist_include_HEADERS = \
 	genflags.hpp \
 	timeseries.hpp \
-	crdts.hpp \
 	cts_read.hpp \
 	earthquake_cat.hpp \
 	event_list.hpp \
 	model.hpp \
-	fit_details.hpp
+	crdts.hpp
 
 dist_libgtms_la_SOURCES =

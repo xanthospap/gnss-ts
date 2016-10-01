@@ -43,7 +43,8 @@ main(int argc, char* argv[])
 
     // fit model via ls (QR)
     std::vector<double> periods = { 365.25, 365.25/2 };
-    ts.qr_fit( &periods );
+    ngpt::ts_model<ngpt::milliseconds> model { ts.events() };
+    ts.qr_fit( model );
 
     // test the iterator
     // ts.test_iter();
