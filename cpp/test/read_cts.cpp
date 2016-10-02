@@ -27,7 +27,7 @@ main(int argc, char* argv[])
 
     // Transform cartesian to topocentric (including sigmas)
     ts.cartesian2topocentric();
-
+    
     // If catalogue file provided, read and apply the interesting earthquakes
     if (argc > 2) {
         ngpt::earthquake_catalogue<ngpt::milliseconds> eq_cat
@@ -43,9 +43,10 @@ main(int argc, char* argv[])
 
     // fit model via ls (QR)
     std::vector<double> periods = { 365.25, 365.25/2 };
-    ngpt::ts_model<ngpt::milliseconds> model { ts.events() };
-    model.add_periods( periods );
-    ts.qr_fit( model );
+    ngpt::ts_model<ngpt::milliseconds> xmodel { ts.events() };
+    xmodel.add_periods( periods );
+    auto ymodel{xmodel}, zmodel{xmodel};
+    ts.qr_fit( xmodel, ymodel, zmodel );
 
     // test the iterator
     // ts.test_iter();
@@ -62,6 +63,10 @@ main(int argc, char* argv[])
     std::ofstream fout_evn ("test.evn");
     ts.dump_event_list( fout_evn );
     fout_evn.close();
+    // print the time-series model line
+    std::ofstream fout_mod ("test.mod");
+    ts.dump_model_line( fout_mod, xmodel, ymodel, zmodel );
+    fout_mod.close();
 
     /*
     ngpt::data_point<ngpt::ts_event> dp;

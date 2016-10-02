@@ -25,6 +25,23 @@ flag_dict = {
 ## Default x-label
 x_label_str = 'Modified Julian Date'
 
+def parse_axis_limits(limit_string):
+    """ The axis limits can be any of:
+        xmin/xmax
+        xmin/xmax,ymin/ymax
+        xmin/xmax,ymin/ymax,zmin/zmax
+        if xmin is negative, it can be given as "n3.23" instead of "-3.23"
+    """
+    if limit_string[0] == "n" :
+        limit_str = '-' + limit_string[1:]
+    else:
+        limit_str = limit_string
+    l = [ i.split("/") for i in limit_str.split(",") ]
+    xmin, xmax = [float(i) for i in l[0]]
+    ymin, ymax = [float(i) for i in l[1]] if len(l) > 1 else [None]*2
+    zmin, zmax = [float(i) for i in l[2]] if len(l) > 2 else [None]*2
+    return xmin, xmax, ymin, ymax, zmin, zmax
+
 def mjd2pydate(mjd_as_float):
     """ Modified Julian Date (as float) to a Python datetime instance """
     fmjd, mjd         = math.modf(mjd_as_float)
@@ -101,6 +118,30 @@ def get_outliers(epochs, x, sigma_x, flag_x):
             new_sigma_x.append(sigma_x[index])
     return new_epochs, new_x, new_sigma_x
 
+def remove_outliers(t, x, sx, fx):
+    outlier_char = ''
+    for i in flag_dict:
+        if flag_dict[i]['what'] == 'outlier':
+            outlier_char = i
+            break
+    assert outlier_char != ''
+    ll = zip(*[ i for i in zip(t, x, sx, fx) if outlier_char not in i[3]])
+    return list(ll[0]), list(ll[1]), list(ll[2]), list(ll[3])
+
+def read_model_line_file(filename):
+    ## fill up the arrays ...
+    epochs = []
+    x = []; y = []; z = [];
+    with open(filename, 'r') as fin:
+        for line in fin:
+            if len(line) >= 2 and line[0] != '#':
+                l = line.split()
+                epochs.append(float(l[0]))
+                x.append(float(l[1]))
+                y.append(float(l[2]))
+                z.append(float(l[3]))
+    return epochs, x, y, z
+
 def read_new_input(filename):
     """ Read in a cts file; this needs more checking ...
         Returns a list (of lists) as:
@@ -173,6 +214,14 @@ parser.add_argument('-e', '--event-file',
     dest     = 'event_file',
     default  = None
 )
+parser.add_argument('-m', '--model-file',
+    action   = 'store',
+    required = False,
+    help     = 'A file containing the model line.',
+    metavar  = 'MODEL_LINE',
+    dest     = 'model_file',
+    default  = None
+)
 parser.add_argument('-t', '--time-format',
     action   = 'store',
     required = False,
@@ -181,6 +230,23 @@ parser.add_argument('-t', '--time-format',
     dest     = 'time_format',
     choices  = ['mjd', 'gps', 'ymd'],
     default  = 'mjd'
+)
+parser.add_argument('-s', '--smooth',
+    action   = 'store_true',
+    required = False,
+    help     = 'Smooth the time-series, i.e. do not show outliers.',
+    dest     = 'hide_outliers'
+)
+parser.add_argument('-l', '--axis-limits',
+    action   = 'store',
+    required = False,
+    help     = 'Choose the axis limits. The format should be: \"xmin/xmax[,ymin/ymax[,zmin/zmax]]\" '
+    'If the first argument (aka xmin) is negative, it should be given with a leading \"n\" '
+    'and NOT the negative sign (e.g. \"n3.00/3.00,-5.0/5.0\" NOT \"-3.00/3.00,-5.0/5.0\". '
+    'This is an argparse bug.',
+    metavar  = 'AXIS_LIMITS',
+    dest     = 'axis_limits',
+    default  = None
 )
 
 ## Parse command line arguments
@@ -195,12 +261,24 @@ if args.event_file is not None:
 else:
     events = None
 
+##  Read the .mod file (if it exists)
+if args.model_file is not None:
+    modt, modx, mody, modz = read_model_line_file(args.model_file)
+else:
+    modt = None
+
+##  Parse the axis limits (if given)
+if args.axis_limits is not None:
+    xmin, xmax, ymin, ymax, zmin, zmax = parse_axis_limits(args.axis_limits)
+
 ## Change datetime format to gps weeks
 if args.time_format == 'gps':
     sec_in_week = 7 * SEC_PER_DAY
     t = [ mjd2gpsw(i)[0] + mjd2gpsw(i)[1]/sec_in_week for i in t ]
     if events is not None:
         events = [ [mjd2gpsw(i[0])[0] + mjd2gpsw(i[0])[1]/sec_in_week, i[1]] for i in events ]
+    if modt is not None:
+        modt = [ [mjd2gpsw(i)[0] + mjd2gpsw(i)[1]/sec_in_week, i[1]] for i in modt ]
     x_label_str = 'Gps Week'
 
 ## Change datetime format to y/m/d
@@ -208,36 +286,74 @@ if args.time_format == 'ymd':
     t = [ mjd2pydate(i) for i in t ]
     if events is not None:
         events = [ [mjd2pydate(i[0]), i[1]] for i in events ]
+    if modt is not None:
+        modt = [ mjd2pydate(i) for i in modt ]
     x_label_str = 'Date (YYYY/MM/DD)'
 
-## Plot (or subplot)
-plt.subplot(3, 1, 1)
-plt.plot(t, n, 'c.')
+## Get the min and max epochs
+min_epoch = t[0]
+max_epoch = t[len(t)-1]
 
-oe, ox, osx = get_outliers(t, n, sn, fn)
-plt.plot(oe, ox, 'yo')
+## Plot (or subplot)
+axis_x = plt.subplot(3, 1, 1)
+if args.hide_outliers:
+    ho_t, ho_n, ho_sn, ho_fn = remove_outliers(t, n, sn, fn)
+    plt.plot(ho_t, ho_n, 'c.')
+else:
+    plt.plot(t, n, 'c.')
+    ## Plot outliers
+    oe, ox, osx = get_outliers(t, n, sn, fn)
+    plt.plot(oe, ox, 'yo')
+## Plot events
 if events:
     for event in events:
         plt.axvline(event[0], linewidth=.5, color=flag_dict[event[1]]['color'])
+## Plot model line
+if modt:
+    plt.plot(modt, modx, '-')
+## Set axis limits
+axis_x.set_xlim(min_epoch, max_epoch)
+if args.axis_limits is not None:
+    axis_x.set_ylim([xmin, xmax])
+
 plt.title('A tale of 2 subplots')
 plt.ylabel('North (m)')
 
-plt.subplot(3, 1, 2)
-plt.plot(t, e, 'r.')
-oe, ox, osx = get_outliers(t, e, se, fe)
-plt.plot(oe, ox, 'yo')
+axis_y = plt.subplot(3, 1, 2)
+if args.hide_outliers:
+    ho_t, ho_e, ho_se, ho_fe = remove_outliers(t, e, se, fe)
+    plt.plot(ho_t, ho_e, 'c.')
+else:
+    plt.plot(t, e, 'r.')
+    oe, ox, osx = get_outliers(t, e, se, fe)
+    plt.plot(oe, ox, 'yo')
 if events:
     for event in events:
         plt.axvline(event[0], linewidth=.5, color=flag_dict[event[1]]['color'])
+if modt:
+    plt.plot(modt, mody, '-')
+## Set axis limits
+axis_y.set_xlim(min_epoch, max_epoch)
+if args.axis_limits is not None and ymin is not None:
+    axis_y.set_ylim([ymin, ymax])
 plt.ylabel('East (m)')
 
-plt.subplot(3, 1, 3)
-plt.plot(t, u, 'g.')
-oe, ox, osx = get_outliers(t, u, su, fu)
-plt.plot(oe, ox, 'yo')
+axis_z = plt.subplot(3, 1, 3)
+if args.hide_outliers:
+    ho_t, ho_u, ho_su, ho_fu = remove_outliers(t, u, su, fu)
+    plt.plot(ho_t, ho_u, 'c.')
+else:
+    plt.plot(t, u, 'g.')
+    oe, ox, osx = get_outliers(t, u, su, fu)
+    plt.plot(oe, ox, 'yo')
 if events:
     for event in events:
         plt.axvline(event[0], linewidth=.5, color=flag_dict[event[1]]['color'])
+if modt:
+    plt.plot(modt, modz, '-')
+if args.axis_limits is not None and zmin is not None:
+    axis_y.set_ylim([zmin, zmax])
+axis_z.set_xlim(min_epoch, max_epoch)
 plt.xlabel(x_label_str)
 plt.ylabel('Up (m)')
 

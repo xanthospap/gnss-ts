@@ -334,71 +334,7 @@ public:
         return start_epoch;
     }
 
-    void
-    make_model_line(
-        const epoch& from,
-        const epoch& to,
-        const epoch& mean_epoch,
-        const std::vector<double>& parameters,
-        const std::vector<epoch>& jumps,
-        const std::vector<epoch>& vel_changes,
-        const std::vector<double>& periods,
-        std::vector<double>& model_x,
-        std::vector<double>& model_y
-
-    )
-    {
-        double mindt = from.as_mjd() - mean_epoch.as_mjd(); // in days
-        double maxdt = to.as_mjd() - mean_epoch.as_mjd();   // in days
-        
-        // set the phases right (transform to angular frequencies i.e. omegas:
-        //  2 * pi * frequency)
-        std::vector<double> omegas {periods};
-        double freq;
-        for (auto it = omegas.begin(); it != omegas.end(); ++it) {
-            freq = 1.0e0 / *it;
-            *it = D2PI * freq;
-        }
-
-        std::vector<double> x, y;
-        x.reserve(maxdt - mindt + 2);
-        y.reserve(maxdt - mindt + 2);
-        epoch current_epoch{from};
-        std::size_t col{0};
-
-        for (double t = mindt; t <= maxdt; t += 1) {
-            x.push_back(current_epoch.as_mjd());
-            double fx = parameters[0] + parameters[1]*(t/365.25);
-            col = 2;
-            // Harmonic coefficients for each period ...
-            for (auto j = omegas.cbegin(); j != omegas.cend(); ++j) {
-                fx += ( parameters[col] * std::cos((*j) * t) +
-                    parameters[col+1] * std::sin((*j) * t) );
-                col += 2;
-            }
-            // Set up jumps ...
-            for (auto j = jumps.cbegin(); j != jumps.cend(); ++j) {
-                if ( *j >= current_epoch ) {
-                    fx += parameters[col];
-                }
-                ++col;
-            }
-            // Set up velocity changes ...
-            for (auto j = vel_changes.cbegin(); j != vel_changes.cend(); ++j) {
-                if ( *j >= current_epoch ) {
-                    fx += parameters[col]*(t/365.25);
-                }
-                ++col;
-            }
-            y.push_back(fx);
-            current_epoch = current_epoch.add(modified_julian_day{1}, T{0});
-        }
-        model_x = std::move(x);
-        model_y = std::move(y);
-        return;
-    }
-
-    // change parameters from pointers to refs.
+    // 
     auto
     qr_ls_solve(
         ngpt::ts_model<T>&    model,
@@ -450,7 +386,14 @@ public:
         // Solve via QR
         x = A.colPivHouseholderQr().solve(b);
 
-        // residual vector u = A*x - b
+        // residual vector u = A*x - b; note that the reisdual vector may not
+        // have the same size as the (original) time-series. Instead, it has
+        // a size of: original_ts.size() - original_ts.skipped_pts().
+        //
+        // IMPORTANT
+        // ---------------------------
+        // Note that at this point the residuals are scaled according to each
+        // data points weight! (We actualy solved not Ax=b but QAx=Qb)
         Eigen::VectorXd u = Eigen::VectorXd(observations);
         u = A * x - b;
     
@@ -458,15 +401,19 @@ public:
         model.assign_solution_vector(x);
         model.dump(std::cout);
 
+        // Cast residuals to time-series and compute a-posteriori std. dev
+        // The resulting residual ts will have the same size as the originak ts,
+        // where data points marked as 'skipped' will have their original value.
         a_posteriori_std_dev = 0;
-        // cast residuals to time-series and compute a-posteriori std. dev
         timeseries<T, F> res {*this};
         res.epoch_ptr() = this->epoch_ptr();
-        idx =  counter = 0;
+        idx = counter = 0;
+        double residual;
         for (std::size_t i = 0; i < epochs(); i++) {
             if ( !m_data[i].skip() ) {
-                data_point<F> dp { u(idx), m_data[i].sigma(),  m_data[i].flag() };
-                a_posteriori_std_dev += u(idx)*u(idx);
+                residual = u(idx)/(sigma0/m_data[i].sigma());
+                data_point<F> dp { residual, m_data[i].sigma(),  m_data[i].flag() };
+                a_posteriori_std_dev += residual*residual;
                 res[i] = dp;
                 ++idx;
             } else {
@@ -1270,11 +1217,9 @@ template<class T, class F>
             res    = rw_it.centre().data().value();
             median = rw_it.clean_median();
             iqr    = rw_it.clean_iqr();
+            // auto foo = rw_it.centre().epoch();
+            // std::cout<<"\n"<<foo.as_mjd()<<" " <<original_ts[counter].value()<<" "<<res;
             if ( std::abs(res-median.value()) > 3.0*iqr.value() ) {
-                /*
-                rw_it.centre().data().flag().set(pt_marker::outlier);
-                original_ts[counter].flag().set(pt_marker::outlier);
-                */
                 rw_it.centre().mark(pt_marker::outlier);
                 original_ts.mark(counter, pt_marker::outlier);
 #ifdef DEBUG
@@ -1291,6 +1236,7 @@ template<class T, class F>
     return;
 }
 
+/*
 template<class T, class F>
     void
     three_sigma(timeseries<T, F>& residuals, timeseries<T, F>& original_ts, double sigma)
@@ -1328,7 +1274,7 @@ template<class T, class F>
     std::cout<<"\nOutliers: " << num_of_outliers << "/" << valid_pts << " = " << ((double)num_of_outliers/valid_pts)*100;
 #endif
     return;
-}
+}*/
 
 } // end namespace ngpt
 

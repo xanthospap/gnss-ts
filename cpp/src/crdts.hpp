@@ -292,17 +292,17 @@ public:
 
     ///
     auto
-    qr_fit(ngpt::ts_model<T>& model)
+    qr_fit(ngpt::ts_model<T>& xmodel, ngpt::ts_model<T>& ymodel, ngpt::ts_model<T>& zmodel)
     {
         // a-posteriori std. devs
         double x_stddev, y_stddev, z_stddev;
 
         std::cout<<"\nComponent X:";
-        m_x.qr_ls_solve(model, x_stddev, 1e-3);
+        m_x.qr_ls_solve(xmodel, x_stddev, 1e-3);
         std::cout<<"\nComponent Y:";
-        m_y.qr_ls_solve(model, y_stddev, 1e-3);
+        m_y.qr_ls_solve(ymodel, y_stddev, 1e-3);
         std::cout<<"\nComponent Z:";
-        m_z.qr_ls_solve(model, y_stddev, 1e-3);
+        m_z.qr_ls_solve(zmodel, y_stddev, 1e-3);
     
         return;
     }
@@ -398,6 +398,28 @@ public:
                 << z_iter.data().value() << " " 
                 << z_iter.data().sigma() << " " 
                 << z_iter.data().flag()  << "\n";
+        }
+        return os;
+    }
+
+    std::ostream& dump_model_line(std::ostream& os, const ts_model<T>& modelx,
+            const ts_model<T>& modely, const ts_model<T>& modelz)
+    {
+        datetime_interval<T> dt {ngpt::modified_julian_day{1}, T{0}};
+        
+        std::vector<std::pair<datetime<T>, double>> v1, v2, v3;
+        std::size_t size_hint = last_epoch().as_mjd() - first_epoch().as_mjd();
+        v1.reserve(size_hint);
+        v2.reserve(size_hint);
+        v3.reserve(size_hint);
+
+        modelx.make_model(first_epoch(), last_epoch(), dt, m_x.central_epoch(), v1);
+        modely.make_model(first_epoch(), last_epoch(), dt, m_y.central_epoch(), v2);
+        modelz.make_model(first_epoch(), last_epoch(), dt, m_z.central_epoch(), v3);
+
+        for (std::size_t i = 0; i < v1.size(); ++i) {
+            os << "\n" << v1[i].first.as_mjd() << " " << v1[i].second << " "
+                << v2[i].second << " " << v3[i].second;
         }
         return os;
     }

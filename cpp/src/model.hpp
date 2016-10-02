@@ -149,6 +149,52 @@ public:
     }
 
     void
+    make_model(datetime<T> start, datetime<T> stop, datetime_interval<T> tinterval,
+            datetime<T> mean_epoch, std::vector<std::pair<datetime<T>,double>>& results)
+    const
+    {
+        datetime<T> t   = start;
+        double value    = 0,
+               mean_mjd = mean_epoch.as_mjd(),
+               dt       = 0;
+
+        while ( t < stop ) {
+            dt    = t.as_mjd() - mean_mjd;
+
+            // coef for constant (linear) velocity i.e. m/year
+            value = m_x0 + m_vx*(dt/365.25);
+
+            // Harmonic coefficients for each period ...
+            for (auto j = m_harmonics.cbegin(); j != m_harmonics.cend(); ++j) {
+                if (t >= j->start() && t < j->stop() ) {
+                    // cosinus or phase
+                    value += j->in_phase()*std::cos(j->angular_frequency()*dt);
+                    // sinus or out-of-phase
+                    value += j->out_of_phase()*std::sin(j->angular_frequency()*dt);
+                }
+            }
+
+            // Set up jumps ...
+            for (auto j = m_jumps.cbegin(); j != m_jumps.cend(); ++j) {
+                if ( t >= j->start() ) {
+                    value += j->value();
+                }
+            }
+
+            // Set up velocity changes ...
+            for (auto j = m_vel_changes.cbegin(); j != m_vel_changes.cend(); ++j) {
+                if ( t >= j->start() && t < j->stop() ) {
+                    value += j->value()*(dt/365.25);
+                } 
+            }
+
+            t += tinterval;
+            results.emplace_back(t, value);
+        }
+        return;
+    }
+
+    void
     assign_solution_vector(const Eigen::VectorXd& x_estim)
     {
         assert( x_estim.size() >= 2 
@@ -225,17 +271,21 @@ public:
         // Harmonic coefficients for each period ...
         // typename std::vector<md_harmonics<T>>::const_iterator j;
         for (auto j = m_harmonics.cbegin(); j != m_harmonics.cend(); ++j) {
-            // cosinus or phase
-            A(row, col) = std::cos(j->angular_frequency() * dt) * weight;
-            ++col;
-            // sinus or out-of-phase
-            A(row, col) = std::sin(j->angular_frequency() * dt) * weight;
-            ++col;
+            if ( current_epoch >= j->start()&& current_epoch < j->stop() ) {
+                // cosinus or phase
+                A(row, col) = std::cos(j->angular_frequency() * dt) * weight;
+                // sinus or out-of-phase
+                A(row, col+1) = std::sin(j->angular_frequency() * dt) * weight;
+            } else {
+                A(row, col)   = 0;
+                A(row, col+1) = 0;
+            }
+            col+=2;
         }
 
         // Set up jumps ...
         for (auto j = m_jumps.cbegin(); j != m_jumps.cend(); ++j) {
-            if ( j->start() >= current_epoch ) {
+            if ( current_epoch >= j->start() ) {
                 A(row, col) = weight;
             } else {
                 A(row, col) = .0e0;
@@ -245,7 +295,7 @@ public:
         
         // Set up velocity changes ...
         for (auto j = m_vel_changes.cbegin(); j != m_vel_changes.cend(); ++j) {
-            if ( j->start() >= current_epoch && j->stop() < current_epoch ) {
+            if ( current_epoch >= j->start() && current_epoch < j->stop() ) {
                 A(row, col) = weight * (dt / 365.25);
             } else {
                 A(row, col) = .0e0;
