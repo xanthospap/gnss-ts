@@ -46,7 +46,7 @@ main(int argc, char* argv[])
     ngpt::ts_model<ngpt::milliseconds> xmodel { ts.events() };
     xmodel.add_periods( periods );
     auto ymodel{xmodel}, zmodel{xmodel};
-    ts.qr_fit( xmodel, ymodel, zmodel );
+    auto residual_ts = ts.qr_fit( xmodel, ymodel, zmodel );
 
     // test the iterator
     // ts.test_iter();
@@ -67,6 +67,8 @@ main(int argc, char* argv[])
     std::ofstream fout_mod ("test.mod");
     ts.dump_model_line( fout_mod, xmodel, ymodel, zmodel );
     fout_mod.close();
+    // print as json
+    ts.dump_json( std::cout, residual_ts );
 
     /*
     ngpt::data_point<ngpt::ts_event> dp;

@@ -63,6 +63,22 @@ public:
       m_ctype{coordinate_type::unknown}
     {}
 
+    explicit
+    crdts(timeseries<T, pt_marker> t1, timeseries<T, pt_marker> t2, timeseries<T, pt_marker> t3)
+    /*: m_epochs{nullptr}
+      m_x{std::move(t1)},
+      m_y{std::move(t2)},
+      m_z{std::move(t3)}
+    */
+    {
+        m_x = std::move(t1);
+        m_y = std::move(t2);
+        m_z = std::move(t3);
+        assert( m_x.epoch_ptr() == m_y.epoch_ptr() && m_y.epoch_ptr() == m_z.epoch_ptr() );
+        m_epochs = *(m_x.epoch_ptr());
+        set_epoch_ptr();
+    }
+
     /// Copy constructor. If needed, the user can specify the start and stop
     /// indexes i.e. construct a crdts from another crdts copying only a portion
     /// of the original crdts.
@@ -183,6 +199,18 @@ public:
     event_list<T>&
     events() noexcept { return m_events; }
 
+    timeseries<T, ngpt::pt_marker>&
+    x_component() noexcept
+    { return m_x; }
+
+    timeseries<T, ngpt::pt_marker>&
+    y_component() noexcept
+    { return m_y; }
+    
+    timeseries<T, ngpt::pt_marker>&
+    z_component() noexcept
+    { return m_z; }
+
     /// Given an earthquake_catalogue, read it through and apply the earthquakes
     /// of interest. For an earthquake to be applied, the following condition
     /// must be met:
@@ -298,13 +326,14 @@ public:
         double x_stddev, y_stddev, z_stddev;
 
         std::cout<<"\nComponent X:";
-        m_x.qr_ls_solve(xmodel, x_stddev, 1e-3);
+        auto mx = m_x.qr_ls_solve(xmodel, x_stddev, 1e-3);
         std::cout<<"\nComponent Y:";
-        m_y.qr_ls_solve(ymodel, y_stddev, 1e-3);
+        auto my = m_y.qr_ls_solve(ymodel, y_stddev, 1e-3);
         std::cout<<"\nComponent Z:";
-        m_z.qr_ls_solve(zmodel, y_stddev, 1e-3);
-    
-        return;
+        auto mz = m_z.qr_ls_solve(zmodel, y_stddev, 1e-3);
+
+        /*crdts<T> residuals {std::move(mx), std::move(my), std::move(mz)};*/
+        return crdts<T>{std::move(mx), std::move(my), std::move(mz)};;
     }
 
     // \todo entr is shit just for debuging
@@ -383,11 +412,11 @@ public:
     // TODO this should be const!
     std::ostream& dump(std::ostream& os)/*const*/
     {
-        auto x_iter = m_x.begin(),
-             y_iter = m_y.begin(),
-             z_iter = m_z.begin();
+        auto x_iter = m_x.cbegin(),
+             y_iter = m_y.cbegin(),
+             z_iter = m_z.cbegin();
 
-        for (; x_iter != m_x.end(); ++x_iter, ++y_iter, ++z_iter) {
+        for (; x_iter != m_x.cend(); ++x_iter, ++y_iter, ++z_iter) {
             os << x_iter.epoch().as_mjd() << " "
                 << x_iter.data().value() << " " 
                 << x_iter.data().sigma() << " " 
@@ -399,6 +428,51 @@ public:
                 << z_iter.data().sigma() << " " 
                 << z_iter.data().flag()  << "\n";
         }
+        return os;
+    }
+
+    std::ostream& dump_json(std::ostream& os, crdts<T>& res)
+    {
+        assert( this->size() == res.size() );
+
+        auto x_iter     = m_x.cbegin(),
+             y_iter     = m_y.cbegin(),
+             z_iter     = m_z.cbegin(),
+             x_iter_end = m_x.cend() - 1;
+        std::size_t index = 0;
+
+        os << "{ data: [";
+        for (; x_iter != x_iter_end; ++x_iter, ++y_iter, ++z_iter) {
+            os << "{\n"
+                << "\"epoch\": \""      << strftime_ymd_hms(x_iter.epoch()) << "\",\n"
+                << "\"north\": "        << x_iter.data().value() << ",\n" 
+                << "\"sigma_north\": "  << x_iter.data().sigma() << ",\n" 
+                << "\"flag_north\": \"" << x_iter.data().flag()  << "\",\n"
+                << "\"res_north\": "    << (res.x_component())[index].value() << ",\n"
+                << "\"east\": "         << y_iter.data().value() << ",\n" 
+                << "\"sigma_east\": "   << y_iter.data().sigma() << ",\n" 
+                << "\"flag_east\": \""  << y_iter.data().flag()  << "\",\n"
+                << "\"res_east\": "     << (res.y_component())[index].value() << ",\n"
+                << "\"up\": "           << z_iter.data().value() << ",\n" 
+                << "\"sigma_up\": "     << z_iter.data().sigma() << ",\n" 
+                << "\"flag_up\": \""    << z_iter.data().flag()  << "\",\n"
+                << "\"res_up\": "       << (res.z_component())[index].value() << "},\n";
+        }
+        os << "{\n"
+            << "\"epoch\": \""      << strftime_ymd_hms(x_iter.epoch()) << "\",\n"
+            << "\"north\": "        << x_iter.data().value() << ",\n" 
+            << "\"sigma_north\": "  << x_iter.data().sigma() << ",\n" 
+            << "\"flag_north\": \"" << x_iter.data().flag()  << "\",\n"
+            << "\"res_north\": "    << (res.x_component())[index].value() << ",\n"
+            << "\"east\": "         << y_iter.data().value() << ",\n" 
+            << "\"sigma_east\": "   << y_iter.data().sigma() << ",\n" 
+            << "\"flag_east\": \""  << y_iter.data().flag()  << "\",\n"
+            << "\"res_east\": "     << (res.y_component())[index].value() << ",\n"
+            << "\"up\": "           << z_iter.data().value() << ",\n" 
+            << "\"sigma_up\": "     << z_iter.data().sigma() << ",\n" 
+            << "\"flag_up\": \""    << z_iter.data().flag()  << "\",\n"
+            << "\"res_up\": "       << (res.z_component())[index].value() << "}\n";
+        os << "]\n}";
         return os;
     }
 

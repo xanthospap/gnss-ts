@@ -222,14 +222,14 @@ public:
         }
     }
 
-    /// Move constructor. Note that the epoch vector is set to nullptr.
+    /// Move constructor. 
     timeseries(timeseries&& ts) noexcept
     : m_epochs(ts.m_epochs),
       m_mean{std::move(ts.m_mean)},
       m_data{std::move(ts.m_data)},
       m_skipped{std::move(ts.m_skipped)}
     {
-        ts.m_epochs = nullptr;
+    //    ts.m_epochs = nullptr;
     }
 
     /// Assignment operator. Note that the epoch vector is set to nullptr.
@@ -244,7 +244,7 @@ public:
         return *this;
     }
     
-    /// Move assignment operator. Note that the epoch vector is set to nullptr.
+    /// Move assignment operator.
     timeseries& operator=(timeseries&& ts) noexcept
     {
         if (this != &ts) {
@@ -252,7 +252,7 @@ public:
             m_mean   = std::move(ts.m_mean);
             m_data   = std::move(ts.m_data);
             m_skipped = std::move(ts.m_skipped);
-            ts.m_epochs = nullptr;
+            // ts.m_epochs = nullptr;
         }
         return *this;
     }
@@ -428,7 +428,7 @@ public:
         datetime_interval<T> window {modified_julian_day{90}, T{0}};
         nikolaidis(res, *this, window);
 
-        return;
+        return res;
     }
 
     /// Return a const iterator to the first entry of the data points vector
