@@ -9,6 +9,16 @@
 // This is a test program to check the ngpt::crdts<> class.
 //
 
+std::string
+split_path(std::string s)
+{
+    auto pos = s.find_last_of('/');
+    if (pos == std::string::npos ) {
+        return std::string("xxxx");
+    }
+    return s.substr(pos+1, 4);
+}
+
 int
 main(int argc, char* argv[])
 {
@@ -18,7 +28,7 @@ main(int argc, char* argv[])
     }
 
     std::string cts_file = std::string(argv[1]);
-    std::string cts_name = std::string("test");
+    std::string cts_name = split_path(std::string(argv[1]));
 
     // Read in the coordinate time-series from the input file
     std::cout << "Reading time-series file \"" <<cts_file<<"\", as station \""<<cts_name<<"\"\n";
@@ -55,16 +65,19 @@ main(int argc, char* argv[])
     // ngpt::datetime_interval<ngpt::milliseconds> window {ngpt::modified_julian_day{30}, ngpt::milliseconds{0}};
     // ts.test_running_window(window);
     
+    std::string filename = cts_name + std::string(".neu");
     // print the time-series
-    std::ofstream fout_neu ("test.neu");
+    std::ofstream fout_neu (filename);
     ts.dump( fout_neu );
     fout_neu.close();
     // print the time-series event list
-    std::ofstream fout_evn ("test.evn");
+    filename = cts_name + std::string(".evn");
+    std::ofstream fout_evn (filename);
     ts.dump_event_list( fout_evn );
     fout_evn.close();
     // print the time-series model line
-    std::ofstream fout_mod ("test.mod");
+    filename = cts_name + std::string(".mod");
+    std::ofstream fout_mod (filename);
     ts.dump_model_line( fout_mod, xmodel, ymodel, zmodel );
     fout_mod.close();
     // print as json
