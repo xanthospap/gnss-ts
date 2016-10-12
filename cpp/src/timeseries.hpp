@@ -339,7 +339,8 @@ public:
     qr_ls_solve(
         ngpt::ts_model<T>&    model,
         double&               a_posteriori_std_dev,
-        double sigma0         = 1e-03
+        double sigma0         = 1e-03,
+        bool   set_model_epoch= false /* set or not the mean epoch for the (input) model */
     )
     {
         // Number of parameters to be estimated:
@@ -360,6 +361,11 @@ public:
         // Compute the mean epoch as mjd; all deltatimes are computed as differences
         // from this (mean) epoch.
         double mean_epoch { this->central_epoch().as_mjd() };
+        if ( set_model_epoch ) {
+            model.mean_epoch() = this->central_epoch();
+        } else {
+            mean_epoch = model.mean_epoch().as_mjd();
+        }
     
         double dt, weight;
         std::size_t idx{0},       // index (i.e. row of A and b matrices)
@@ -497,6 +503,19 @@ public:
         return it;
     }
 
+    std::ostream&
+    dump(std::ostream& os) const
+    {
+        auto iter = this->cbegin();
+
+        for (; iter != this->cend(); ++iter) {
+            os <<  iter.epoch().as_mjd() << " "
+                << iter.data().value() << " " 
+                << iter.data().sigma() << " " 
+                << iter.data().flag()  << "\n";
+        }
+        return os;
+    }
 private:
     /// A pointer to a vector of datetime<T> instances.
     std::vector<epoch>* m_epochs;
@@ -1166,7 +1185,6 @@ public:
                 (sigmas[size/2]+sigmas[size/2-1])/2.0};
         }
     }
-
 
 private:
     

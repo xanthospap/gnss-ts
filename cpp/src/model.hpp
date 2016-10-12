@@ -146,16 +146,18 @@ public:
                 m_jumps.emplace_back(it->first);
             }
         }
+        ngpt::datetime<T> t0 {modified_julian_day{0}, T{0}};
+        m_mean_epoch = t0;
     }
 
     void
     make_model(datetime<T> start, datetime<T> stop, datetime_interval<T> tinterval,
-            datetime<T> mean_epoch, std::vector<std::pair<datetime<T>,double>>& results)
+            std::vector<std::pair<datetime<T>,double>>& results)
     const
     {
         datetime<T> t   = start;
         double value    = 0,
-               mean_mjd = mean_epoch.as_mjd(),
+               mean_mjd = m_mean_epoch.as_mjd(),
                dt       = 0;
 
         while ( t < stop ) {
@@ -193,6 +195,53 @@ public:
         }
         return;
     }
+    
+    std::vector<double>
+    make_model(const std::vector<datetime<T>>& epochs)
+    const
+    {
+        assert( epochs.size() > 0 );
+        double value    = 0,
+               mean_mjd = m_mean_epoch.as_mjd(),
+               dt       = 0;
+
+        std::vector<double> vals;
+        vals.reserve(epochs.size());
+
+        for (const auto& t : epochs) {
+            dt    = t.as_mjd() - mean_mjd;
+
+            // coef for constant (linear) velocity i.e. m/year
+            value = m_x0 + m_vx*(dt/365.25);
+
+            // Harmonic coefficients for each period ...
+            for (auto j = m_harmonics.cbegin(); j != m_harmonics.cend(); ++j) {
+                if (t >= j->start() && t < j->stop() ) {
+                    // cosinus or phase
+                    value += j->in_phase()*std::cos(j->angular_frequency()*dt);
+                    // sinus or out-of-phase
+                    value += j->out_of_phase()*std::sin(j->angular_frequency()*dt);
+                }
+            }
+
+            // Set up jumps ...
+            for (auto j = m_jumps.cbegin(); j != m_jumps.cend(); ++j) {
+                if ( t >= j->start() ) {
+                    value += j->value();
+                }
+            }
+
+            // Set up velocity changes ...
+            for (auto j = m_vel_changes.cbegin(); j != m_vel_changes.cend(); ++j) {
+                if ( t >= j->start() && t < j->stop() ) {
+                    value += j->value()*(dt/365.25);
+                } 
+            }
+            vals.emplace_back(value);
+        }
+        return vals;
+    }
+
 
     void
     assign_solution_vector(const Eigen::VectorXd& x_estim)
@@ -219,6 +268,9 @@ public:
     void
     dump(std::ostream& os) const
     {
+        if (m_mean_epoch.mjd() != modified_julian_day{0})
+            os << "Central Epoch      : " << strftime_ymd_hms<T>(m_mean_epoch)<<"\n";
+
         os << "Linear Coefficients:";
         os << "\n\t" << m_x0 << "\n\t" << m_vx;
         
@@ -250,6 +302,32 @@ public:
     add_periods(const std::vector<double>& periods) noexcept
     {
         for (auto i : periods) m_harmonics.emplace_back(i);
+    }
+
+    void
+    add_period(double period_in_days, datetime<T> start=datetime<T>::min(), datetime<T> stop=datetime<T>::max(),
+        double in_phase=0e0, double out_of_phase=0e0) noexcept
+    {
+        m_harmonics.emplace_back(period_in_days, start, stop, in_phase, out_of_phase);
+    }
+
+    void
+    add_period(double period_in_days, double in_phase, double out_of_phase) noexcept
+    {
+        m_harmonics.emplace_back(period_in_days, datetime<T>::min(), datetime<T>::max(), in_phase, out_of_phase);
+    }
+
+    void
+    add_jump(datetime<T> at, double val=0e0)
+    {
+        m_jumps.emplace_back(at, val);
+    }
+
+    void
+    add_velocity_change(datetime<T> start, double val=0e0,
+        ngpt::datetime<T> stop = ngpt::datetime<T>::max())
+    {
+        m_vel_changes.emplace_back(start, stop, val);
     }
 
     std::size_t
@@ -308,12 +386,30 @@ public:
         return;
     }
 
+    datetime<T>
+    mean_epoch() const noexcept
+    { return m_mean_epoch; }
+    
+    datetime<T>&
+    mean_epoch() noexcept
+    { return m_mean_epoch; }
+
+    double
+    x0() const noexcept { return m_x0; }
+    double&
+    x0() noexcept { return m_x0; }
+    double
+    vx() const noexcept { return m_vx; }
+    double&
+    vx() noexcept { return m_vx; }
+
 private:
     double                             m_x0,
                                        m_vx;
     std::vector<md_jump<T>>            m_jumps;
     std::vector<md_harmonics<T>>       m_harmonics;
     std::vector<md_velocity_change<T>> m_vel_changes;
+    datetime<T>                        m_mean_epoch;
 
 }; // end class ts_model
 

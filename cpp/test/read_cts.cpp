@@ -55,6 +55,7 @@ main(int argc, char* argv[])
     std::vector<double> periods = { 365.25 };
     ngpt::ts_model<ngpt::milliseconds> xmodel { ts.events() };
     xmodel.add_periods( periods );
+    xmodel.mean_epoch() = ts.mean_epoch();
     auto ymodel{xmodel}, zmodel{xmodel};
     auto residual_ts = ts.qr_fit( xmodel, ymodel, zmodel );
 
@@ -82,8 +83,8 @@ main(int argc, char* argv[])
     fout_mod.close();
     // print as json
     // ts.dump_json( std::cout, residual_ts );
-    residual_ts.test_period();
-
+    // residual_ts.test_period();
+    
     std::cout<<"\n";
 
     return 0;

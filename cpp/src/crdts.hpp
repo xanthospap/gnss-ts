@@ -212,6 +212,13 @@ public:
     z_component() noexcept
     { return m_z; }
 
+    /// Return the mean epoch
+    epoch
+    mean_epoch() const noexcept
+    {
+        return m_x.central_epoch();
+    }
+
     /// Given an earthquake_catalogue, read it through and apply the earthquakes
     /// of interest. For an earthquake to be applied, the following condition
     /// must be met:
@@ -390,19 +397,12 @@ public:
             to   = last.delta_time(centre);
             vto  = vlast.delta_time(centre);
 
-            //std::cout << "\nFirst : " << strftime_ymd_hms(first.epoch());
-            //std::cout << " Centre: "  << strftime_ymd_hms(centre.epoch());
-            //std::cout << " Last : "   << strftime_ymd_hms(vlast.epoch());
-            //std::cout<<" [-" << from.days().as_underlying_type() <<", +"<< vto.days().as_underlying_type() <<" (" << to.days().as_underlying_type() << ")]";
             auto data = rw_it.clean_average();
             auto median = rw_it.median();
             auto iqr = rw_it.iqr();
-            // std::cout << "\n" << centre.epoch().as_mjd() << " " << data.value() << " " << data.sigma();
-            std::cout << " Centre: "  << strftime_ymd_hms(centre.epoch()) << "\n";
             for (auto i = rw_it.first(); i!=rw_it.last(); ++i) {
                 std::cout<<i.data().value() << ",";
             }
-            std::cout<<"\nMedian: "<<median.value()<<", IQR: "<<iqr.value()<<", Average: "<<data.value()<<"\n";
         }
         return;
     }
@@ -517,9 +517,9 @@ public:
         v2.reserve(size_hint);
         v3.reserve(size_hint);
 
-        modelx.make_model(first_epoch(), last_epoch(), dt, m_x.central_epoch(), v1);
-        modely.make_model(first_epoch(), last_epoch(), dt, m_y.central_epoch(), v2);
-        modelz.make_model(first_epoch(), last_epoch(), dt, m_z.central_epoch(), v3);
+        modelx.make_model(first_epoch(), last_epoch(), dt, v1);
+        modely.make_model(first_epoch(), last_epoch(), dt, v2);
+        modelz.make_model(first_epoch(), last_epoch(), dt, v3);
 
         for (std::size_t i = 0; i < v1.size(); ++i) {
             os << "\n" << v1[i].first.as_mjd() << " " << v1[i].second << " "
