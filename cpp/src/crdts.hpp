@@ -35,6 +35,7 @@
 #include "earthquake_cat.hpp"
 #include "event_list.hpp"
 #include "model.hpp"
+#include "period.hpp"
 
 namespace ngpt
 {
@@ -345,6 +346,29 @@ public:
     }
  
 #ifdef DEBUG
+    // just to test periodogram
+    void
+    test_period()
+    {
+        std::size_t N = m_x.data_pts() - m_x.skipped_pts();
+        double ofac{4}, hifac{2};
+        int nout = 0.5*ofac*hifac*N + 1;
+        double *px, *py, prob;
+        int jmax;
+
+        px = new double[nout];
+        py = new double[nout];
+        lomb_scargle_period(m_x, ofac, hifac, px, py, nout, nout, jmax, prob);
+        for (int i=0;i<nout;i++)
+            std::cout<<"\n"<<px[i]<<" "<<py[i];
+        delete[] px;
+        delete[] py;
+
+        double days_in_year = 365.25e0;
+        std::cout<<"\nDominant frequency in time-series: "<<py[jmax]<<" (at: "<<jmax<<")";
+        std::cout<<"\nAs yearly fraction: 1/"<<days_in_year*px[jmax]<<"\n";
+    }
+
     // just to show the use of running_window
     void
     test_running_window(datetime_interval<T> window)
@@ -410,7 +434,9 @@ public:
 #endif
 
     // TODO this should be const!
-    std::ostream& dump(std::ostream& os)/*const*/
+    std::ostream&
+        dump(std::ostream& os)
+    const
     {
         auto x_iter = m_x.cbegin(),
              y_iter = m_y.cbegin(),
@@ -431,7 +457,9 @@ public:
         return os;
     }
 
-    std::ostream& dump_json(std::ostream& os, crdts<T>& res)
+    std::ostream&
+        dump_json(std::ostream& os, crdts<T>& res)
+    const
     {
         assert( this->size() == res.size() );
 
@@ -476,8 +504,10 @@ public:
         return os;
     }
 
-    std::ostream& dump_model_line(std::ostream& os, const ts_model<T>& modelx,
-            const ts_model<T>& modely, const ts_model<T>& modelz)
+    std::ostream&
+    dump_model_line(std::ostream& os, const ts_model<T>& modelx,
+        const ts_model<T>& modely, const ts_model<T>& modelz)
+    const
     {
         datetime_interval<T> dt {ngpt::modified_julian_day{1}, T{0}};
         

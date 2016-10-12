@@ -22,6 +22,7 @@ libgtms_la_CXXFLAGS = \
 dist_include_HEADERS = \
 	genflags.hpp \
 	timeseries.hpp \
+	period.hpp \
 	cts_read.hpp \
 	earthquake_cat.hpp \
 	event_list.hpp \

@@ -83,11 +83,6 @@ period(double x[], double y[], int n, double ofac, double hifac, double px[],
     // xmax = xmin = x[0];
     xmin = x[0];
     xmax = x[n-1];
-    // Go through data to get the range of abscissas
-    /*for (int j = 1; j < n; j++) {
-        if (x[j] > xmax) xmax = x[j];
-        if (x[j] < xmin) xmin = x[j];
-    }*/
 
     xdif = xmax - xmin;
     xave = 0.5*(xmax+xmin);
@@ -96,21 +91,8 @@ period(double x[], double y[], int n, double ofac, double hifac, double px[],
     // Initialize values for the trigonometric recurrences at each data point.
     for (int j = 0; j < n; j++) { 
         arg    = TWOPID*((x[j]-xave)*pnow);
-        //if (std::isnan(arg)) {
-        //    std::cerr<<"\nERROR arg = nan for j = "<<j;
-        //    throw 1;
-        //}
-        //std::cout<<"\narg = "<<TWOPID<<"*(("<<x[j]<<"-"<<xave<<")*"<<pnow<<")";
         wpr[j] = -2.0*sin(0.5*arg)*sin(0.5*arg);
-        //if (std::isnan(wpr[j])) {
-        //    std::cerr<<"\nERROR wpr = nan for j = "<<j;
-        //    throw 1;
-        //}
         wpi[j] = std::sin(arg);
-        //if (std::isnan(wpi[j])) {
-        //    std::cerr<<"\nERROR wpi = nan for j = "<<j;
-        //    throw 1;
-        //}
         wr[j]  = std::cos(arg);
         wi[j]  = wpi[j];
     }
@@ -118,10 +100,6 @@ period(double x[], double y[], int n, double ofac, double hifac, double px[],
     // Main loop over the frequencies to be evaluated
     for (int i = 0; i < nout; i++) {
         px[i] = pnow;
-        //if (std::isnan(px[i])) {
-        //    std::cerr<<"\nERROR px[i] = nan for i = "<<i;
-        //    throw 1;
-        //}
         sumsh = sumc = 0.0;
         // First, loop over the data to get τ and related quantities.
         for (int j = 0; j < n; j++) {
@@ -136,26 +114,10 @@ period(double x[], double y[], int n, double ofac, double hifac, double px[],
         sums  = sumc = sumsy = sumcy = 0.0;
         // Then, loop over the data again to get the periodogram value.
         for (int j = 0; j < n; j++) {
-        //if (std::isnan(wi[j])) {
-        //    std::cerr<<"\nERROR wi = nan for i = "<<i<< "j = "<<j;
-        //    throw 1;
-        //}
-        //if (std::isnan(wr[j])) {
-        //    std::cerr<<"\nERROR wr = nan for i = "<<i;
-        //    throw 1;
-        //}
             s  = wi[j];
             c  = wr[j];
             ss = s*cwtau-c*swtau;
             cc = c*cwtau+s*swtau;
-        //if (std::isnan(ss)) {
-        //    std::cerr<<"\nERROR ss = nan for i = "<<i;
-        //    throw 1;
-        // }
-        //if (std::isnan(cc)) {
-        //    std::cerr<<"\nERROR cc = nan for i = "<<i;
-        //    throw 1;
-        //}
             sums += ss*ss;
             sumc += cc*cc;
             yy = y[j]-ave;

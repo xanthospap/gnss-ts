@@ -52,7 +52,7 @@ main(int argc, char* argv[])
     }
 
     // fit model via ls (QR)
-    std::vector<double> periods = { 365.25, 365.25/2 };
+    std::vector<double> periods = { 365.25 };
     ngpt::ts_model<ngpt::milliseconds> xmodel { ts.events() };
     xmodel.add_periods( periods );
     auto ymodel{xmodel}, zmodel{xmodel};
@@ -82,6 +82,7 @@ main(int argc, char* argv[])
     fout_mod.close();
     // print as json
     // ts.dump_json( std::cout, residual_ts );
+    residual_ts.test_period();
 
     std::cout<<"\n";
 

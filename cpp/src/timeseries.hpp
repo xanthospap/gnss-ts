@@ -467,12 +467,14 @@ public:
     
     timeseries_const_iterator<T, F>
     cbegin()
+    const
     {
         return timeseries_const_iterator<T, F> {*this};
     }
 
     timeseries_const_iterator<T, F>
     cend()
+    const
     {
         timeseries_const_iterator<T, F> it {*this};
         it.end();
