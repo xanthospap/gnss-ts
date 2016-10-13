@@ -41,12 +41,17 @@
                     <li><a href='#'>GPS Week</a></li>
                 </ul>
             </div>
-            <button type='button' class='btn btn-primary inactive' id='outlier-btn'>Filter Outliers</button>
+            <button type='button' class='btn btn-primary inactive' id='outlier-btn' onclick='plot_raw_no_outliers();'>Filter Outliers</button>
             <button type='button' class='btn btn-primary inactive' id='chart-btn'>Line Plot</button>
             <button type='button' class='btn btn-primary inactive' id='events-btn'>Show Events</button>
             <button type='button' class='btn btn-primary inactive' id='model-btn'>Show Model</button>
         </div>
     </div><!-- row-->
+
+    <!-- the 3 plots -->
+    <div id="North-Plot"></div>
+    <div id="East-Plot"></div>
+    <div id="Up-Plot"></div>
 
 </div><!-- container-fluid -->
 
@@ -93,19 +98,19 @@ var yAxisN = d3.svg.axis().scale(yN).orient("left");
 var yAxisE = d3.svg.axis().scale(yE).orient("left");
 var yAxisU = d3.svg.axis().scale(yU).orient("left");
 
-var svgN = d3.select("body").append("svg")
+var svgN = d3.select("#North-Plot").append("svg")
     .attr("width", width + margin.left + margin.right)
     .attr("height", height + margin.top + margin.bottom)
   .append("g")
     .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
-var svgE = d3.select("body").append("svg")
+var svgE = d3.select("#East-Plot").append("svg")
     .attr("width", width + margin.left + margin.right)
     .attr("height", height + margin.top + margin.bottom)
   .append("g")
     .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
-var svgU = d3.select("body").append("svg")
+var svgU = d3.select("#Up-Plot").append("svg")
     .attr("width", width + margin.left + margin.right)
     .attr("height", height + margin.top + margin.bottom)
   .append("g")
@@ -176,7 +181,7 @@ d3.json('dion.json', function(error, data) {
         .attr("class", "line")
         .attr("d", raw_line);
     */
-    svgN.selectAll("dot")
+    svgN.selectAll(".dot")
         .data(pdata)
       .enter().append("circle")
         .attr("r", 3.0)
@@ -187,8 +192,12 @@ d3.json('dion.json', function(error, data) {
         .attr("fill", function(d) {
             if (d.flag_north.indexOf("o")>-1) return "yellow";
             return "red";
+        })
+        .attr("class", function(d) {
+            if (d.flag_north.indexOf("o")>-1) return "outlier_pt";
+            else return "normal_pt";
         });
-    svgE.selectAll("dot")
+    svgE.selectAll(".dot")
         .data(pdata)
       .enter().append("circle")
         .attr("r", 3.0)
@@ -199,8 +208,12 @@ d3.json('dion.json', function(error, data) {
         .attr("fill", function(d) {
             if (d.flag_east.indexOf("o")>-1) return "yellow";
             return "red";
+        })
+        .attr("class", function(d) {
+            if (d.flag_east.indexOf("o")>-1) return "outlier_pt";
+            else return "normal_pt";
         });
-    svgU.selectAll("dot")
+    svgU.selectAll(".dot")
         .data(pdata)
       .enter().append("circle")
         .attr("r", 3.0)
@@ -211,9 +224,49 @@ d3.json('dion.json', function(error, data) {
         .attr("fill", function(d) {
             if (d.flag_up.indexOf("o")>-1) return "yellow";
             return "red";
+        })
+        .attr("class", function(d) {
+            if (d.flag_up.indexOf("o")>-1) return "outlier_pt";
+            else return "normal_pt";
         });
 
 });
+
+function plot_raw_no_outliers() {
+    // Get the data again
+    d3.json('dion.json', function(error, data) {
+        if ( error ) throw error;
+    
+        // the actual data to plot is:
+        pdata = data.data;
+
+        // set x and y domains
+        x.domain(d3.extent (pdata, function(d) { return d.epoch; }));
+        yN.domain(d3.extent(pdata, function(d) { 
+            if (d.flag_north.indexOf("o")>-1) return 0;
+            else return d.north;
+        }));
+        yE.domain(d3.extent(pdata, function(d) { 
+            if (d.flag_east.indexOf("o")>-1) return 0;
+            else return d.east;
+        }));
+        yU.domain(d3.extent(pdata, function(d) { 
+            if (d.flag_up.indexOf("o")>-1) return 0;
+            else return d.up;
+        }));
+    
+        // Select the section we want to apply our changes to
+        var svg_nn = d3.select("#North-Plot").transition();
+        var svg_ne = d3.select("#East-Plot").transition();
+        var svg_nu = d3.select("#Up-Plot").transition();
+
+    // add the points exluding outliers
+    svgN.selectAll(".outlier_pt").remove();
+    svgE.selectAll(".outlier_pt").remove();
+    svgU.selectAll(".outlier_pt").remove();
+
+    });
+}
 </script>
 
 </body>
