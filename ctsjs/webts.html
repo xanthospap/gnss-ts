@@ -73,25 +73,39 @@ var margin = {top: 20, right: 80, bottom: 30, left: 50},
     width  = 960 - margin.left - margin.right,
     height = 500 - margin.top - margin.bottom;
 
+// given a (data) object from a json input file, return time (as mjd) as x
+// and the specified component as y
+/*
+var raw_line = d3.svg.line()
+    .x(function(d) { return x(d.epoch); })
+    .y(function(d) { return yN(d.north); });
+*/
+
+
 var dateFormat = d3.time.format("%Y-%m-%d %H:%M:%S");
-var x     = d3.time.scale().range([0, width]);
-var y     = d3.scale.linear().range([height, 0]);
-var xAxis = d3.svg.axis().scale(x).orient("bottom");
-var yAxis = d3.svg.axis().scale(y).orient("left");
+/*var x      = d3.time.scale().range([0, width]);*/
+var x      = d3.scale.linear().range([0, width]);
+var xAxis  = d3.svg.axis().scale(x).orient("bottom");
+var yN     = d3.scale.linear().range([height, 0]);
+var yE     = d3.scale.linear().range([height, 0]);
+var yU     = d3.scale.linear().range([height, 0]);
+var yAxisN = d3.svg.axis().scale(yN).orient("left");
+var yAxisE = d3.svg.axis().scale(yE).orient("left");
+var yAxisU = d3.svg.axis().scale(yU).orient("left");
 
-var svg_x = d3.select("body").append("svg")
+var svgN = d3.select("body").append("svg")
     .attr("width", width + margin.left + margin.right)
     .attr("height", height + margin.top + margin.bottom)
   .append("g")
     .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
-var svg_y = d3.select("body").append("svg")
+var svgE = d3.select("body").append("svg")
     .attr("width", width + margin.left + margin.right)
     .attr("height", height + margin.top + margin.bottom)
   .append("g")
     .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
-var svg_z = d3.select("body").append("svg")
+var svgU = d3.select("body").append("svg")
     .attr("width", width + margin.left + margin.right)
     .attr("height", height + margin.top + margin.bottom)
   .append("g")
@@ -99,8 +113,106 @@ var svg_z = d3.select("body").append("svg")
 
 d3.json('dion.json', function(error, data) {
     if ( error ) throw error;
+    
+    // assign data to global var
     global.plot_data = data.data;
-    console.log(data.data[0]);
+    
+    // the actual data to plot is:
+    pdata = data.data;
+
+    // set x and y domains
+    x.domain(d3.extent (pdata, function(d) { return d.epoch; }));
+    yN.domain(d3.extent(pdata, function(d) { return d.north; }));
+    yE.domain(d3.extent(pdata, function(d) { return d.east; }));
+    yU.domain(d3.extent(pdata, function(d) { return d.up; }));
+    
+    // set (append) the x-axis in all three subplots
+    svgN.append("g")
+        .attr("class", "x axis")
+        .attr("transform", "translate(0," + height + ")")
+        .call(xAxis);
+    svgE.append("g")
+        .attr("class", "x axis")
+        .attr("transform", "translate(0," + height + ")")
+        .call(xAxis);
+     svgU.append("g")
+        .attr("class", "x axis")
+        .attr("transform", "translate(0," + height + ")")
+        .call(xAxis);
+      
+    // set (append) the y-axis
+    svgN.append("g")
+        .attr("class", "y axis")
+        .call(yAxisN)
+      .append("text")
+        .attr("transform", "rotate(-90)")
+        .attr("y", 6)
+        .attr("dy", ".71em")
+        .style("text-anchor", "end")
+        .text("North (m)");
+    svgE.append("g")
+        .attr("class", "y axis")
+        .call(yAxisE)
+      .append("text")
+        .attr("transform", "rotate(-90)")
+        .attr("y", 6)
+        .attr("dy", ".71em")
+        .style("text-anchor", "end")
+        .text("East (m)");
+    svgU.append("g")
+        .attr("class", "y axis")
+        .call(yAxisU)
+      .append("text")
+        .attr("transform", "rotate(-90)")
+        .attr("y", 6)
+        .attr("dy", ".71em")
+        .style("text-anchor", "end")
+        .text("Up (m)");
+        
+    // add the lines
+    /*
+    svgN.append("path")
+        .datum(pdata)
+        .attr("class", "line")
+        .attr("d", raw_line);
+    */
+    svgN.selectAll("dot")
+        .data(pdata)
+      .enter().append("circle")
+        .attr("r", 3.0)
+        .attr("cx", function(d) {return x(d.epoch);})
+        .attr("cy", function(d) {return yN(d.north);})
+        .attr("stroke", "blue")
+        .attr("stroke-width", 0.3)
+        .attr("fill", function(d) {
+            if (d.flag_north.indexOf("o")>-1) return "yellow";
+            return "red";
+        });
+    svgE.selectAll("dot")
+        .data(pdata)
+      .enter().append("circle")
+        .attr("r", 3.0)
+        .attr("cx", function(d) {return x(d.epoch);})
+        .attr("cy", function(d) {return yN(d.east);})
+        .attr("stroke", "blue")
+        .attr("stroke-width", 0.3)
+        .attr("fill", function(d) {
+            if (d.flag_east.indexOf("o")>-1) return "yellow";
+            return "red";
+        });
+    svgU.selectAll("dot")
+        .data(pdata)
+      .enter().append("circle")
+        .attr("r", 3.0)
+        .attr("cx", function(d) {return x(d.epoch);})
+        .attr("cy", function(d) {return yN(d.east);})
+        .attr("stroke", "blue")
+        .attr("stroke-width", 0.3)
+        .attr("fill", function(d) {
+            if (d.flag_up.indexOf("o")>-1) return "yellow";
+            return "red";
+        });
+
 });
 </script>
 

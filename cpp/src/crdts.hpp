@@ -472,7 +472,7 @@ public:
         os << "{ data: [";
         for (; x_iter != x_iter_end; ++x_iter, ++y_iter, ++z_iter) {
             os << "{\n"
-                << "\"epoch\": \""      << strftime_ymd_hms(x_iter.epoch()) << "\",\n"
+                << "\"epoch\": " << /*strftime_ymd_hms(x_iter.epoch())*/x_iter.epoch().as_mjd() << ",\n"
                 << "\"north\": "        << x_iter.data().value() << ",\n" 
                 << "\"sigma_north\": "  << x_iter.data().sigma() << ",\n" 
                 << "\"flag_north\": \"" << x_iter.data().flag()  << "\",\n"
