@@ -469,7 +469,7 @@ public:
              x_iter_end = m_x.cend() - 1;
         std::size_t index = 0;
 
-        os << "{ data: [";
+        os << "{ \"data\": [";
         for (; x_iter != x_iter_end; ++x_iter, ++y_iter, ++z_iter) {
             os << "{\n"
                 << "\"epoch\": " << /*strftime_ymd_hms(x_iter.epoch())*/x_iter.epoch().as_mjd() << ",\n"
@@ -485,7 +485,9 @@ public:
                 << "\"sigma_up\": "     << z_iter.data().sigma() << ",\n" 
                 << "\"flag_up\": \""    << z_iter.data().flag()  << "\",\n"
                 << "\"res_up\": "       << (res.z_component())[index].value() << "},\n";
+            ++index;
         }
+        /* TODO something is very wrong here !! */
         os << "{\n"
             << "\"epoch\": \""      << strftime_ymd_hms(x_iter.epoch()) << "\",\n"
             << "\"north\": "        << x_iter.data().value() << ",\n" 

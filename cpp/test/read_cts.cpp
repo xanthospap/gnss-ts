@@ -82,7 +82,7 @@ main(int argc, char* argv[])
     ts.dump_model_line( fout_mod, xmodel, ymodel, zmodel );
     fout_mod.close();
     // print as json
-    // ts.dump_json( std::cout, residual_ts );
+    ts.dump_json( std::cout, residual_ts );
     // residual_ts.test_period();
     
     std::cout<<"\n";
