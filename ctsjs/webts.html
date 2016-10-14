@@ -16,7 +16,20 @@
 
     <script src='https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js'></script>
     <script src='https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.0/d3.min.js' charset='utf-8'></script>
-    <script src="http://d3js.org/d3.v3.min.js"></script>
+    <script src="http://d3js.org/d3.v4.min.js"></script>
+
+    <style type="text/css">
+        .axis line {
+            fill: none;
+            stroke: black;
+            shape-rendering: crispEdges;
+            stroke-width: 1px;
+        }
+        .axis text {
+            font-family: sans-serif;
+            font-size: 12px;
+        }
+    </style>
 </head>
 
 <body>
@@ -29,12 +42,14 @@
         <div class='btn-group'>
             <div class='btn-group'>
                 <button type='button' class='btn btn-primary dropdown-toggle' data-toggle='dropdown'>
-                    NEU Plot <span class='caret'></span></button>
+                    Show <span class='caret'></span></button>
                 <ul class="dropdown-menu" role="menu">
-                    <li><a href='#'>Residual Plot</a></li>
+                    <li><a href='#' onclick='plot_raw();'>Time-Series Plot</a></li>
+                    <li><a href='#' onclick='plot_residuals();'>Residual Plot</a></li>
                 </ul>
             </div>
-            <button type='button' class='btn btn-primary dropdown-toggle' data-toggle='dropdown'>
+            <div class='btn-group'>
+                <button type='button' class='btn btn-primary dropdown-toggle' data-toggle='dropdown'>
                     YY:MM:DD <span class='caret'></span></button>
                 <ul class="dropdown-menu" role="menu">
                     <li><a href='#'>Modified Julian Date</a></li>
@@ -68,35 +83,25 @@ function deepCopy(arr) {
     return out;
 }
 
-function plotRaw(plt_arr) {
-
-}
-
-var global = {};
-
 var margin = {top: 20, right: 80, bottom: 30, left: 50},
     width  = 960 - margin.left - margin.right,
     height = 500 - margin.top - margin.bottom;
 
-// given a (data) object from a json input file, return time (as mjd) as x
-// and the specified component as y
-/*
-var raw_line = d3.svg.line()
-    .x(function(d) { return x(d.epoch); })
-    .y(function(d) { return yN(d.north); });
-*/
-
-
 var dateFormat = d3.time.format("%Y-%m-%d %H:%M:%S");
-/*var x      = d3.time.scale().range([0, width]);*/
-var x      = d3.scale.linear().range([0, width]);
-var xAxis  = d3.svg.axis().scale(x).orient("bottom");
-var yN     = d3.scale.linear().range([height, 0]);
-var yE     = d3.scale.linear().range([height, 0]);
-var yU     = d3.scale.linear().range([height, 0]);
-var yAxisN = d3.svg.axis().scale(yN).orient("left");
-var yAxisE = d3.svg.axis().scale(yE).orient("left");
-var yAxisU = d3.svg.axis().scale(yU).orient("left");
+// var x      = d3.scale.linear().range([0, width]);
+var x = d3.scaleLinear().range([0, width]); // v4.x
+// var xAxis  = d3.svg.axis().scale(x).orient("bottom"); // v3.x
+var xAxis  = d3.axisBottom(x);
+// in v4.x scale.linear() becomes scaleLinear()
+var yN     = d3.scaleLinear().range([height, 0]);
+var yE     = d3.scaleLinear().range([height, 0]);
+var yU     = d3.scaleLinear().range([height, 0]);
+// var yAxisN = d3.svg.axis().scale(yN).orient("left"); // v3.x
+// var yAxisE = d3.svg.axis().scale(yE).orient("left"); // v3.x
+// var yAxisU = d3.svg.axis().scale(yU).orient("left"); // v3.x
+var yAxisN = d3.axisLeft(yN); // v4.x
+var yAxisE = d3.axisLeft(yE); // v4.x
+var yAxisU = d3.axisLeft(yU); // v4.x
 
 var svgN = d3.select("#North-Plot").append("svg")
     .attr("width", width + margin.left + margin.right)
@@ -118,9 +123,6 @@ var svgU = d3.select("#Up-Plot").append("svg")
 
 d3.json('dion.json', function(error, data) {
     if ( error ) throw error;
-    
-    // assign data to global var
-    global.plot_data = data.data;
     
     // the actual data to plot is:
     pdata = data.data;
@@ -194,8 +196,8 @@ d3.json('dion.json', function(error, data) {
             return "red";
         })
         .attr("class", function(d) {
-            if (d.flag_north.indexOf("o")>-1) return "outlier_pt";
-            else return "normal_pt";
+            if (d.flag_north.indexOf("o")>-1) return "outlier_pt data_pt";
+            else return "normal_pt data_pt";
         });
     svgE.selectAll(".dot")
         .data(pdata)
@@ -210,15 +212,15 @@ d3.json('dion.json', function(error, data) {
             return "red";
         })
         .attr("class", function(d) {
-            if (d.flag_east.indexOf("o")>-1) return "outlier_pt";
-            else return "normal_pt";
+            if (d.flag_east.indexOf("o")>-1) return "outlier_pt data_pt";
+            else return "normal_pt data_pt";
         });
     svgU.selectAll(".dot")
         .data(pdata)
       .enter().append("circle")
         .attr("r", 3.0)
         .attr("cx", function(d) {return x(d.epoch);})
-        .attr("cy", function(d) {return yN(d.east);})
+        .attr("cy", function(d) {return yN(d.up);})
         .attr("stroke", "blue")
         .attr("stroke-width", 0.3)
         .attr("fill", function(d) {
@@ -226,12 +228,167 @@ d3.json('dion.json', function(error, data) {
             return "red";
         })
         .attr("class", function(d) {
-            if (d.flag_up.indexOf("o")>-1) return "outlier_pt";
-            else return "normal_pt";
+            if (d.flag_up.indexOf("o")>-1) return "outlier_pt data_pt";
+            else return "normal_pt data_pt";
         });
 
 });
 
+function plot_raw() {
+    d3.json('dion.json', function(error, data) {
+        if ( error ) throw error;
+        
+        // the actual data to plot is:
+        pdata = data.data;
+
+        // set x and y domains
+        x.domain(d3.extent (pdata, function(d) { return d.epoch; }));
+        yN.domain([0, 0]);
+        yN.domain(d3.extent(pdata, function(d) { return d.north; }));
+        yE.domain([0, 0]);
+        yE.domain(d3.extent(pdata, function(d) { return d.east; }));
+        yU.domain([0, 0]);
+        yU.domain(d3.extent(pdata, function(d) { return d.up; }));
+        
+        // rescale y-axis
+        svgN.selectAll(".y.axis").call(yAxisN);
+        svgE.selectAll(".y.axis").call(yAxisE);
+        svgU.selectAll(".y.axis").call(yAxisU);
+        
+        // remove outliers if any
+        svgN.selectAll(".residual_pt").remove();
+        svgE.selectAll(".residual_pt").remove();
+        svgU.selectAll(".residual_pt").remove();
+    
+        // add the data points
+        svgN.selectAll(".dot")
+            .data(pdata)
+          .enter().append("circle")
+            .attr("r", 3.0)
+            .attr("cx", function(d) {return x(d.epoch);})
+            .attr("cy", function(d) {return yN(d.north);})
+            .attr("stroke", "blue")
+            .attr("stroke-width", 0.3)
+            .attr("fill", function(d) {
+                if (d.flag_north.indexOf("o")>-1) return "yellow";
+                return "red";
+            })
+            .attr("class", function(d) {
+                if (d.flag_north.indexOf("o")>-1) return "outlier_pt data_pt";
+                else return "normal_pt data_pt";
+            });
+        svgE.selectAll(".dot")
+            .data(pdata)
+          .enter().append("circle")
+            .attr("r", 3.0)
+            .attr("cx", function(d) {return x(d.epoch);})
+            .attr("cy", function(d) {return yN(d.east);})
+            .attr("stroke", "blue")
+            .attr("stroke-width", 0.3)
+            .attr("fill", function(d) {
+                if (d.flag_east.indexOf("o")>-1) return "yellow";
+                return "red";
+            })
+            .attr("class", function(d) {
+                if (d.flag_east.indexOf("o")>-1) return "outlier_pt data_pt";
+                else return "normal_pt data_pt";
+            });
+        svgU.selectAll(".dot")
+            .data(pdata)
+          .enter().append("circle")
+            .attr("r", 3.0)
+            .attr("cx", function(d) {return x(d.epoch);})
+            .attr("cy", function(d) {return yN(d.up);})
+            .attr("stroke", "blue")
+            .attr("stroke-width", 0.3)
+            .attr("fill", function(d) {
+                if (d.flag_up.indexOf("o")>-1) return "yellow";
+                return "red";
+            })
+        .attr("class", function(d) {
+            if (d.flag_up.indexOf("o")>-1) return "outlier_pt data_pt";
+            else return "normal_pt data_pt";
+        });
+    });
+}
+function plot_residuals() {
+    d3.json('dion.json', function(error, data) {
+        if ( error ) throw error;
+        
+        // the actual data to plot is:
+        pdata = data.data;
+        
+        // remove any data points (already ploted)
+        svgN.selectAll(".data_pt").remove();
+        svgE.selectAll(".data_pt").remove();
+        svgU.selectAll(".data_pt").remove();
+
+        // set x and y domains
+        x.domain(d3.extent (pdata, function(d) { return d.epoch; }));
+        yN.domain([0, 0]);
+        yN.domain(d3.extent(pdata, function(d) { return d.res_north; }));
+        yE.domain([0, 0]);
+        yE.domain(d3.extent(pdata, function(d) { return d.res_east; }));
+        yU.domain([0, 0]);
+        yU.domain(d3.extent(pdata, function(d) { return d.res_up; }));
+        
+        // rescale y-axis
+        svgN.selectAll(".y.axis").call(yAxisN);
+        svgE.selectAll(".y.axis").call(yAxisE);
+        svgU.selectAll(".y.axis").call(yAxisU);
+        
+        // plot the residuals as points (circles)
+        svgN.selectAll(".dot")
+            .data(pdata)
+          .enter().append("circle")
+            .attr("r", 3.0)
+            .attr("cx", function(d) {return x(d.epoch);})
+            .attr("cy", function(d) {return yN(d.res_north);})
+            .attr("stroke", "blue")
+            .attr("stroke-width", 0.3)
+            .attr("fill", function(d) {
+                if (d.flag_north.indexOf("o")>-1) return "yellow";
+                return "red";
+            })
+            .attr("class", function(d) {
+                if (d.flag_north.indexOf("o")>-1) return "outlier_pt residual_pt";
+                else return "normal_pt residual_pt";
+            });
+        svgE.selectAll(".dot")
+            .data(pdata)
+          .enter().append("circle")
+            .attr("r", 3.0)
+            .attr("cx", function(d) {return x(d.epoch);})
+            .attr("cy", function(d) {return yN(d.res_east*1000);})
+            .attr("stroke", "blue")
+            .attr("stroke-width", 0.3)
+            .attr("fill", function(d) {
+                if (d.flag_east.indexOf("o")>-1) return "yellow";
+                return "red";
+            })
+            .attr("class", function(d) {
+                if (d.flag_east.indexOf("o")>-1) return "outlier_pt residual_pt";
+                else return "normal_pt residual_pt";
+            });
+        svgU.selectAll(".dot")
+            .data(pdata)
+          .enter().append("circle")
+            .attr("r", 3.0)
+            .attr("cx", function(d) {return x(d.epoch);})
+            .attr("cy", function(d) {return yN(d.res_up*1000);})
+            .attr("stroke", "blue")
+            .attr("stroke-width", 0.3)
+            .attr("fill", function(d) {
+                if (d.flag_up.indexOf("o")>-1) return "yellow";
+                return "red";
+            })
+            .attr("class", function(d) {
+                if (d.flag_up.indexOf("o")>-1) return "outlier_pt residual_pt";
+                else return "normal_pt residual_pt";
+            });
+        
+    });
+}
 function plot_raw_no_outliers() {
     // Get the data again
     d3.json('dion.json', function(error, data) {
@@ -242,29 +399,35 @@ function plot_raw_no_outliers() {
 
         // set x and y domains
         x.domain(d3.extent (pdata, function(d) { return d.epoch; }));
+        yN.domain([0, 0]);
         yN.domain(d3.extent(pdata, function(d) { 
             if (d.flag_north.indexOf("o")>-1) return 0;
             else return d.north;
         }));
+        yE.domain([0, 0]);
         yE.domain(d3.extent(pdata, function(d) { 
             if (d.flag_east.indexOf("o")>-1) return 0;
             else return d.east;
         }));
+        yU.domain([0, 0]);
         yU.domain(d3.extent(pdata, function(d) { 
             if (d.flag_up.indexOf("o")>-1) return 0;
             else return d.up;
         }));
     
-        // Select the section we want to apply our changes to
-        var svg_nn = d3.select("#North-Plot").transition();
-        var svg_ne = d3.select("#East-Plot").transition();
-        var svg_nu = d3.select("#Up-Plot").transition();
+        // add the points exluding outliers
+        svgN.selectAll(".outlier_pt").remove();
+        svgE.selectAll(".outlier_pt").remove();
+        svgU.selectAll(".outlier_pt").remove();
+        
+        svgN.selectAll(".data_pt")
+            .attr("cx", function(d) {return x(d.epoch);})
+            .attr("cy", function(d) {return yN(d.res_north);});
 
-    // add the points exluding outliers
-    svgN.selectAll(".outlier_pt").remove();
-    svgE.selectAll(".outlier_pt").remove();
-    svgU.selectAll(".outlier_pt").remove();
-
+        // rescale y-axis
+        svgN.selectAll(".y.axis").call(yAxisN);
+        svgE.selectAll(".y.axis").call(yAxisE);
+        svgU.selectAll(".y.axis").call(yAxisU);
     });
 }
 </script>
