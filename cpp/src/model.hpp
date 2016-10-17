@@ -299,6 +299,59 @@ public:
     }
 
     void
+    dump_as_json(std::ostream& os) const
+    {
+        double min_mjd = datetime<T>::min().as_mjd();
+        double max_mjd = datetime<T>::max().as_mjd();
+
+        os << "{\n";
+
+        os << "\"reference_epoch\":";
+        if (m_mean_epoch.mjd() != modified_julian_day{0})
+            os << m_mean_epoch.as_mjd();
+        else
+            os << "null";
+
+        os << ",\n\"const_term\":" << m_x0 
+           << ",\n\"velocity\":" << m_vx;
+        
+        if ( m_harmonics.size() ) {
+            os << ",\n\"harmonics\": [";
+            for (auto j = m_harmonics.begin(); j != m_harmonics.end(); ++j) {
+                os << "\n{\"in_phase\":" << j->in_phase();
+                os << ",\n\"from\":" << (j->start()==datetime<T>::min()?min_mjd:(j->start().as_mjd()));
+                os << ",\n\"to\":"  << (j->stop()==datetime<T>::max()?max_mjd:(j->stop().as_mjd()));
+                os << ",\n\"period\":" << j->period();
+                os << ",\n\"out_of_phase\":" << j->out_of_phase()<<"}";
+                if (j != m_harmonics.end()-1) os << ",";
+            }
+            os << "\n]";
+        }
+        
+        if ( m_jumps.size() ) {
+            os << ",\n\"jumps\": [";
+            for (auto j = m_jumps.begin(); j != m_jumps.end(); ++j) {
+                os << "\n{\"value\": "<<j->value()<<", \"at\":"<<j->start().as_mjd()<<"},";
+            }
+            os << "\n]";
+        }
+
+        if ( m_vel_changes.size() ) {
+            os << ",\n\"velocity_changes\": [";
+            for (auto j = m_vel_changes.begin(); j != m_vel_changes.end(); ++j) {
+                os << "\n{\"value\":" << j->value() << ",";
+                os << ",\n\"from\":" << (j->start()==datetime<T>::min()?min_mjd:j->start().as_mjd());
+                os << ",\n\"to\":" << (j->stop()==datetime<T>::max()?max_mjd:j->stop().as_mjd())<<"},";
+            }
+            os << "\n]";
+        }
+
+        os << "}"; // close object
+
+        return;
+    }
+
+    void
     add_periods(const std::vector<double>& periods) noexcept
     {
         for (auto i : periods) m_harmonics.emplace_back(i);
@@ -413,6 +466,19 @@ private:
 
 }; // end class ts_model
 
+template<class T>
+    void
+    models_to_json(std::ostream& os, const ts_model<T>& x,
+            const ts_model<T>& y, const ts_model<T>& z)
+{
+    os << "{\n\"model_x\":";
+    x.dump_as_json(os);
+    os << ",\n\"model_y\":";
+    y.dump_as_json(os);
+    os << ",\n\"model_z\":";
+    z.dump_as_json(os);
+    os << "\n}";
+}
 
 }// end namespace ngpt
 

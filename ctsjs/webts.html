@@ -18,7 +18,13 @@
     <script src='https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.0/d3.min.js' charset='utf-8'></script>
     <script src="http://d3js.org/d3.v4.min.js"></script>
 
-    <style type="text/css"></style>
+    <style type="text/css">
+        .line {
+            fill: none;
+            stroke: steelblue;
+            stroke-width: 3.5px;
+        }
+    </style>
 </head>
 
 <body>
@@ -49,7 +55,7 @@
             <button type='button' class='btn btn-primary inactive' id='outlier-btn' onclick='plot_raw_no_outliers();'>Filter Outliers</button>
             <button type='button' class='btn btn-primary inactive' id='chart-btn'>Line Plot</button>
             <button type='button' class='btn btn-primary inactive' id='events-btn'>Show Events</button>
-            <button type='button' class='btn btn-primary inactive' id='model-btn'>Show Model</button>
+            <button type='button' class='btn btn-primary inactive' id='model-btn' onclick='plot_models();'>Show Model</button>
         </div>
     </div><!-- row-->
 
@@ -73,6 +79,10 @@ function deepCopy(arr) {
     return out;
 }
 
+/*
+** Convert a (double) Modified Julian Day to GPS week and seconds of week.
+** The function returns a fractional gps week
+*/
 function mjd_to_gps(dmjd)
 {
     var mjd  = Math.floor(dmjd);
@@ -138,6 +148,7 @@ var margin = {top: 20, right: 80, bottom: 30, left: 50},
 // store here the min and max values of the x-axis as mjd values.
 var g_min_mjd, g_max_mjd;
 
+// axis setup functions/variables
 var dateFormat = d3.time.format("%Y-%m-%d %H:%M:%S");
 var x = d3.scaleLinear().range([0, width]); // v4.x
 var xAxis  = d3.axisBottom(x);
@@ -147,6 +158,18 @@ var yU     = d3.scaleLinear().range([height, 0]);
 var yAxisN = d3.axisLeft(yN); // v4.x
 var yAxisE = d3.axisLeft(yE); // v4.x
 var yAxisU = d3.axisLeft(yU); // v4.x
+
+// simple D3 line functions, to plot arrays of objects of type
+// {"t":...,"val":...}; normally used to plot the model line (per component)
+var nline = d3.svg.line()
+    .x(function(d) { return x(d.t); })
+    .y(function(d) { return yN(d.val); });
+var eline = d3.svg.line()
+    .x(function(d) { return x(d.t); })
+    .y(function(d) { return yE(d.val); });
+var uline = d3.svg.line()
+    .x(function(d) { return x(d.t); })
+    .y(function(d) { return yU(d.val); });
 
 var svgN = d3.select("#North-Plot").append("svg")
     .attr("width", width + margin.left + margin.right)
@@ -514,6 +537,95 @@ function plot_raw_no_outliers() {
         svgU.selectAll(".data_pt")
             .attr("cx", function(d) {return x(d.epoch);})
             .attr("cy", function(d) {return yU(d.up);});
+    });
+
+    // if we also have the model lines, we need to rescale them!
+    if ( svgN.select(".model_line").empty() ) {
+        console.log("empty selection");
+    } else {
+        console.log("shit! rescaling model line");
+        // store model points here
+        var xdata, ydata, zdata;
+        // Get the data
+        d3.json('model.json', function(error, data) {
+            if ( error ) throw error;
+            
+            // compute the model points/canvas
+            xdata = make_model(data.model_x, g_min_mjd, g_max_mjd, 1);
+            ydata = make_model(data.model_y, g_min_mjd, g_max_mjd, 1);
+            zdata = make_model(data.model_z, g_min_mjd, g_max_mjd, 1);
+
+            // re-scale the model-line (if any)
+            svgN.select(".model_line").attr("d", nline(xdata));
+            svgE.select(".model_line").attr("d", eline(ydata));
+            svgU.select(".model_line").attr("d", uline(zdata));
+        });
+    }
+}
+
+/*
+** Given a "model" object (as read off fro a corrsponding json file),
+** compute the values of the model for values in
+** range [from,to] with a step = step.
+** The values are returned as an array of objects of type:
+** [...{"t":...,"val":...}...] so that they can be ploted via the [neu]line
+** functions
+*/
+function make_model(mod, from, to, step)
+{
+    var data = [];
+    var value = 0;
+    var ref_t = mod.reference_epoch;
+
+    for (var t = from; t <= to; t += step) {
+        var dt = t - ref_t;
+        value  = mod.const_term;
+        value += mod.velocity*dt/365.25;
+        for (var comp in mod.harmonics) {
+            if (t>=mod.harmonics[comp].from && t<mod.harmonics[comp].to)
+            {
+                var angular_frequency = 2*Math.PI/mod.harmonics[comp].period;
+                value += mod.harmonics[comp].in_phase*Math.cos(angular_frequency*dt);
+                value += mod.harmonics[comp].out_of_phase*Math.sin(angular_frequency*dt);
+            }
+        }
+        data.push({"t":t, "val":value});
+    }
+    return data;
+}
+
+/*
+** Read coordinate time-series model(s) off from a corresponding json file,
+** and plot the models (one per component). The plotted lines will belong to a
+** class(es) named "line model_line"
+*/
+function plot_models()
+{
+    // store model points here
+    var xdata, ydata, zdata;
+    
+    // Get the data
+    d3.json('model.json', function(error, data) {
+        if ( error ) throw error;
+        
+        // compute the model points/canvas
+        xdata = make_model(data.model_x, g_min_mjd, g_max_mjd, 1);
+        ydata = make_model(data.model_y, g_min_mjd, g_max_mjd, 1);
+        zdata = make_model(data.model_z, g_min_mjd, g_max_mjd, 1);
+
+        // append the model as line
+        svgN.append("path")
+            .datum(xdata)
+            .attr("class", "line model_line")
+            .attr("d", nline);
+        svgE.append("path")
+            .datum(ydata)
+            .attr("class", "line model_line")
+            .attr("d", eline);
+        svgU.append("path")
+            .datum(zdata)
+            .attr("class", "line model_line")
+            .attr("d", uline);
     });
 }
 

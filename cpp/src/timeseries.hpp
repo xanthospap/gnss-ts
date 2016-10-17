@@ -311,7 +311,7 @@ public:
     {
         auto delta_dt = ngpt::delta_date(last_epoch(), first_epoch());
         auto central_epoch { first_epoch() };
-        central_epoch += delta_dt;
+        central_epoch += delta_dt/2;
         return central_epoch;
     }
     

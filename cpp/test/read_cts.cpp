@@ -51,11 +51,13 @@ main(int argc, char* argv[])
         ts.apply_earthquake_catalogue(eq_cat);
     }
 
-    // fit model via ls (QR)
+    // make a model and fit via ls (QR)
     std::vector<double> periods = { 365.25 };
     ngpt::ts_model<ngpt::milliseconds> xmodel { ts.events() };
     xmodel.add_periods( periods );
     xmodel.mean_epoch() = ts.mean_epoch();
+    std::cout<<"\nFrom: "<<ts.first_epoch().as_mjd()<<" to: "<<ts.last_epoch().as_mjd();
+    std::cout<<"\nCentral Epoch: "<< ts.mean_epoch().as_mjd();
     auto ymodel{xmodel}, zmodel{xmodel};
     auto residual_ts = ts.qr_fit( xmodel, ymodel, zmodel );
 
@@ -81,9 +83,11 @@ main(int argc, char* argv[])
     std::ofstream fout_mod (filename);
     ts.dump_model_line( fout_mod, xmodel, ymodel, zmodel );
     fout_mod.close();
-    // print as json
-    ts.dump_json( std::cout, residual_ts );
+    // print time-seres as json
+    // ts.dump_json( std::cout, residual_ts );
     // residual_ts.test_period();
+    // print the modelin json format
+    models_to_json(std::cout, xmodel, ymodel, zmodel);
     
     std::cout<<"\n";
 
