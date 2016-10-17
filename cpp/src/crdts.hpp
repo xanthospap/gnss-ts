@@ -536,6 +536,12 @@ public:
         return m_events.dump_event_list(os);
     }
 
+    std::ostream&
+    dump_event_list_as_json(std::ostream& os)
+    {
+        return m_events.dump_event_list_as_json(os);
+    }
+
 private:
 
     /// Set the epoch pointer of each timeseries component.

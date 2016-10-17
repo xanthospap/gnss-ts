@@ -331,7 +331,8 @@ public:
         if ( m_jumps.size() ) {
             os << ",\n\"jumps\": [";
             for (auto j = m_jumps.begin(); j != m_jumps.end(); ++j) {
-                os << "\n{\"value\": "<<j->value()<<", \"at\":"<<j->start().as_mjd()<<"},";
+                os << "\n{\"value\": "<<j->value()<<", \"at\":"<<j->start().as_mjd()<<"}";
+                if (j != m_jumps.end()-1) os << ",";
             }
             os << "\n]";
         }
@@ -341,7 +342,8 @@ public:
             for (auto j = m_vel_changes.begin(); j != m_vel_changes.end(); ++j) {
                 os << "\n{\"value\":" << j->value() << ",";
                 os << ",\n\"from\":" << (j->start()==datetime<T>::min()?min_mjd:j->start().as_mjd());
-                os << ",\n\"to\":" << (j->stop()==datetime<T>::max()?max_mjd:j->stop().as_mjd())<<"},";
+                os << ",\n\"to\":" << (j->stop()==datetime<T>::max()?max_mjd:j->stop().as_mjd())<<"}";
+                if (j != m_vel_changes.end()-1) os << ",";
             }
             os << "\n]";
         }

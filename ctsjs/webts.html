@@ -24,6 +24,19 @@
             stroke: steelblue;
             stroke-width: 3.5px;
         }
+        .event_line {
+            fill: none;
+            stroke-width: 1.5px;
+        }
+        .jump_line {
+            stroke: springgreen;
+        }
+        .velchg_line {
+            stroke: turquoise;
+        }
+        .erthqk_line {
+            stroke: peru;
+        }
     </style>
 </head>
 
@@ -52,12 +65,20 @@
                     <li><a href='#' onclick='to_gpsw();'>GPS Week</a></li>
                 </ul>
             </div>
-            <button type='button' class='btn btn-primary inactive' id='outlier-btn' onclick='plot_raw_no_outliers();'>Filter Outliers</button>
-            <button type='button' class='btn btn-primary inactive' id='chart-btn'>Line Plot</button>
-            <button type='button' class='btn btn-primary inactive' id='events-btn'>Show Events</button>
-            <button type='button' class='btn btn-primary inactive' id='model-btn' onclick='plot_models();'>Show Model</button>
         </div>
     </div><!-- row-->
+        <div class="checkbox checkbox-success checkbox-inline">
+            <input type="checkbox" id="outlier-btn" onclick="plot_raw_no_outliers();">
+            <label for="outlier-btn"> Filter Outliers </label>
+        </div>
+        <div class="checkbox checkbox-success checkbox-inline">
+            <input type="checkbox" id="events-btn" onclick="plot_events();">
+            <label for="events-btn"> Show Events </label>
+        </div>
+        <div class="checkbox checkbox-success checkbox-inline">
+            <input type="checkbox" id="model-btn" onclick="plot_models();">
+            <label for="model-btn"> Show Model </label>
+        </div>
 
     <!-- the 3 plots -->
     <div id="North-Plot"></div>
@@ -189,7 +210,7 @@ var svgU = d3.select("#Up-Plot").append("svg")
   .append("g")
     .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
-d3.json('dion.json', function(error, data) {
+d3.json('tuc2.json', function(error, data) {
     if ( error ) throw error;
     
     // the actual data to plot is:
@@ -314,7 +335,7 @@ d3.json('dion.json', function(error, data) {
 **    class
 */
 function plot_raw() {
-    d3.json('dion.json', function(error, data) {
+    d3.json('tuc2.json', function(error, data) {
         if ( error ) throw error;
         
         // the actual data to plot is:
@@ -391,6 +412,7 @@ function plot_raw() {
     });
     // enable outlier button
     document.getElementById("outlier-btn").disabled = false;
+    document.getElementById("model-btn").disabled = false;
 }
 
 /*
@@ -404,7 +426,7 @@ function plot_raw() {
 ** TODO Rename the y-axis
 */
 function plot_residuals() {
-    d3.json('dion.json', function(error, data) {
+    d3.json('tuc2.json', function(error, data) {
         if ( error ) throw error;
         pdata = data.data;
         
@@ -487,6 +509,7 @@ function plot_residuals() {
 
     // disable outlier button
     document.getElementById("outlier-btn").disabled = true;
+    document.getElementById("model-btn").disabled = true;
 }
 
 /*
@@ -498,7 +521,7 @@ function plot_residuals() {
 */
 function plot_raw_no_outliers() {
     // Get the data again
-    d3.json('dion.json', function(error, data) {
+    d3.json('tuc2.json', function(error, data) {
         if ( error ) throw error;
         pdata = data.data;
 
@@ -589,6 +612,11 @@ function make_model(mod, from, to, step)
                 value += mod.harmonics[comp].out_of_phase*Math.sin(angular_frequency*dt);
             }
         }
+        for (var comp in mod.jumps) {
+            if (t>=mod.jumps[comp].at) {
+                value += mod.jumps[comp].value;
+            }
+        }
         data.push({"t":t, "val":value});
     }
     return data;
@@ -626,6 +654,84 @@ function plot_models()
             .datum(zdata)
             .attr("class", "line model_line")
             .attr("d", uline);
+    });
+}
+
+function plot_events()
+{
+    // Get the data
+    d3.json('events.json', function(error, data) {
+        if ( error ) throw error;
+        
+        // split events
+        jump_list   = data.jumps;
+        velchg_list = data.velocity_changes;
+        erthqk_list = data.earthquakes;
+
+        for (var evnt in jump_list) {
+            var t  = jump_list[evnt].at;
+            svgN.append("line")
+                .attr("x1", x(t))
+                .attr("y1", yN(yAxisN.scale().domain()[0]))
+                .attr("x2", x(t))
+                .attr("y2", yN(yAxisN.scale().domain()[1]))
+                .attr("class", "event_line jump_line");
+            svgE.append("line")
+                .attr("x1", x(t))
+                .attr("y1", yE(yAxisE.scale().domain()[0]))
+                .attr("x2", x(t))
+                .attr("y2", yE(yAxisE.scale().domain()[1]))
+                .attr("class", "event_line jump_line");
+            svgU.append("line")
+                .attr("x1", x(t))
+                .attr("y1", yU(yAxisU.scale().domain()[0]))
+                .attr("x2", x(t))
+                .attr("y2", yU(yAxisU.scale().domain()[1]))
+                .attr("class", "event_line jump_line");
+        }
+        
+        for (var evnt in velchg_list) {
+            var t  = jump_list[evnt].at;
+            svgN.append("line")
+                .attr("x1", x(t))
+                .attr("y1", yN(yAxisN.scale().domain()[0]))
+                .attr("x2", x(t))
+                .attr("y2", yN(yAxisN.scale().domain()[1]))
+                .attr("class", "event_line velchg_line");
+            svgE.append("line")
+                .attr("x1", x(t))
+                .attr("y1", yE(yAxisE.scale().domain()[0]))
+                .attr("x2", x(t))
+                .attr("y2", yE(yAxisE.scale().domain()[1]))
+                .attr("class", "event_line velchg_line");
+            svgU.append("line")
+                .attr("x1", x(t))
+                .attr("y1", yU(yAxisU.scale().domain()[0]))
+                .attr("x2", x(t))
+                .attr("y2", yU(yAxisU.scale().domain()[1]))
+                .attr("class", "event_line velchg_line");
+        }
+        for (var evnt in erthqk_list) {
+            var t  = jump_list[evnt].at;
+            svgN.append("line")
+                .attr("x1", x(t))
+                .attr("y1", yN(yAxisN.scale().domain()[0]))
+                .attr("x2", x(t))
+                .attr("y2", yN(yAxisN.scale().domain()[1]))
+                .attr("class", "event_line erthqk_line");
+            svgE.append("line")
+                .attr("x1", x(t))
+                .attr("y1", yE(yAxisE.scale().domain()[0]))
+                .attr("x2", x(t))
+                .attr("y2", yE(yAxisE.scale().domain()[1]))
+                .attr("class", "event_line erthqk_line");
+            svgU.append("line")
+                .attr("x1", x(t))
+                .attr("y1", yU(yAxisU.scale().domain()[0]))
+                .attr("x2", x(t))
+                .attr("y2", yU(yAxisU.scale().domain()[1]))
+                .attr("class", "event_line erthqk_line");
+        }
     });
 }
 

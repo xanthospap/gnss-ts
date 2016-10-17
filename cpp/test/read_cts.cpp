@@ -63,6 +63,7 @@ main(int argc, char* argv[])
 
     // test the iterator
     // ts.test_iter();
+    // residual_ts.test_period();
     
     // test the running window
     // ngpt::datetime_interval<ngpt::milliseconds> window {ngpt::modified_julian_day{30}, ngpt::milliseconds{0}};
@@ -83,11 +84,17 @@ main(int argc, char* argv[])
     std::ofstream fout_mod (filename);
     ts.dump_model_line( fout_mod, xmodel, ymodel, zmodel );
     fout_mod.close();
-    // print time-seres as json
-    // ts.dump_json( std::cout, residual_ts );
-    // residual_ts.test_period();
+    
+    // --JSON--
+    // print time-seres and residuals as json
+    filename = cts_name + std::string(".json");
+    std::ofstream fout_ts_json (filename);
+    ts.dump_json(fout_ts_json, residual_ts);
     // print the modelin json format
-    models_to_json(std::cout, xmodel, ymodel, zmodel);
+    std::ofstream fout_mod_json ("model.json");
+    models_to_json(fout_mod_json, xmodel, ymodel, zmodel);
+    std::ofstream fout_evn_json ("events.json");
+    ts.dump_event_list_as_json(fout_evn_json);
     
     std::cout<<"\n";
 

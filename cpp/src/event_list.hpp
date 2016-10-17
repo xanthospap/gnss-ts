@@ -209,6 +209,46 @@ public:
         return os;
     }
 
+    /// Write the event list instance to an output stream in json format.
+    std::ostream&
+    dump_event_list_as_json(std::ostream& os)
+    const
+    {
+        std::vector<epoch> jumps, vel_chg, erthq;
+        this->split_event_list(jumps, vel_chg, erthq);
+
+        os << "{";
+        if ( jumps.size() ) {
+            os << "\n\"jumps\": [";
+            for (auto i = jumps.cbegin(); i != jumps.cend(); ++i) {
+                os << "\n{ \"at\": "<< i->as_mjd() << "}";
+                if (i != jumps.cend()-1) os << ",";
+            }
+            os << "\n]";
+        }
+        if ( vel_chg.size() ) {
+            if (jumps.size()) os <<",";
+            os << "\n\"velocity_changes\": [";
+            for (auto i = vel_chg.cbegin(); i != vel_chg.cend(); ++i) {
+                os << "\n{ \"at\": "<< i->as_mjd() << "}";
+                if (i != vel_chg.cend()-1) os << ",";
+            }
+            os << "\n]";
+        }
+        if ( erthq.size() ) {
+            if ( jumps.size() || vel_chg.size() ) os <<",";
+            os << "\n\":earthquakes\": [";
+            for (auto i = erthq.cbegin(); i != erthq.cend(); ++i) {
+                os << "\n{ \"at\": "<< i->as_mjd() << "}";
+                if (i != erthq.cend()-1) os << ",";
+            }
+            os << "\n]";
+        }
+        os << "}";
+
+        return os;
+    }
+
     typename std::vector<event>::const_iterator
     it_begin() const noexcept
     { return m_events.cbegin(); }
