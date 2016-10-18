@@ -43,6 +43,18 @@
             font-family: Consolas, monospace, sans-serif;
             font-size: 12px;
         }
+        .model-tooltip {
+            position: absolute;
+            text-align: center;
+            width: 250px;
+            height: 150px;
+            padding: 1px;
+            font: 11px sans-serif;
+            background: lightsteelblue;
+            border: 1px;
+            border-radius: 8px;
+            pointer-events: none;
+        }
     </style>
 </head>
 
@@ -88,10 +100,12 @@
                 <input type="checkbox" id="model-btn" onclick="plot_models();">
                 <label for="model-btn"> Show Model </label>
             </div>
+            <!--
             <div class="checkbox-inline">
                 <input type="checkbox" id="model-info-btn" onclick="show_model_info();">
                 <label for="model-info-btn"> Show Model Info</label>
             </div>
+            -->
         </div>
     </div>
 
@@ -281,12 +295,6 @@ d3.json('tuc2.json', function(error, data) {
         .text("Up (m)");
         
     // add the lines
-    /*
-    svgN.append("path")
-        .datum(pdata)
-        .attr("class", "line")
-        .attr("d", raw_line);
-    */
     svgN.selectAll(".dot")
         .data(pdata)
       .enter().append("circle")
@@ -336,8 +344,14 @@ d3.json('tuc2.json', function(error, data) {
                 : "data_pt normal_pt" ;
         });
 
-        // enable outlier button
+        // check/uncheck buttons button
+        document.getElementById("outlier-btn").checked = false;
+        document.getElementById("model-btn").checked   = false;
+        document.getElementById("events-btn").checked  = false;
+        // enable/disable buttons button
         document.getElementById("outlier-btn").disabled = false;
+        document.getElementById("model-btn").disabled   = false;
+        document.getElementById("events-btn").disabled  = false;
 
         // assign blobal min/max mjd
         g_min_mjd = x.domain()[0];
@@ -350,6 +364,7 @@ d3.json('tuc2.json', function(error, data) {
 **    class
 */
 function plot_raw() {
+    
     d3.json('tuc2.json', function(error, data) {
         if ( error ) throw error;
         
@@ -425,9 +440,10 @@ function plot_raw() {
             else return "normal_pt data_pt";
         });
     });
-    // enable outlier button
+    // enable/disable buttons button
     document.getElementById("outlier-btn").disabled = false;
-    document.getElementById("model-btn").disabled = false;
+    document.getElementById("model-btn").disabled   = false;
+    document.getElementById("events-btn").disabled  = false;
 }
 
 /*
@@ -521,7 +537,10 @@ function plot_residuals() {
             });
         
     });
-
+    // check/uncheck buttons button
+    document.getElementById("outlier-btn").checked = false;
+    document.getElementById("model-btn").checked   = false;
+    // document.getElementById("events-btn").checked  = true;
     // disable outlier button
     document.getElementById("outlier-btn").disabled = true;
     document.getElementById("model-btn").disabled = true;
@@ -535,6 +554,15 @@ function plot_residuals() {
 ** 3. Re-scale and re-plot all points belonging to the 'normal_pt' class
 */
 function plot_raw_no_outliers() {
+
+    if ( document.getElementById("outlier-btn").checked === false ) {
+        svgN.selectAll(".data_pt").remove();
+        svgE.selectAll(".data_pt").remove();
+        svgU.selectAll(".data_pt").remove();
+        plot_raw();
+        return;
+    }
+
     // Get the data again
     d3.json('tuc2.json', function(error, data) {
         if ( error ) throw error;
@@ -581,7 +609,7 @@ function plot_raw_no_outliers() {
     if ( svgN.select(".model_line").empty() ) {
         console.log("empty selection");
     } else {
-        console.log("shit! rescaling model line");
+        console.log("rescaling model lines");
         // store model points here
         var xdata, ydata, zdata;
         // Get the data
@@ -602,7 +630,7 @@ function plot_raw_no_outliers() {
 }
 
 /*
-** Given a "model" object (as read off fro a corrsponding json file),
+** Given a "model" object (as read off from a corrsponding json file),
 ** compute the values of the model for values in
 ** range [from,to] with a step = step.
 ** The values are returned as an array of objects of type:
@@ -637,6 +665,12 @@ function make_model(mod, from, to, step)
     return data;
 }
 
+function remove_models()
+{
+    svgN.selectAll(".model_line").remove();
+    svgE.selectAll(".model_line").remove();
+    svgU.selectAll(".model_line").remove();
+}
 /*
 ** Read coordinate time-series model(s) off from a corresponding json file,
 ** and plot the models (one per component). The plotted lines will belong to a
@@ -644,6 +678,11 @@ function make_model(mod, from, to, step)
 */
 function plot_models()
 {
+    if ( document.getElementById("model-btn").checked === false ) {
+        remove_models();
+        return;
+    }
+
     // store model points here
     var xdata, ydata, zdata;
     
@@ -655,26 +694,79 @@ function plot_models()
         xdata = make_model(data.model_x, g_min_mjd, g_max_mjd, 1);
         ydata = make_model(data.model_y, g_min_mjd, g_max_mjd, 1);
         zdata = make_model(data.model_z, g_min_mjd, g_max_mjd, 1);
+        
+        // make model a list of strings
+        xmodel = data.model_x;
+        ymodel = data.model_y;
+        zmodel = data.model_z;
+        xstr = model2text(xmodel);
+        ystr = model2text(ymodel);
+        zstr = model2text(zmodel);
+
+        // Define the div for the tooltip, see http://bl.ocks.org/d3noob/a22c42db65eb00d4e369
+        var tooltip_div = d3.select("body").append("div")   
+                            .attr("class", "model-tooltip")               
+                            .style("opacity", 0);
 
         // append the model as line
         svgN.append("path")
             .datum(xdata)
             .attr("class", "line model_line")
-            .attr("d", nline);
+            .attr("d", nline)
+            .on("mouseover", function(d) {
+                tooltip_div.transition()
+                           .duration(200)
+                           .style("opacity", .9);
+                tooltip_div.html(xstr)
+                           .style("left", (d3.event.pageX) + "px")
+                           .style("top", (d3.event.pageY - 28) + "px");
+            })
+            .on("mouseout", function(d) {
+                tooltip_div.transition()
+                           .duration(200)
+                           .style("opacity", 0);
+            });
         svgE.append("path")
             .datum(ydata)
             .attr("class", "line model_line")
-            .attr("d", eline);
+            .attr("d", eline)
+            .on("mouseover", function(d) {
+                tooltip_div.transition()
+                           .duration(200)
+                           .style("opacity", .9);
+                tooltip_div.html(ystr)
+                           .style("left", (d3.event.pageX) + "px")
+                           .style("top", (d3.event.pageY - 28) + "px");
+            })
+            .on("mouseout", function(d) {
+                tooltip_div.transition()
+                           .duration(200)
+                           .style("opacity", 0);
+            });
         svgU.append("path")
             .datum(zdata)
             .attr("class", "line model_line")
-            .attr("d", uline);
+            .attr("d", uline)
+            .on("mouseover", function(d) {
+                tooltip_div.transition()
+                           .duration(200)
+                           .style("opacity", .9);
+                tooltip_div.html(zstr)
+                           .style("left", (d3.event.pageX) + "px")
+                           .style("top", (d3.event.pageY - 28) + "px");
+            })
+            .on("mouseout", function(d) {
+                tooltip_div.transition()
+                           .duration(200)
+                           .style("opacity", 0);
+            });
     });
 }
 
 function model2text(model)
 {
-    /*
+    /* As string with newlines
+       ------------------------
     var str = 'Reference Epoch: ';
     str += mjd_to_ymdhms(model.reference_epoch) + '\n';
     str += 'Velocity       : ';
@@ -689,6 +781,8 @@ function model2text(model)
     }
     return str;
     */
+    /* As list of strings (lines)
+       ----------------------------
     var line_list = [];
     line_list.push('Reference Epoch: ' + mjd_to_ymdhms(model.reference_epoch) + '\n');
     line_list.push('Velocity       : ' + model.velocity + ' m/yr\n');
@@ -701,7 +795,23 @@ function model2text(model)
         line_list.push('Jump           : ' + model.jumps[i].value + ' (m) at ' + mjd_to_ymdhms(model.jumps[i].at));
     }
     return line_list;
+    */
+    var str = "";
+    str += '<p>Reference Epoch: ';
+    str += mjd_to_ymdhms(model.reference_epoch) + '</p>';
+    str += '<p>Velocity       : ';
+    str += model.velocity + ' m/yr</p>';
+    for (var i in model.harmonics) {
+        str += '<p>Period         : ' + model.harmonics[i].period;
+        str += '<br>  In Phase     : ' + model.harmonics[i].in_phase + ' (m)';
+        str += '<br>  Out Of Phase : ' + model.harmonics[i].out_of_phase + ' (m)</p>';
+    }
+    for (var i in model.jumps) {
+        str += '<p>Jump           : ' + model.jumps[i].value + ' (m) at ' + mjd_to_ymdhms(model.jumps[i].at)+"</p>";
+    }
+    return str;
 }
+/*
 function show_model_info()
 {
     // Get the data
@@ -725,9 +835,21 @@ function show_model_info()
         //console.log(xstr);
     });
 }
+*/
 
+function remove_events()
+{
+    svgN.selectAll(".event_line").remove();
+    svgE.selectAll(".event_line").remove();
+    svgU.selectAll(".event_line").remove();
+}
 function plot_events()
 {
+    if ( document.getElementById("events-btn").checked === false ) {
+        remove_events();
+        return;
+    }
+
     // Get the data
     d3.json('events.json', function(error, data) {
         if ( error ) throw error;
