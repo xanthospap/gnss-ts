@@ -237,7 +237,7 @@ public:
         }
         if ( erthq.size() ) {
             if ( jumps.size() || vel_chg.size() ) os <<",";
-            os << "\n\":earthquakes\": [";
+            os << "\n\"earthquakes\": [";
             for (auto i = erthq.cbegin(); i != erthq.cend(); ++i) {
                 os << "\n{ \"at\": "<< i->as_mjd() << "}";
                 if (i != erthq.cend()-1) os << ",";

@@ -603,30 +603,30 @@ function plot_raw_no_outliers() {
         svgU.selectAll(".data_pt")
             .attr("cx", function(d) {return x(d.epoch);})
             .attr("cy", function(d) {return yU(d.up);});
-    });
-
-    // if we also have the model lines, we need to rescale them!
-    if ( svgN.select(".model_line").empty() ) {
-        console.log("empty selection");
-    } else {
-        console.log("rescaling model lines");
-        // store model points here
-        var xdata, ydata, zdata;
-        // Get the data
-        d3.json('model.json', function(error, data) {
-            if ( error ) throw error;
             
-            // compute the model points/canvas
-            xdata = make_model(data.model_x, g_min_mjd, g_max_mjd, 1);
-            ydata = make_model(data.model_y, g_min_mjd, g_max_mjd, 1);
-            zdata = make_model(data.model_z, g_min_mjd, g_max_mjd, 1);
+        // if we also have the model lines, we need to rescale them!
+        if ( svgN.select(".model_line").empty() ) {
+            console.log("empty selection");
+        } else {
+            console.log("rescaling model lines");
+            // store model points here
+            var xdata, ydata, zdata;
+            // Get the data
+            d3.json('model.json', function(error, data) {
+                if ( error ) throw error;
+                
+                // compute the model points/canvas
+                xdata = make_model(data.model_x, g_min_mjd, g_max_mjd, 1);
+                ydata = make_model(data.model_y, g_min_mjd, g_max_mjd, 1);
+                zdata = make_model(data.model_z, g_min_mjd, g_max_mjd, 1);
 
-            // re-scale the model-line (if any)
-            svgN.select(".model_line").attr("d", nline(xdata));
-            svgE.select(".model_line").attr("d", eline(ydata));
-            svgU.select(".model_line").attr("d", uline(zdata));
-        });
-    }
+                // re-scale the model-line (if any)
+                svgN.select(".model_line").attr("d", nline(xdata));
+                svgE.select(".model_line").attr("d", eline(ydata));
+                svgU.select(".model_line").attr("d", uline(zdata));
+            });
+        }
+    });
 }
 
 /*
