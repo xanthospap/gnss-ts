@@ -14,7 +14,8 @@ split_path(std::string s)
 {
     auto pos = s.find_last_of('/');
     if (pos == std::string::npos ) {
-        return std::string("xxxx");
+        if ( s.size() < 4) return std::string("xxxx");
+        pos = 0;
     }
     return s.substr(pos+1, 4);
 }
