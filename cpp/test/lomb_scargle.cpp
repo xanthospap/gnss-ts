@@ -41,9 +41,12 @@ main(int argc, char* argv[])
     components.push_back(&ts.y_component());
     components.push_back(&ts.z_component());
 
+    std::vector<std::string> cmp_names = {std::string("North"), std::string("East"), std::string("Up")};
+
     std::ofstream fout {ofile.c_str()};
 
-    auto it = components.begin();
+    auto it  = components.begin();
+    auto cit = cmp_names.cbegin();
     for (; it != components.end(); ++it) {
         std::size_t N = (*it)->data_pts() - (*it)->skipped_pts();
         double          ofac{4}, hifac{.9};
@@ -55,13 +58,13 @@ main(int argc, char* argv[])
         px = new double[nout];
         py = new double[nout];
         ngpt::lomb_scargle_period( **it, ofac, hifac, px, py, nout, nout, jmax, prob );
-        // std::cout<<"\nDominant frequency in time-series: "<<py[jmax]<<" (at: "<<jmax<<")";
-        // std::cout<<"\nAs yearly fraction: 1/"<<days_in_year*px[jmax]<<"\n";
-        fout << "\nNew Component";
+        fout << "\n#New Component : " << *cit;
         for (int i=0;i<nout;i++) {
             fout << "\n" << px[i] << " " << py[i];
         }
+        std::cout<<"\nDominant frequency in time-series, component "<< *cit <<" : "<<px[jmax]<<" (at: "<<jmax<<")";
 
+        ++cit;
         delete[] px;
         delete[] py;
     }
