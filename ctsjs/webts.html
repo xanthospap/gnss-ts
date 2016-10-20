@@ -55,6 +55,13 @@
             border-radius: 8px;
             pointer-events: none;
         }
+        .bar rect {
+            fill: steelblue;
+        }
+        .bar text {
+            fill: #fff;
+            font: 10px sans-serif;
+        }
     </style>
 </head>
 
@@ -72,6 +79,7 @@
                 <ul class="dropdown-menu" role="menu">
                     <li><a href='#' onclick='plot_raw();'>Time-Series Plot</a></li>
                     <li><a href='#' onclick='plot_residuals();'>Residual Plot</a></li>
+                    <li><a href='#' onclick='plot_residual_histogram();'>Residual Histogram</a></li>
                 </ul>
             </div>
             <div class='btn-group'>
@@ -446,6 +454,12 @@ function plot_raw() {
     document.getElementById("events-btn").disabled  = false;
 }
 
+function remove_datapt()
+{
+    svgN.selectAll(".data_pt").remove();
+    svgE.selectAll(".data_pt").remove();
+    svgU.selectAll(".data_pt").remove();
+}
 /*
 ** Read in a json time-series file and plot residuals (North, East and Up).
 ** The function will remove any points/elements of the plots, belonging to
@@ -923,6 +937,60 @@ function plot_events()
                 .attr("y2", yU(yAxisU.scale().domain()[1]))
                 .attr("class", "event_line erthqk_line");
         }
+    });
+}
+
+function plot_residual_histogram()
+{
+    remove_events();
+    remove_models();
+    remove_datapt();
+
+
+    d3.json('tuc2.json', function(error, data) {
+        if ( error ) throw error;
+        pdata = data.data;
+     
+        x.domain([yN.domain()[0], yN.domain()[1]]);
+        
+        var Nhistogram = d3.histogram()
+                        .domain(x.domain())
+                        .thresholds(x.ticks(0.2));
+        var Ehistogram = d3.histogram()
+                        .domain(x.domain())
+                        .thresholds(x.ticks(0.2));
+        var Uhistogram = d3.histogram()
+                        .domain(x.domain())
+                        .thresholds(x.ticks(0.2));
+        
+        ResN = data.data.map(function(a) {return a.res_north;});
+        ResE = data.data.map(function(a) {return a.res_east;});
+        ResU = data.data.map(function(a) {return a.res_up;});
+
+        var BinN = Nhistogram(ResN);
+        var BinE = Ehistogram(ResE);
+        var BinU = Uhistogram(ResU);
+        
+        yN.domain([0, d3.max(BinN, function(d) { return d.length; })]);
+        yE.domain([0, d3.max(BinE, function(d) { return d.length; })]);
+        yU.domain([0, d3.max(BinU, function(d) { return d.length; })]);
+        svgN.selectAll(".y.axis").call(yAxisN);
+        svgE.selectAll(".y.axis").call(yAxisE);
+        svgU.selectAll(".y.axis").call(yAxisU);
+        svgN.selectAll(".x.axis").call(xAxis);
+        svgE.selectAll(".x.axis").call(xAxis);
+        svgU.selectAll(".x.axis").call(xAxis);
+
+        svgN.selectAll("rect")
+                .data(BinN)
+            .enter().append("rect")
+                .attr("class", "bar")
+                .attr("x", 1)
+                .attr("transform", function(d) {
+                    return "translate(" + x(d.x0) + "," + yN(d.length) + ")"; })
+                .attr("width", function(d) { return x(d.x1) - x(d.x0) -1 ; })
+                .attr("height", function(d) { return height - yN(d.length); });
+
     });
 }
 

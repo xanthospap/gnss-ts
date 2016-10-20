@@ -1,7 +1,8 @@
 noinst_PROGRAMS = \
 		readcts \
 		readcat \
-		period
+		period \
+		lomb_scargle
 
 MCXXFLAGS = \
 	-std=c++14 \
@@ -18,6 +19,11 @@ MCXXFLAGS = \
 	-DDEBUG
 
 AM_LDFLAGS = -lggeodesy -lggdatetime
+
+lomb_scargle_SOURCES   = lomb_scargle.cpp
+lomb_scargle_CXXFLAGS  = $(MCXXFLAGS) -I$(top_srcdir)/src -L$(top_srcdir)/src
+lomb_scargle_LDADD     = $(top_srcdir)/src/libgtms.la
+#readcts_LDFLAGS   = -llibggeodesy.so -llibggdatetime.so
 
 period_SOURCES   = test_periods.cpp
 period_CXXFLAGS  = $(MCXXFLAGS) -I$(top_srcdir)/src -L$(top_srcdir)/src

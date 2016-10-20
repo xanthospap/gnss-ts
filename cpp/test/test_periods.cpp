@@ -26,8 +26,8 @@ main(/*int argc, char* argv[]*/)
     // datetime<milliseconds> event {modified_julian_day{54832}, milliseconds{0}};
     // model.add_jump(event, 1.235); // add a jump
     // add harmonics
-    model.add_period(365.25/52, -0.40, -0.11);
-    model.add_period(365.25/12, -0.80, -0.01);
+    model.add_period(365.25/52, -0.20, -0.01);
+    model.add_period(365.25/12, -0.60, -0.11);
     std::cout<<"\nThe model (and ts) include a frequency of 1/365.25/4 = "<<1/(365.25/2);
 
     /*timeseries<milliseconds,pt_marker>*/

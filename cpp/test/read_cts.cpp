@@ -75,6 +75,11 @@ main(int argc, char* argv[])
     std::ofstream fout_neu (filename);
     ts.dump( fout_neu );
     fout_neu.close();
+    // print the residuals (time-series)
+    filename = cts_name + std::string(".res");
+    std::ofstream fout_res (filename);
+    residual_ts.dump(fout_res);
+    fout_res.close();
     // print the time-series event list
     filename = cts_name + std::string(".evn");
     std::ofstream fout_evn (filename);
