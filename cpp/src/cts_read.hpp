@@ -6,6 +6,7 @@
 #include <cstdlib>
 #include <fstream>
 #include <cmath>
+#include <cctype>
 
 // ggdatetime headers
 #include "ggdatetime/datetime_read.hpp"
@@ -18,6 +19,27 @@
 
 namespace ngpt
 {
+
+/// Conver a c-string to a flag<pt_marker>. Leading whitespace characters are
+/// ignored, untill a non-whitespace char is encountered.
+flag<pt_marker>
+str2flag(const char* str, char** stop)
+{
+    const char* c = str;
+    flag<pt_marker> f;
+
+    while ( *c && (*c == ' ') ) ++c; // go to the first non-whitespace char
+
+    while ( *c && (*c != ' ') ) {
+        if ( std::isdigit(*c) || *c == '-' ) return f;
+        if (*c == 's') f.set(pt_marker::skip);
+        else if (*c == 'o') f.set(pt_marker::outlier);
+        else throw 1;
+        ++c;
+    }
+    *stop = (char*)c; // fuck it, just cast to non-const
+    return f;
+}
 
 /// Read a time-series file, as fromated by the function:
 /// crdts<T>.dump(...)
@@ -37,6 +59,7 @@ template<typename T,
     char line[MAX_CHARS];
     char *cptr(&line[0]), *end;
     double data[7], mjd, fmjd;
+    flag<pt_marker> fx, fy, fz;
     crdts<T> ts {ts_name};
 #ifdef DEBUG
     std::size_t line_counter = 0;
@@ -44,9 +67,8 @@ template<typename T,
 
     while ( ifs.getline(line, MAX_CHARS) ) {
         if ( *line != '#' ) {
-            // epoch = ngpt::strptime_ymd_hms<T>(line, &cptr);
-            ++cptr;
-            for (int i = 0; i < 7; ++i) {
+            cptr = line;
+            for (int i = 0; i < 3; ++i) {
                 data[i] = std::strtod(cptr, &end);
                 if (errno == ERANGE) {
                     errno = 0;
@@ -56,11 +78,40 @@ template<typename T,
                 }
                 cptr = end;
             }
+            fx = str2flag(cptr, &end);
+            cptr = end;
+
+            for (int i = 3; i < 5; ++i) {
+                data[i] = std::strtod(cptr, &end);
+                if (errno == ERANGE) {
+                    errno = 0;
+                    ifs.close();
+                    throw std::invalid_argument
+                        ("Invalid record line: \""+std::string(line)+"\" (argument #"+std::to_string(i)+")");
+                }
+                cptr = end;
+            }
+            fy = str2flag(cptr, &end);
+            cptr = end;
+
+            for (int i = 5; i < 7; ++i) {
+                data[i] = std::strtod(cptr, &end);
+                if (errno == ERANGE) {
+                    errno = 0;
+                    ifs.close();
+                    throw std::invalid_argument
+                        ("Invalid record line: \""+std::string(line)+"\" (argument #"+std::to_string(i)+")");
+                }
+                cptr = end;
+            }
+            fz = str2flag(cptr, &end);
+            cptr = end;
+            
             fmjd = std::modf(data[0], &mjd);
             fmjd *= static_cast<double>(T::max_in_day);
             datetime<T> epoch {modified_julian_day{static_cast<long>(mjd)},
                 T{static_cast<long>(fmjd)}};
-            ts.add(epoch, data[1], data[3], data[5], data[2], data[4], data[6]);
+            ts.add(epoch, data[1], data[3], data[5], data[2], data[4], data[6], fx, fy, fz);
 #ifdef DEBUG
             ++line_counter;
 #endif

@@ -896,7 +896,7 @@ function plot_events()
         }
         
         for (var evnt in velchg_list) {
-            var t  = jump_list[evnt].at;
+            var t  = velchg_list[evnt].at;
             svgN.append("line")
                 .attr("x1", x(t))
                 .attr("y1", yN(yAxisN.scale().domain()[0]))
@@ -917,7 +917,7 @@ function plot_events()
                 .attr("class", "event_line velchg_line");
         }
         for (var evnt in erthqk_list) {
-            var t  = jump_list[evnt].at;
+            var t  = erthqk_list[evnt].at;
             svgN.append("line")
                 .attr("x1", x(t))
                 .attr("y1", yN(yAxisN.scale().domain()[0]))
@@ -951,21 +951,61 @@ function plot_residual_histogram()
         if ( error ) throw error;
         pdata = data.data;
      
-        x.domain([yN.domain()[0], yN.domain()[1]]);
+        var xN = d3.scaleLinear().range([0, width]);
+        var xAxisN  = d3.axisBottom(xN);
+        var xE = d3.scaleLinear().range([0, width]);
+        var xAxisE  = d3.axisBottom(xE);
+        var xU = d3.scaleLinear().range([0, width]);
+        var xAxisU  = d3.axisBottom(xU);
+        var x_axis_limits = {"xnmin":0, "xnmax":0, "xemin":0, "xemax":0, "xumin":0, "xumax":0};
+        for (var o in data.data) {
+            if (data.data[o].flag_north.indexOf("o") === -1) {
+                if (x_axis_limits.xnmin > data.data[o].res_north)
+                    x_axis_limits.xnmin = data.data[o].res_north;
+                if (x_axis_limits.xnmax < data.data[o].res_north)
+                    x_axis_limits.xnmax = data.data[o].res_north;
+            }
+            else {
+                console.log("excluding outlier:", data.data[o].res_north);
+            }
+            if (data.data[o].flag_east.indexOf("o") === -1) {
+                if (x_axis_limits.xemin > data.data[o].res_east)
+                    x_axis_limits.xemin = data.data[o].res_east;
+                if (x_axis_limits.xemax < data.data[o].res_east)
+                    x_axis_limits.xemax = data.data[o].res_east;
+            }
+            if (data.data[o].flag_up.indexOf("o") === -1) {
+                if (x_axis_limits.xumin > data.data[o].res_up)
+                    x_axis_limits.xumin = data.data[o].res_up;
+                if (x_axis_limits.xumax < data.data[o].res_up)
+                    x_axis_limits.xumax = data.data[o].res_up;
+            }
+        }
+
+
+        xN.domain([x_axis_limits.xnmin, x_axis_limits.xnmax]);
+        xE.domain([x_axis_limits.xemin, x_axis_limits.xemax]);
+        xU.domain([x_axis_limits.xumin, x_axis_limits.xumax]);
         
         var Nhistogram = d3.histogram()
-                        .domain(x.domain())
-                        .thresholds(x.ticks(0.2));
+                        .domain(xN.domain())
+                        .thresholds(xN.ticks(20));
         var Ehistogram = d3.histogram()
-                        .domain(x.domain())
-                        .thresholds(x.ticks(0.2));
+                        .domain(xN.domain())
+                        .thresholds(xN.ticks(20));
         var Uhistogram = d3.histogram()
-                        .domain(x.domain())
-                        .thresholds(x.ticks(0.2));
+                        .domain(xN.domain())
+                        .thresholds(xN.ticks(20));
         
-        ResN = data.data.map(function(a) {return a.res_north;});
-        ResE = data.data.map(function(a) {return a.res_east;});
-        ResU = data.data.map(function(a) {return a.res_up;});
+        ResN = data.data.map(function(a) {;
+            return (a.flag_north.indexOf("o")>-1) ? a.res_north : null;
+        });
+        ResE = data.data.map(function(a) {
+            return (a.flag_east.indexOf("o")>-1) ? a.res_east : null;
+        });
+        ResU = data.data.map(function(a) {
+            return (a.flag_up.indexOf("o")>-1) ? a.res_up : null;
+        });
 
         var BinN = Nhistogram(ResN);
         var BinE = Ehistogram(ResE);
@@ -977,9 +1017,9 @@ function plot_residual_histogram()
         svgN.selectAll(".y.axis").call(yAxisN);
         svgE.selectAll(".y.axis").call(yAxisE);
         svgU.selectAll(".y.axis").call(yAxisU);
-        svgN.selectAll(".x.axis").call(xAxis);
-        svgE.selectAll(".x.axis").call(xAxis);
-        svgU.selectAll(".x.axis").call(xAxis);
+        svgN.selectAll(".x.axis").call(xAxisN);
+        svgE.selectAll(".x.axis").call(xAxisE);
+        svgU.selectAll(".x.axis").call(xAxisU);
 
         svgN.selectAll("rect")
                 .data(BinN)
@@ -987,10 +1027,27 @@ function plot_residual_histogram()
                 .attr("class", "bar")
                 .attr("x", 1)
                 .attr("transform", function(d) {
-                    return "translate(" + x(d.x0) + "," + yN(d.length) + ")"; })
-                .attr("width", function(d) { return x(d.x1) - x(d.x0) -1 ; })
+                    return "translate(" + xN(d.x0) + "," + yN(d.length) + ")"; })
+                .attr("width", function(d) { return xN(d.x1) - xN(d.x0) -1 ; })
                 .attr("height", function(d) { return height - yN(d.length); });
-
+        svgE.selectAll("rect")
+                .data(BinE)
+            .enter().append("rect")
+                .attr("class", "bar")
+                .attr("x", 1)
+                .attr("transform", function(d) {
+                    return "translate(" + xE(d.x0) + "," + yE(d.length) + ")"; })
+                .attr("width", function(d) { return xE(d.x1) - xE(d.x0) -1 ; })
+                .attr("height", function(d) { return height - yE(d.length); });
+        svgU.selectAll("rect")
+                .data(BinU)
+            .enter().append("rect")
+                .attr("class", "bar")
+                .attr("x", 1)
+                .attr("transform", function(d) {
+                    return "translate(" + xU(d.x0) + "," + yU(d.length) + ")"; })
+                .attr("width", function(d) { return xU(d.x1) - xU(d.x0) -1 ; })
+                .attr("height", function(d) { return height - yU(d.length); });
     });
 }
 

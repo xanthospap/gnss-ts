@@ -15,7 +15,7 @@ split_path(std::string s)
     auto pos = s.find_last_of('/');
     if (pos == std::string::npos ) {
         if ( s.size() < 4) return std::string("xxxx");
-        pos = 0;
+        pos = -1;
     }
     return s.substr(pos+1, 4);
 }
@@ -53,7 +53,7 @@ main(int argc, char* argv[])
     }
 
     // make a model and fit via ls (QR)
-    std::vector<double> periods = { 365.25 };
+    std::vector<double> periods = { /*365.25*/ };
     ngpt::ts_model<ngpt::milliseconds> xmodel { ts.events() };
     xmodel.add_periods( periods );
     xmodel.mean_epoch() = ts.mean_epoch();

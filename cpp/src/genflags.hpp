@@ -49,6 +49,9 @@ public:
     /// Clear a flag.
     void clear(FlagEnum f) noexcept { _f &= ~(static_cast<ft>(f)); }
     
+    /// Clear a flag.
+    void clear() noexcept { _f = static_cast<ft>(0); }
+    
     /// Check if a flag is set.
     bool check(FlagEnum f) const noexcept { return _f & static_cast<ft>(f); }
 

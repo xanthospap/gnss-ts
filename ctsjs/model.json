@@ -1,44 +1,14 @@
 {
 "model_x":{
-"reference_epoch":55298,
-"const_term":-0.00489651,
-"velocity":-0.0122079,
-"harmonics": [
-{"in_phase":0.00199141,
-"from":-9.22337e+18,
-"to":9.22337e+18,
-"period":365.25,
-"out_of_phase":-0.00109368}
-],
-"jumps": [
-{"value": 0.000414203, "at":55393}
-]},
+"reference_epoch":56249.5,
+"const_term":0.00103569,
+"velocity":-0.0067252},
 "model_y":{
-"reference_epoch":55298,
-"const_term":-5.67374e-05,
-"velocity":0.00768518,
-"harmonics": [
-{"in_phase":0.000850583,
-"from":-9.22337e+18,
-"to":9.22337e+18,
-"period":365.25,
-"out_of_phase":0.000544987}
-],
-"jumps": [
-{"value": 0.0063623, "at":55393}
-]},
+"reference_epoch":56249.5,
+"const_term":-0.000695803,
+"velocity":0.0108871},
 "model_z":{
-"reference_epoch":55298,
-"const_term":0.00155401,
-"velocity":0.00013056,
-"harmonics": [
-{"in_phase":0.00107943,
-"from":-9.22337e+18,
-"to":9.22337e+18,
-"period":365.25,
-"out_of_phase":-0.00101693}
-],
-"jumps": [
-{"value": -0.00261758, "at":55393}
-]}
+"reference_epoch":56249.5,
+"const_term":-0.00010517,
+"velocity":0.00111478}
 }
