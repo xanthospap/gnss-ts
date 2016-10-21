@@ -34,7 +34,7 @@ str2flag(const char* str, char** stop)
         if ( std::isdigit(*c) || *c == '-' ) return f;
         if (*c == 's') f.set(pt_marker::skip);
         else if (*c == 'o') f.set(pt_marker::outlier);
-        else throw 1;
+        else throw 1;// not very informative .... TODO
         ++c;
     }
     *stop = (char*)c; // fuck it, just cast to non-const
