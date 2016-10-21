@@ -97,7 +97,7 @@ public:
     /// Given an event list file, read it through and apply it, i.e. add all
     /// (unique) events to the m_events list.
     void
-    apply_event_list_file(const char* evn_file, epoch&& start, epoch&& stop)
+    apply_event_list_file(const char* evn_file, epoch start, epoch stop)
     {
         std::ifstream fin (evn_file, std::ifstream::in);
         if ( !fin.is_open() ) {
