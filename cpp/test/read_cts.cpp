@@ -53,7 +53,7 @@ main(int argc, char* argv[])
     }
 
     // make a model and fit via ls (QR)
-    std::vector<double> periods = { /*365.25*/ };
+    std::vector<double> periods = { 365.25/2 };
     ngpt::ts_model<ngpt::milliseconds> xmodel { ts.events() };
     xmodel.add_periods( periods );
     xmodel.mean_epoch() = ts.mean_epoch();

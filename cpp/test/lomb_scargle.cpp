@@ -49,7 +49,7 @@ main(int argc, char* argv[])
     auto cit = cmp_names.cbegin();
     for (; it != components.end(); ++it) {
         std::size_t N = (*it)->data_pts() - (*it)->skipped_pts();
-        double          ofac{4}, hifac{.9};
+        double          ofac{2}, hifac{1.5};
         int             nout = 0.5*ofac*hifac*N + 1;
         double          *px, *py, prob;
         int             jmax;
