@@ -70,8 +70,43 @@
     <div class='row'>
         <h2 id='header-string'>Position Time-Series for station </h2>
     </div>
+    
+    <div class="row">
+    <form class='form-inline'>
+        <h3>Input FIle Selector</h3>
+        <p>All input files should be in JSON format.</p>
+        <div class='form-group'>
+        <!--
+            <label for="ts-file-selector">Time-Series</label>
+            <input id="ts-file-selector" type="file" style="display:none;" onchange="$('#ts-file-selector').html($(this).val());"> -->
+            <label class="custom-file">Selector
+            <input type="file" id="ts-file-selector" class="custom-file-input">
+            <span class=custom-file-control"></span>
+            </label>
+        </div>
+        <div class='form-group'>
+            <label class="custom-file">Selector
+            <input type="file" id="md-file-selector" class="custom-file-input">
+            <span class=custom-file-control"></span>
+            </label>
+            <!--
+            <label class="btn btn-primary" for="md-file-selector">Model</label>
+            <input id="md-file-selector" type="file" style="display:none;">-->
+        </div>
+        <div class='form-group'>
+            <label class="custom-file">Selector
+            <input type="file" id="ev-file-selector" class="custom-file-input">
+            <span class=custom-file-control"></span>
+            </label>
+            <!--<label class="btn btn-primary" for="ev-file-selector">Events</label>
+            <input id="ev-file-selector" type="file" style="display:none;">-->
+        </div>
+        <button type="submit" class="btn btn-default" onclick="files_changed();">Submit</button>
+    </form>
+    </div>
 
     <div class='row'>
+        <h3>Plot Options</h3>
         <div class='btn-group btn-group-lg'>
             <div class='btn-group'>
                 <button type='button' class='btn btn-primary dropdown-toggle' data-toggle='dropdown'>
@@ -205,6 +240,9 @@ var margin = {top: 20, right: 80, bottom: 30, left: 50},
 
 // store here the min and max values of the x-axis as mjd values.
 var g_min_mjd, g_max_mjd;
+var g_ts_filename = "tuc2.json",
+    g_ev_filename = "events.json",
+    g_md_filename = "model.json";
 
 // axis setup functions/variables
 var dateFormat = d3.time.format("%Y-%m-%d %H:%M:%S");
@@ -247,7 +285,7 @@ var svgU = d3.select("#Up-Plot").append("svg")
   .append("g")
     .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
-d3.json('tuc2.json', function(error, data) {
+d3.json(g_ts_filename, function(error, data) {
     if ( error ) throw error;
     
     // the actual data to plot is:
@@ -373,7 +411,7 @@ d3.json('tuc2.json', function(error, data) {
 */
 function plot_raw() {
     
-    d3.json('tuc2.json', function(error, data) {
+    d3.json(g_ts_filename, function(error, data) {
         if ( error ) throw error;
         
         // the actual data to plot is:
@@ -471,7 +509,7 @@ function remove_datapt()
 ** TODO Rename the y-axis
 */
 function plot_residuals() {
-    d3.json('tuc2.json', function(error, data) {
+    d3.json(g_ts_filename, function(error, data) {
         if ( error ) throw error;
         pdata = data.data;
         
@@ -578,7 +616,7 @@ function plot_raw_no_outliers() {
     }
 
     // Get the data again
-    d3.json('tuc2.json', function(error, data) {
+    d3.json(g_ts_filename, function(error, data) {
         if ( error ) throw error;
         pdata = data.data;
 
@@ -626,7 +664,7 @@ function plot_raw_no_outliers() {
             // store model points here
             var xdata, ydata, zdata;
             // Get the data
-            d3.json('model.json', function(error, data) {
+            d3.json(g_md_filename, function(error, data) {
                 if ( error ) throw error;
                 
                 // compute the model points/canvas
@@ -701,7 +739,7 @@ function plot_models()
     var xdata, ydata, zdata;
     
     // Get the data
-    d3.json('model.json', function(error, data) {
+    d3.json(g_md_filename, function(error, data) {
         if ( error ) throw error;
         
         // compute the model points/canvas
@@ -829,7 +867,7 @@ function model2text(model)
 function show_model_info()
 {
     // Get the data
-    d3.json('model.json', function(error, data) {
+    d3.json(g_md_filename, function(error, data) {
         if ( error ) throw error;
 
         xmodel = data.model_x;
@@ -865,7 +903,7 @@ function plot_events()
     }
 
     // Get the data
-    d3.json('events.json', function(error, data) {
+    d3.json(g_ev_filename, function(error, data) {
         if ( error ) throw error;
         
         // split events
@@ -947,7 +985,7 @@ function plot_residual_histogram()
     remove_datapt();
 
 
-    d3.json('tuc2.json', function(error, data) {
+    d3.json(g_ts_filename, function(error, data) {
         if ( error ) throw error;
         pdata = data.data;
      
@@ -1095,6 +1133,18 @@ function to_gpsw()
     svgN.selectAll(".x.axis").call(xAxis);
     svgE.selectAll(".x.axis").call(xAxis);
     svgU.selectAll(".x.axis").call(xAxis);
+}
+function files_changed()
+{
+    g_ts_filename = document.getElementById("ts-file-selector").value;
+    g_md_filename = document.getElementById("md-file-selector").value;
+    g_ev_filename = document.getElementById("ev-file-selector").value;
+
+    remove_events();
+    remove_models();
+    remove_datapt();
+    
+    plot_raw();
 }
 </script>
 
