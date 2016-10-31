@@ -131,7 +131,8 @@ template<class T> class ts_model
 public:
 
     ts_model() noexcept {};
-      
+    
+    /// \warning earthquake events are translated to jumps. 
     explicit
     ts_model(const event_list<T>& events) noexcept
     : m_x0{0}, m_vx{0}
@@ -293,6 +294,26 @@ public:
             os << "\n\t" << j->value();
             os << " From: " << (j->start()==datetime<T>::min()?"start":strftime_ymd_hms<T>(j->start()) );
             os << " To: "  << (j->stop()==datetime<T>::max()?"end":strftime_ymd_hms<T>(j->stop()) );
+        }
+
+        return;
+    }
+
+    void
+    filter_parameters()
+    {
+        typename std::vector<md_jump<T>>::iterator jit;
+        while ( (jit = std::find_if(m_jumps.begin(), m_jumps.end(),
+            [](const md_jump<T>& j){ return j.value() < .001;})) != m_jumps.end() )
+        {
+            m_jumps.erase( jit );
+        }
+        
+        typename std::vector<md_harmonics<T>>::iterator hit;
+        while ( (hit = std::find_if(m_harmonics.begin(), m_harmonics.end(),
+            [](const md_harmonics<T>& j){ return j.in_phase() < .001 && j.out_of_phase() < .001;})) != m_harmonics.end() )
+        {
+            m_harmonics.erase( hit );
         }
 
         return;

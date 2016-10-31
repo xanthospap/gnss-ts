@@ -405,6 +405,7 @@ public:
     
         // assign solution vector to the model.
         model.assign_solution_vector(x);
+        model.filter_parameters();
         model.dump(std::cout);
 
         // Cast residuals to time-series and compute a-posteriori std. dev
@@ -845,8 +846,8 @@ public:
     operator+(int n) const noexcept
     {
         timeseries_const_iterator ti {*this};
-        ti.m_data_iter + n;
-        ti.m_epoch_iter + n;
+        ti.m_data_iter  += n;
+        ti.m_epoch_iter += n;
         return ti;
     }
 
@@ -854,8 +855,8 @@ public:
     operator-(int n) const noexcept
     {
         timeseries_const_iterator ti {*this};
-        ti.m_data_iter - n;
-        ti.m_epoch_iter - n;
+        ti.m_data_iter  -= n;
+        ti.m_epoch_iter -= n;
         return ti;
     }
 

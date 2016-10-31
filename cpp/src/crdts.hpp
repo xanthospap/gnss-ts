@@ -489,7 +489,7 @@ public:
         }
         /* TODO something is very wrong here !! */
         os << "{\n"
-            << "\"epoch\": \""      << strftime_ymd_hms(x_iter.epoch()) << "\",\n"
+            << "\"epoch\": " << /*strftime_ymd_hms(x_iter.epoch())*/x_iter.epoch().as_mjd() << ",\n"
             << "\"north\": "        << x_iter.data().value() << ",\n" 
             << "\"sigma_north\": "  << x_iter.data().sigma() << ",\n" 
             << "\"flag_north\": \"" << x_iter.data().flag()  << "\",\n"

@@ -240,9 +240,9 @@ var margin = {top: 20, right: 80, bottom: 30, left: 50},
 
 // store here the min and max values of the x-axis as mjd values.
 var g_min_mjd, g_max_mjd;
-var g_ts_filename = "tuc2.json",
+var g_ts_filename = "mtho.json",
     g_ev_filename = "events.json",
-    g_md_filename = "model.json";
+    g_md_filename = "mtho-model.json";
 
 // axis setup functions/variables
 var dateFormat = d3.time.format("%Y-%m-%d %H:%M:%S");
@@ -485,6 +485,10 @@ function plot_raw() {
             if (d.flag_up.indexOf("o")>-1) return "outlier_pt data_pt";
             else return "normal_pt data_pt";
         });
+        
+        // assign blobal min/max mjd
+        g_min_mjd = x.domain()[0];
+        g_max_mjd = x.domain()[1];
     });
     // enable/disable buttons button
     document.getElementById("outlier-btn").disabled = false;
