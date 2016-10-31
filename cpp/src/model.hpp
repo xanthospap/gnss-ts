@@ -304,14 +304,14 @@ public:
     {
         typename std::vector<md_jump<T>>::iterator jit;
         while ( (jit = std::find_if(m_jumps.begin(), m_jumps.end(),
-            [](const md_jump<T>& j){ return j.value() < .001;})) != m_jumps.end() )
+            [](const md_jump<T>& j){ return std::abs(j.value()) < .001;})) != m_jumps.end() )
         {
             m_jumps.erase( jit );
         }
         
         typename std::vector<md_harmonics<T>>::iterator hit;
         while ( (hit = std::find_if(m_harmonics.begin(), m_harmonics.end(),
-            [](const md_harmonics<T>& j){ return j.in_phase() < .001 && j.out_of_phase() < .001;})) != m_harmonics.end() )
+            [](const md_harmonics<T>& j){ return std::abs(j.in_phase()) < .001 && std::abs(j.out_of_phase()) < .001;})) != m_harmonics.end() )
         {
             m_harmonics.erase( hit );
         }
