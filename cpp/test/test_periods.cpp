@@ -28,7 +28,11 @@ main(/*int argc, char* argv[]*/)
     // add harmonics
     model.add_period(365.25/52, -0.20, -0.01);
     model.add_period(365.25/12, -0.60, -0.11);
-    std::cout<<"\nThe model (and ts) include a frequency of 1/365.25/4 = "<<1/(365.25/2);
+    std::cout<<"\nHarmonics in signal:";
+    for ( auto i : model.harmonics() ) {
+        std::cout<<"\n\tPeriod: "<<i.period()<<" angular frequency: "<<i.angular_frequency();
+        std::cout<<" frequency: "<<i.angular_frequency()/D2PI;
+    }
 
     /*timeseries<milliseconds,pt_marker>*/
     auto ts = synthetic_ts<milliseconds,pt_marker>(epochs, model, 0, 0.1);
@@ -48,8 +52,10 @@ main(/*int argc, char* argv[]*/)
     px = new double[nout];
     py = new double[nout];
     lomb_scargle_period(ts, ofac, hifac, px, py, nout, nout, jmax, prob);
-    std::cout<<"\nDominant frequency in time-series: "<<py[jmax]<<" (at: "<<jmax<<")";
-    std::cout<<"\nAs yearly fraction: 1/"<<days_in_year*px[jmax]<<"\n";
+    std::cout<<"\nDominant frequency in time-series: "<<px[jmax]<<" (at: "<<jmax<<")";
+    std::cout<<"; this is a period of "<<1e0/px[jmax]<<" days";
+    std::cout<<"\nMinimum frequency examined is: "<<px[0]<<", i.e. a period of "<<1e0/px[0]<<" days";
+    std::cout<<"\nMaximum frequency examined is: "<<px[nout-1]<<", i.e. a period of "<<1e0/px[nout-1]<<" days\n";
     std::ofstream ls_out {"lomb.out"};
     for (int i=0;i<nout;i++) ls_out << "\n" << px[i] << " " << py[i];
     

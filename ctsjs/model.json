@@ -1,14 +1,35 @@
 {
 "model_x":{
-"reference_epoch":56249.5,
-"const_term":0.00103569,
-"velocity":-0.0067252},
+"reference_epoch":55253.5,
+"const_term":-0.00648969,
+"velocity":-0.0150692,
+"harmonics": [
+{"in_phase":-0.000239088,
+"from":-9.22337e+18,
+"to":9.22337e+18,
+"period":182.625,
+"out_of_phase":0.000127013}
+]},
 "model_y":{
-"reference_epoch":56249.5,
-"const_term":-0.000695803,
-"velocity":0.0108871},
+"reference_epoch":55253.5,
+"const_term":0.00284985,
+"velocity":0.00869587,
+"harmonics": [
+{"in_phase":0.000300635,
+"from":-9.22337e+18,
+"to":9.22337e+18,
+"period":182.625,
+"out_of_phase":-2.43046e-05}
+]},
 "model_z":{
-"reference_epoch":56249.5,
-"const_term":-0.00010517,
-"velocity":0.00111478}
+"reference_epoch":55253.5,
+"const_term":-0.00297406,
+"velocity":-0.000839681,
+"harmonics": [
+{"in_phase":9.32551e-05,
+"from":-9.22337e+18,
+"to":9.22337e+18,
+"period":182.625,
+"out_of_phase":-0.000517341}
+]}
 }

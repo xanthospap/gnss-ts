@@ -32,6 +32,7 @@ main(int argc, char* argv[])
 
     std::string ctsf  = std::string(argv[1]);
     std::string sname = split_path(ctsf);
+    std::cout<<"\nAnalysis output written to file: "<< (sname + ".prd");
     std::string ofile = sname + ".prd";
      
     ngpt::crdts<ngpt::milliseconds> ts = ngpt::readin<ngpt::milliseconds>(ctsf, sname);
@@ -45,11 +46,16 @@ main(int argc, char* argv[])
 
     std::ofstream fout {ofile.c_str()};
 
+    auto   tdif = ts.last_epoch().delta_date( ts.first_epoch() );
+    double ddif = tdif.days().as_underlying_type() / 365.25;
+    double div  = 1e0/ddif;
+    std::cout<<"\nDiv = " << div;
+
     auto it  = components.begin();
     auto cit = cmp_names.cbegin();
     for (; it != components.end(); ++it) {
         std::size_t N = (*it)->data_pts() - (*it)->skipped_pts();
-        double          ofac{2}, hifac{1.5};
+        double          ofac{4}, hifac{div};
         int             nout = 0.5*ofac*hifac*N + 1;
         double          *px, *py, prob;
         int             jmax;
@@ -60,9 +66,16 @@ main(int argc, char* argv[])
         ngpt::lomb_scargle_period( **it, ofac, hifac, px, py, nout, nout, jmax, prob );
         fout << "\n#New Component : " << *cit;
         for (int i=0;i<nout;i++) {
-            fout << "\n" << px[i] << " " << py[i];
+            fout << "\n" << px[i] << " " << py[i] << " " << 1e0/px[i];
         }
-        std::cout<<"\nDominant frequency in time-series, component "<< *cit <<" : "<<px[jmax]<<" (at: "<<jmax<<")";
+        std::cout<<"\nComponent: "<<*cit;
+        std::cout<<"\n---------------------------------------------------------";
+        std::cout<<"\n\tDominant frequency in time-series: "<<px[jmax]<<" (at: "<<jmax<<")";
+        std::cout<<"; this is a period of "<<1e0/px[jmax]<<" days";
+        std::cout<<"\n\tMinimum frequency examined is: "<<px[0]
+            <<", i.e. a period of "<<1e0/px[0]<<" days";
+        std::cout<<"\n\tMaximum frequency examined is: "<<px[nout-1]
+            <<", i.e. a period of "<<1e0/px[nout-1]<<" days\n";
 
         ++cit;
         delete[] px;

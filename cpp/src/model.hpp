@@ -243,7 +243,6 @@ public:
         return vals;
     }
 
-
     void
     assign_solution_vector(const Eigen::VectorXd& x_estim)
     {
@@ -478,6 +477,10 @@ public:
     vx() const noexcept { return m_vx; }
     double&
     vx() noexcept { return m_vx; }
+
+    std::vector<md_harmonics<T>>
+    harmonics() const noexcept
+    { return m_harmonics; }
 
 private:
     double                             m_x0,
