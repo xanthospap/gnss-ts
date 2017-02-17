@@ -234,7 +234,7 @@ public:
     {
         catalogue.rewind();
         datetime<T> start {this->first_epoch()},
-                    stop {this->last_epoch()};
+                    stop  {this->last_epoch()};
         earthquake<T> eq;
         std::size_t /*start_search_at = 0,*/eq_applied = 0;
         double faz = 0,

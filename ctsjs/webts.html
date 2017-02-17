@@ -74,18 +74,18 @@
     <div class="row">
     <form class='form-inline'>
         <h3>Input FIle Selector</h3>
-        <p>All input files should be in JSON format.</p>
+        <!--<p>All input files should be in JSON format.</p>-->
         <div class='form-group'>
         <!--
             <label for="ts-file-selector">Time-Series</label>
             <input id="ts-file-selector" type="file" style="display:none;" onchange="$('#ts-file-selector').html($(this).val());"> -->
-            <label class="custom-file">Selector
+            <label class="custom-file">Time-Series
             <input type="file" id="ts-file-selector" class="custom-file-input">
             <span class=custom-file-control"></span>
             </label>
         </div>
         <div class='form-group'>
-            <label class="custom-file">Selector
+            <label class="custom-file">Model
             <input type="file" id="md-file-selector" class="custom-file-input">
             <span class=custom-file-control"></span>
             </label>
@@ -94,14 +94,14 @@
             <input id="md-file-selector" type="file" style="display:none;">-->
         </div>
         <div class='form-group'>
-            <label class="custom-file">Selector
+            <label class="custom-file">Events
             <input type="file" id="ev-file-selector" class="custom-file-input">
             <span class=custom-file-control"></span>
             </label>
             <!--<label class="btn btn-primary" for="ev-file-selector">Events</label>
             <input id="ev-file-selector" type="file" style="display:none;">-->
         </div>
-        <button type="submit" class="btn btn-default" onclick="files_changed();">Submit</button>
+        <button type="submit" class="btn btn-default" onclick='files_changed();'>Submit</button>
     </form>
     </div>
 
@@ -412,10 +412,15 @@ d3.json(g_ts_filename, function(error, data) {
 function plot_raw() {
     
     d3.json(g_ts_filename, function(error, data) {
-        if ( error ) throw error;
+        if ( error ) {
+            alert("ERROR IN plot_raw(); Input file not parsed correctly!");
+            throw error;
+        }
+        console.log("file parsed");
         
         // the actual data to plot is:
         pdata = data.data;
+        console.log("data assigned");
 
         // set x and y domains
         x.domain(d3.extent (pdata, function(d) { return d.epoch; }));
@@ -1140,6 +1145,7 @@ function to_gpsw()
 }
 function files_changed()
 {
+    console.log("In function files_changed()");
     g_ts_filename = document.getElementById("ts-file-selector").value;
     g_md_filename = document.getElementById("md-file-selector").value;
     g_ev_filename = document.getElementById("ev-file-selector").value;
@@ -1147,8 +1153,18 @@ function files_changed()
     remove_events();
     remove_models();
     remove_datapt();
-    
-    plot_raw();
+
+    g_ts_filename = "diog.json";
+    try {
+        plot_raw();
+    } catch(err) {
+        console.log("OOPS!!");
+        console.log("Got g_ts_filename = ", g_ts_filename);
+        console.log("Got g_md_filename = ", g_md_filename);
+        console.log("Got g_ev_filename = ", g_ev_filename);
+        window.alert("ERROR. Something went wrong in plotting the (raw) time-series.");
+    }
+    console.log("Out function files_changed()");
 }
 </script>
 

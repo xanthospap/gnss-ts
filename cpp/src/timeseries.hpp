@@ -391,6 +391,14 @@ public:
 
         // Solve via QR
         x = A.colPivHouseholderQr().solve(b);
+        /*
+        auto sm1 = A.colPivHouseholderQr();
+        x        = sm1.solve(b);
+        auto R   = sm1.matrixQR().triangularView<Eigen::Upper>();
+        auto S   = R.transpose();
+        std::cout<<"\nCoef: "<<R(1,1);
+        */
+        
 
         // residual vector u = A*x - b; note that the reisdual vector may not
         // have the same size as the (original) time-series. Instead, it has
