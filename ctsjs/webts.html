@@ -410,9 +410,10 @@ d3.json(g_ts_filename, function(error, data) {
 **    class
 */
 function plot_raw() {
-    
+    console.log("trying to parse file", g_ts_filename);
     d3.json(g_ts_filename, function(error, data) {
         if ( error ) {
+            console.log("eexception thrown while parsing file");
             alert("ERROR IN plot_raw(); Input file not parsed correctly!");
             throw error;
         }
@@ -1154,7 +1155,7 @@ function files_changed()
     remove_models();
     remove_datapt();
 
-    g_ts_filename = "diog.json";
+    // g_ts_filename = "diog.json";
     try {
         plot_raw();
     } catch(err) {
