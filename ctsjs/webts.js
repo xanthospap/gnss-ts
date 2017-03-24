@@ -1,168 +1,10 @@
-<!DOCTYPE html>
-<html lang="en">
-
-<head><title>Time Series Plot</title>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-  
-    <link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css">
-    <script src='https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js'></script>
-    <script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"></script>
-
-    <link href='https://fonts.googleapis.com/css?family=Open+Sans:400,300,700' rel='stylesheet' type='text/css'>
-    <link href='https://fonts.googleapis.com/css?family=PT+Serif:400,700,400italic' rel='stylesheet' type='text/css'>
-    <link href='https://netdna.bootstrapcdn.com/font-awesome/4.2.0/css/font-awesome.css' rel='stylesheet' type='text/css'>
-    <link href='https://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css' rel='stylesheet' type='text/css'>
-
-    <script src='https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js'></script>
-    <script src='https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.0/d3.min.js' charset='utf-8'></script>
-    <script src="http://d3js.org/d3.v4.min.js"></script>
-
-    <style type="text/css">
-        .line {
-            fill: none;
-            stroke: steelblue;
-            stroke-width: 3.5px;
-        }
-        .event_line {
-            fill: none;
-            stroke-width: 1.5px;
-        }
-        .jump_line {
-            stroke: springgreen;
-        }
-        .velchg_line {
-            stroke: turquoise;
-        }
-        .erthqk_line {
-            stroke: peru;
-        }
-        .model_text {
-            color: steelblue;
-            text-align: left;
-            font-family: Consolas, monospace, sans-serif;
-            font-size: 12px;
-        }
-        .model-tooltip {
-            position: absolute;
-            text-align: center;
-            width: 250px;
-            height: 150px;
-            padding: 1px;
-            font: 11px sans-serif;
-            background: lightsteelblue;
-            border: 1px;
-            border-radius: 8px;
-            pointer-events: none;
-        }
-        .bar rect {
-            fill: steelblue;
-        }
-        .bar text {
-            fill: #fff;
-            font: 10px sans-serif;
-        }
-    </style>
-</head>
-
-<body>
-<div class='container-fluid'>
-    <div class='row'>
-        <h2 id='header-string'>Position Time-Series for station </h2>
-    </div>
-    
-    <div class="row">
-    <form class='form-inline'>
-        <h3>Input FIle Selector</h3>
-        <!--<p>All input files should be in JSON format.</p>-->
-        <div class='form-group'>
-        <!--
-            <label for="ts-file-selector">Time-Series</label>
-            <input id="ts-file-selector" type="file" style="display:none;" onchange="$('#ts-file-selector').html($(this).val());"> -->
-            <label class="custom-file">Time-Series
-            <input type="file" id="ts-file-selector" class="custom-file-input">
-            <span class=custom-file-control"></span>
-            </label>
-        </div>
-        <div class='form-group'>
-            <label class="custom-file">Model (Optional)
-            <input type="file" id="md-file-selector" class="custom-file-input">
-            <span class=custom-file-control"></span>
-            </label>
-            <!--
-            <label class="btn btn-primary" for="md-file-selector">Model</label>
-            <input id="md-file-selector" type="file" style="display:none;">-->
-        </div>
-        <div class='form-group'>
-            <label class="custom-file">Events (Optional)
-            <input type="file" id="ev-file-selector" class="custom-file-input">
-            <span class=custom-file-control"></span>
-            </label>
-            <!--<label class="btn btn-primary" for="ev-file-selector">Events</label>
-            <input id="ev-file-selector" type="file" style="display:none;">-->
-        </div>
-        <!-- Submit button; collect the input files and plot -->
-        <button type="submit" class="btn btn-default" onclick='files_changed();'>Submit</button>
-    </form>
-    </div>
-
-    <div class='row'>
-        <h3>Plot Options</h3>
-        <div class='btn-group btn-group-lg'>
-            <div class='btn-group'>
-                <button type='button' class='btn btn-primary dropdown-toggle' data-toggle='dropdown'>
-                    Show <span class='caret'></span></button>
-                <ul class="dropdown-menu" role="menu">
-                    <li><a href='#' onclick='plot_raw();'>Time-Series Plot</a></li>
-                    <li><a href='#' onclick='plot_residuals();'>Residual Plot</a></li>
-                    <li><a href='#' onclick='plot_residual_histogram();'>Residual Histogram</a></li>
-                </ul>
-            </div>
-            <div class='btn-group'>
-                <button type='button' class='btn btn-primary dropdown-toggle' data-toggle='dropdown'>
-                    DateTime Format <span class='caret'></span></button>
-                <ul class="dropdown-menu" role="menu">
-                    <li><a href='#' onclick='to_ymdhms();'>Year-Month-Day</a></li>
-                    <li><a href='#' onclick='to_mjd();'>Modified Julian Date</a></li>
-                    <li><a href='#' onclick='to_gpsw();'>GPS Week</a></li>
-                </ul>
-            </div>
-        </div>
-    </div><!-- row-->
-
-    <div class='row'>
-        <div class='btn-group btn-group-lg'>
-            <div class="checkbox-inline">
-                <input type="checkbox" id="outlier-btn" onclick="plot_raw_no_outliers();">
-                <label for="outlier-btn"> Filter Outliers </label>
-            </div>
-            <div class="checkbox-inline">
-                <input type="checkbox" id="events-btn" onclick="plot_events();">
-                <label for="events-btn"> Show Events </label>
-            </div>
-            <div class="checkbox-inline">
-                <input type="checkbox" id="model-btn" onclick="plot_models();">
-                <label for="model-btn"> Show Model </label>
-            </div>
-            <!--
-            <div class="checkbox-inline">
-                <input type="checkbox" id="model-info-btn" onclick="show_model_info();">
-                <label for="model-info-btn"> Show Model Info</label>
-            </div>
-            -->
-        </div>
-    </div>
-
-    <!-- the 3 plots -->
-    <div class='col-md-12' id="North-Plot"></div>
-    <div class='col-md-12' id="East-Plot"></div>
-    <div class='col-md-12' id="Up-Plot"></div>
-
-</div><!-- container-fluid -->
-
-<script>
-
-function deepCopy(arr) {
+// ---------------------------------------------------------------------------
+//  function deepCopy
+//
+//  Return a (deep) copy of the input array.
+//  --------------------------------------------------------------------------
+function deepCopy(arr)
+{
     var out = [];
     for (var i = 0, len = arr.length; i < len; i++) {
         var item = arr[i];
@@ -173,10 +15,12 @@ function deepCopy(arr) {
     return out;
 }
 
-/*
-** Convert a (double) Modified Julian Day to GPS week and seconds of week.
-** The function returns a fractional gps week
-*/
+// ---------------------------------------------------------------------------
+//  function mjd_to_gps
+//
+//  Convert a (double) Modified Julian Day to GPS week and seconds of week.
+//  The function returns a fractional gps week
+// ---------------------------------------------------------------------------
 function mjd_to_gps(dmjd)
 {
     var mjd  = Math.floor(dmjd);
@@ -186,10 +30,12 @@ function mjd_to_gps(dmjd)
     return gps_week + sec_of_week / (7*86400);
 }
 
-/*
-** Convert a (double) Modified Julian Day to a string of type:
-** YYYY-MM-DD HH:MM:SS
-*/
+// ---------------------------------------------------------------------------
+//  function mjd_to_ymdhms
+//
+//  Convert a (double) Modified Julian Day to a string of type:
+//  YYYY-MM-DD HH:MM:SS
+// ---------------------------------------------------------------------------
 function mjd_to_ymdhms(dmjd)
 {
     var mjd  = Math.floor(dmjd);
@@ -235,6 +81,7 @@ function mjd_to_ymdhms(dmjd)
         ":" + parseInt(second).toString();
 }
 
+/*
 var margin = {top: 20, right: 80, bottom: 30, left: 50},
     width  = 960 - margin.left - margin.right,
     height = 500 - margin.top - margin.bottom;
@@ -407,6 +254,7 @@ d3.json(g_ts_filename, function(error, data) {
         g_min_mjd = x.domain()[0];
         g_max_mjd = x.domain()[1];
 });
+*/
 
 //  ---------------------------------------------------------------------------
 //  function plot_raw()
@@ -578,6 +426,8 @@ function remove_datapt()
 // ----------------------------------------------------------------------------
 function plot_residuals()
 {
+    console.log("[DEBUG] Plotting residuals using file \"" + g_ts_filename + "\".");
+    
     d3.json(g_ts_filename, function(error, data) {
         if ( error ) throw error;
         pdata = data.data;
@@ -666,6 +516,8 @@ function plot_residuals()
     //  Disable outlier button
     document.getElementById("outlier-btn").disabled = true;
     document.getElementById("model-btn").disabled = true;
+    
+    console.log("[DEBUG] Residuals plotted");
 }
 
 // ---------------------------------------------------------------------------
@@ -754,14 +606,17 @@ function plot_raw_no_outliers()
     });
 }
 
-/*
-** Given a "model" object (as read off from a corrsponding json file),
-** compute the values of the model for values in
-** range [from,to] with a step = step.
-** The values are returned as an array of objects of type:
-** [...{"t":...,"val":...}...] so that they can be ploted via the [neu]line
-** functions
-*/
+// ---------------------------------------------------------------------------
+//  function make_model
+//
+//  Given a "model" object (as read off from a corrsponding json file),
+//+ compute the values of the model for values in range [from, to] with a 
+//+ step = step.
+//  The values are returned as an array of objects of type:
+//+ [...{"t":...,"val":...}...] 
+//+ so that they can be ploted via the [neu]line functions.
+//
+//// -------------------------------------------------------------------------
 function make_model(mod, from, to, step)
 {
     var data = [];
@@ -1241,7 +1096,3 @@ function files_changed()
     }
     console.log("Out function files_changed()");
 }
-</script>
-
-</body>
-</html>
