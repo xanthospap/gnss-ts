@@ -81,181 +81,6 @@ function mjd_to_ymdhms(dmjd)
         ":" + parseInt(second).toString();
 }
 
-/*
-var margin = {top: 20, right: 80, bottom: 30, left: 50},
-    width  = 960 - margin.left - margin.right,
-    height = 500 - margin.top - margin.bottom;
-
-// store here the min and max values of the x-axis as mjd values.
-var g_min_mjd, g_max_mjd;
-var g_ts_filename = "mtho.json",
-    g_ev_filename = "events.json",
-    g_md_filename = "mtho-model.json";
-
-// axis setup functions/variables
-var dateFormat = d3.time.format("%Y-%m-%d %H:%M:%S");
-var x = d3.scaleLinear().range([0, width]); // v4.x
-var xAxis  = d3.axisBottom(x);
-var yN     = d3.scaleLinear().range([height, 0]);
-var yE     = d3.scaleLinear().range([height, 0]);
-var yU     = d3.scaleLinear().range([height, 0]);
-var yAxisN = d3.axisLeft(yN); // v4.x
-var yAxisE = d3.axisLeft(yE); // v4.x
-var yAxisU = d3.axisLeft(yU); // v4.x
-
-// simple D3 line functions, to plot arrays of objects of type
-// {"t":...,"val":...}; normally used to plot the model line (per component)
-var nline = d3.svg.line()
-    .x(function(d) { return x(d.t); })
-    .y(function(d) { return yN(d.val); });
-var eline = d3.svg.line()
-    .x(function(d) { return x(d.t); })
-    .y(function(d) { return yE(d.val); });
-var uline = d3.svg.line()
-    .x(function(d) { return x(d.t); })
-    .y(function(d) { return yU(d.val); });
-
-var svgN = d3.select("#North-Plot").append("svg")
-    .attr("width", width + margin.left + margin.right)
-    .attr("height", height + margin.top + margin.bottom)
-  .append("g")
-    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
-
-var svgE = d3.select("#East-Plot").append("svg")
-    .attr("width", width + margin.left + margin.right)
-    .attr("height", height + margin.top + margin.bottom)
-  .append("g")
-    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
-
-var svgU = d3.select("#Up-Plot").append("svg")
-    .attr("width", width + margin.left + margin.right)
-    .attr("height", height + margin.top + margin.bottom)
-  .append("g")
-    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
-
-d3.json(g_ts_filename, function(error, data) {
-
-    console.log("[DEBUG] Plotting time-series file: \"" + g_ts_filename +"\"");
-
-    if ( error ) throw error;
-    
-    // the actual data to plot is:
-    pdata = data.data;
-
-    // set x and y domains
-    x.domain(d3.extent (pdata, function(d) { return d.epoch; }));
-    yN.domain(d3.extent(pdata, function(d) { return d.north; }));
-    yE.domain(d3.extent(pdata, function(d) { return d.east; }));
-    yU.domain(d3.extent(pdata, function(d) { return d.up; }));
-    
-    // set (append) the x-axis in all three subplots
-    svgN.append("g")
-        .attr("class", "x axis")
-        .attr("transform", "translate(0," + height + ")")
-        .call(xAxis);
-    svgE.append("g")
-        .attr("class", "x axis")
-        .attr("transform", "translate(0," + height + ")")
-        .call(xAxis);
-     svgU.append("g")
-        .attr("class", "x axis")
-        .attr("transform", "translate(0," + height + ")")
-        .call(xAxis);
-      
-    // set (append) the y-axis
-    svgN.append("g")
-        .attr("class", "y axis")
-        .call(yAxisN)
-      .append("text")
-        .attr("transform", "rotate(-90)")
-        .attr("y", 6)
-        .attr("dy", ".71em")
-        .style("text-anchor", "end")
-        .text("North (m)");
-    svgE.append("g")
-        .attr("class", "y axis")
-        .call(yAxisE)
-      .append("text")
-        .attr("transform", "rotate(-90)")
-        .attr("y", 6)
-        .attr("dy", ".71em")
-        .style("text-anchor", "end")
-        .text("East (m)");
-    svgU.append("g")
-        .attr("class", "y axis")
-        .call(yAxisU)
-      .append("text")
-        .attr("transform", "rotate(-90)")
-        .attr("y", 6)
-        .attr("dy", ".71em")
-        .style("text-anchor", "end")
-        .text("Up (m)");
-        
-    // add the lines
-    svgN.selectAll(".dot")
-        .data(pdata)
-      .enter().append("circle")
-        .attr("r", 3.0)
-        .attr("cx", function(d) {return x(d.epoch);})
-        .attr("cy", function(d) {return yN(d.north);})
-        .attr("stroke", "blue")
-        .attr("stroke-width", 0.3)
-        .attr("fill", function(d) {
-            return (d.flag_north.indexOf("o")>-1) ? "yellow" : "red" ;
-        })
-        .attr("class", function(d) {
-            return (d.flag_north.indexOf("o")>-1)
-                ? "data_pt outlier_pt"
-                : "data_pt normal_pt" ;
-        });
-    svgE.selectAll(".dot")
-        .data(pdata)
-      .enter().append("circle")
-        .attr("r", 3.0)
-        .attr("cx", function(d) {return x(d.epoch);})
-        .attr("cy", function(d) {return yE(d.east);})
-        .attr("stroke", "blue")
-        .attr("stroke-width", 0.3)
-        .attr("fill", function(d) {
-            return (d.flag_east.indexOf("o")>-1) ? "yellow" : "red" ;
-        })
-        .attr("class", function(d) {
-            return (d.flag_east.indexOf("o")>-1)
-                ? "data_pt outlier_pt"
-                : "data_pt normal_pt" ;
-        });
-    svgU.selectAll(".dot")
-        .data(pdata)
-      .enter().append("circle")
-        .attr("r", 3.0)
-        .attr("cx", function(d) {return x(d.epoch);})
-        .attr("cy", function(d) {return yU(d.up);})
-        .attr("stroke", "blue")
-        .attr("stroke-width", 0.3)
-        .attr("fill", function(d) {
-            return (d.flag_up.indexOf("o")>-1) ? "yellow" : "red" ;
-        })
-        .attr("class", function(d) {
-            return (d.flag_up.indexOf("o")>-1)
-                ? "data_pt outlier_pt"
-                : "data_pt normal_pt" ;
-        });
-
-        // check/uncheck buttons button
-        document.getElementById("outlier-btn").checked = false;
-        document.getElementById("model-btn").checked   = false;
-        document.getElementById("events-btn").checked  = false;
-        // enable/disable buttons button
-        document.getElementById("outlier-btn").disabled = false;
-        document.getElementById("model-btn").disabled   = false;
-        document.getElementById("events-btn").disabled  = false;
-
-        // assign blobal min/max mjd
-        g_min_mjd = x.domain()[0];
-        g_max_mjd = x.domain()[1];
-});
-*/
-
 //  ---------------------------------------------------------------------------
 //  function plot_raw()
 //
@@ -532,6 +357,8 @@ function plot_residuals()
 // ---------------------------------------------------------------------------
 function plot_raw_no_outliers()
 {
+    console.log("[DEBUG] plotting time-series with no outliers, file is \""+g_ts_filename+"\".");
+
     if ( document.getElementById("outlier-btn").checked === false ) {
         svgN.selectAll(".data_pt").remove();
         svgE.selectAll(".data_pt").remove();
@@ -619,6 +446,8 @@ function plot_raw_no_outliers()
 //// -------------------------------------------------------------------------
 function make_model(mod, from, to, step)
 {
+    console.log("[DEBUG] Making model line ...");
+
     var data = [];
     var value = 0;
     var ref_t = mod.reference_epoch;
@@ -658,6 +487,8 @@ function remove_models()
 */
 function plot_models()
 {
+    console.log("[DEBUG] Plotting model line using file \""+g_md_filename+"\".");
+
     if ( document.getElementById("model-btn").checked === false ) {
         remove_models();
         return;
@@ -825,6 +656,7 @@ function remove_events()
 }
 function plot_events()
 {
+    console.log("[DEBUG] Plotting events using file \""+g_ev_filename+"\".");
     if ( document.getElementById("events-btn").checked === false ) {
         remove_events();
         return;
@@ -908,6 +740,7 @@ function plot_events()
 
 function plot_residual_histogram()
 {
+    console.log("[DEBUG] Plotting residual histogram using file \""+g_ts_filename+"\".");
     remove_events();
     remove_models();
     remove_datapt();
@@ -1062,15 +895,19 @@ function to_gpsw()
     svgE.selectAll(".x.axis").call(xAxis);
     svgU.selectAll(".x.axis").call(xAxis);
 }
-/*
- * This function is triggered by the SUBMIT button.
- * 1. First collect the input files filenames.
- * 2. Remove any plots/lines that already exist on page.
- * 3. Plot the raw time-series
- */
+
+// ---------------------------------------------------------------------------
+//  function files_changed
+//
+//  This function is triggered by the SUBMIT button.
+//  1. First collect the input files filenames.
+//  2. Remove any plots/lines that already exist on page.
+//  3. Plot the raw time-series
+//
+// ---------------------------------------------------------------------------
 function files_changed()
 {
-    console.log("In function files_changed()");
+    console.log("[DEBUG] In function files_changed()");
     g_ts_filename = document.getElementById("ts-file-selector").value;
     g_md_filename = document.getElementById("md-file-selector").value;
     g_ev_filename = document.getElementById("ev-file-selector").value;
@@ -1094,5 +931,5 @@ function files_changed()
         if ( !g_ev_filename.trim() ) {console.log("empty event filename");}
         // window.alert("ERROR. Something went wrong in plotting the (raw) time-series.");
     }
-    console.log("Out function files_changed()");
+    console.log("[DEBUG] Out function files_changed()");
 }
