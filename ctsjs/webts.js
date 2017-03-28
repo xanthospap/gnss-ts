@@ -81,6 +81,77 @@ function mjd_to_ymdhms(dmjd)
         ":" + parseInt(second).toString();
 }
 
+// ---------------------------------------------------------------------------
+//  function add_axis_label
+//
+//  Add x- and y- axis labels to the three SVG's.
+//  See http://bl.ocks.org/phoebebright/3061203
+//
+//  --------------------------------------------------------------------------
+function add_axis_label(xlabel, yn_label, ye_label, yu_label)
+{
+    // space around the chart, not including labels
+    padding = -1.2 * margin.left;
+
+    //  First remove any already-in-place axis labels
+    remove_axis_labels();
+    
+    svgN.append("text")
+        .attr("text-anchor", "middle")
+        .attr("transform", "translate("+ (width/2) +","+(height-(padding/3))+")")
+        .attr("class", "axis-label")
+        .text(xlabel);
+    svgN.append("text")
+        .attr("text-anchor", "middle")
+        .attr("transform", "translate("+ (padding/2) +","+(height/2)+")rotate(-90)")
+        .attr("class", "axis-label")
+        .text(yn_label);
+    
+    svgE.append("text")
+        .attr("text-anchor", "middle")
+        .attr("transform", "translate("+ (width/2) +","+(height-(padding/3))+")")
+        .attr("class", "axis-label")
+        .text(xlabel);
+    svgE.append("text")
+        .attr("text-anchor", "middle")
+        .attr("transform", "translate("+ (padding/2) +","+(height/2)+")rotate(-90)")
+        .attr("class", "axis-label")
+        .text(ye_label);
+    
+    svgU.append("text")
+        .attr("text-anchor", "middle")
+        .attr("transform", "translate("+ (width/2) +","+(height-(padding/3))+")")
+        .attr("class", "axis-label")
+        .text(xlabel);
+    svgU.append("text")
+        .attr("text-anchor", "middle")
+        .attr("transform", "translate("+ (padding/2) +","+(height/2)+")rotate(-90)")
+        .attr("class", "axis-label")
+        .text(yu_label);
+
+    //  Set global axis names
+    g_xlabel   = xlabel;
+    g_yn_label = yn_label;
+    g_ye_label = ye_label;
+    g_yu_label = yu_label;
+}
+
+// ---------------------------------------------------------------------------
+//
+//  function remove_axis_labels
+//
+//  Remove axis lables on all three SVG's. Actually, the function will remove
+//+ everything belonging o the class 'axis-label', attached to any of the three
+//+ SVG.
+//
+// ---------------------------------------------------------------------------
+function remove_axis_labels()
+{
+    svgN.selectAll(".axis-label").remove();
+    svgE.selectAll(".axis-label").remove();
+    svgU.selectAll(".axis-label").remove();
+}
+
 //  ---------------------------------------------------------------------------
 //  function plot_raw()
 //
@@ -97,6 +168,9 @@ function mjd_to_ymdhms(dmjd)
 function plot_raw()
 {
     console.log("[DEBUG] Trying to parse and plot (raw) file \"" + g_ts_filename + "\".");
+
+    //  If we are showing the residual plot, we need to remove it first
+    remove_residuals();
     
     //  Load data from file
     d3.json(g_ts_filename, function(error, data) {
@@ -123,12 +197,9 @@ function plot_raw()
         svgE.selectAll(".y.axis").call(yAxisE);
         svgU.selectAll(".y.axis").call(yAxisU);
         
-        /*  Remove outliers if any
-        svgN.selectAll(".residual_pt").remove();
-        svgE.selectAll(".residual_pt").remove();
-        svgU.selectAll(".residual_pt").remove();
-        */
-    
+        //  Add axis labels
+        add_axis_label( g_xlabel, "North (m)", "East (m)", "Up (m)" );
+        
         //  Add the data points to all three svg (n, e, u).
         //  Points are added as circles; the normal color is red, though if a
         //+ data point is marked as outlier, it is filled with yellow color.
@@ -276,6 +347,9 @@ function plot_residuals()
         svgN.selectAll(".y.axis").call(yAxisN);
         svgE.selectAll(".y.axis").call(yAxisE);
         svgU.selectAll(".y.axis").call(yAxisU);
+        
+        //  Add axis labels
+        add_axis_label( g_xlabel, "North Residuals (mm)", "East Residuals (mm)", "Up Residuals (mm)" );
 
         //  Remove any data points belonging to the class 'data_pt'
         svgN.selectAll(".data_pt").remove();
@@ -343,6 +417,20 @@ function plot_residuals()
     document.getElementById("model-btn").disabled = true;
     
     console.log("[DEBUG] Residuals plotted");
+}
+
+// ----------------------------------------------------------------------------
+//  function remove_residual
+//
+//  Remove all data points belonging to the class 'residual_pt' from all three
+//+ SVGs (svgN, svgE, svgU)
+//
+// ----------------------------------------------------------------------------
+function remove_residuals()
+{
+    svgN.selectAll(".residual_pt").remove();
+    svgE.selectAll(".residual_pt").remove();
+    svgU.selectAll(".residual_pt").remove();
 }
 
 // ---------------------------------------------------------------------------
@@ -471,6 +559,8 @@ function make_model(mod, from, to, step)
         }
         data.push({"t":t, "val":value});
     }
+
+    console.log("[DEBUG] Model line evaluated with "+ data.length +" data points.");
     return data;
 }
 
@@ -480,11 +570,15 @@ function remove_models()
     svgE.selectAll(".model_line").remove();
     svgU.selectAll(".model_line").remove();
 }
-/*
-** Read coordinate time-series model(s) off from a corresponding json file,
-** and plot the models (one per component). The plotted lines will belong to a
-** class(es) named "line model_line"
-*/
+
+// ---------------------------------------------------------------------------
+//  function plot_models
+//
+//  Read coordinate time-series model(s) off from a corresponding json file,
+//+ and plot the models (one per component). The plotted lines will belong to a
+//+ class(es) named "line model_line"
+//
+// ---------------------------------------------------------------------------
 function plot_models()
 {
     console.log("[DEBUG] Plotting model line using file \""+g_md_filename+"\".");
@@ -514,7 +608,8 @@ function plot_models()
         ystr = model2text(ymodel);
         zstr = model2text(zmodel);
 
-        // Define the div for the tooltip, see http://bl.ocks.org/d3noob/a22c42db65eb00d4e369
+        // Define the div for the tooltip, see
+        // http://bl.ocks.org/d3noob/a22c42db65eb00d4e369
         var tooltip_div = d3.select("body").append("div")   
                             .attr("class", "model-tooltip")               
                             .style("opacity", 0);
@@ -850,17 +945,22 @@ function plot_residual_histogram()
     });
 }
 
-/*
-** Attach the x axis to a datetime scale in the domain [g_min_mjd,g_max_mjd]
-** Note that nothing gets reploted!
-*/
+// ---------------------------------------------------------------------------
+//  function to_ymdhms
+//
+//
+//  Attach the x axis to a datetime scale in the domain [g_min_mjd,g_max_mjd]
+//  The scale is YMDHMS. At the end, the SVG's x-axis label gets renamed to
+//+ 'Date (Year/Month/Day)'.
+//  Note that nothing gets reploted, only the x-domain changes.
+//
+// ---------------------------------------------------------------------------
 function to_ymdhms()
 {
     x = d3.scaleTime().range([0, width]);
     min_ymd = mjd_to_ymdhms(g_min_mjd);
     max_ymd = mjd_to_ymdhms(g_max_mjd);
-    // console.log("Min date:", min_ymd);
-    // console.log("Max date:", max_ymd);
+    
     x.domain([dateFormat.parse(min_ymd), dateFormat.parse(max_ymd)]);
     xAxis  = d3.axisBottom(x);
     
@@ -868,11 +968,21 @@ function to_ymdhms()
     svgN.selectAll(".x.axis").call(xAxis);
     svgE.selectAll(".x.axis").call(xAxis);
     svgU.selectAll(".x.axis").call(xAxis);
+    
+    g_xlabel = "Date (Year/Month/Day)";
+    add_axis_label(g_xlabel, g_yn_label, g_ye_label, g_yu_label);
 }
-/*
-** Attach the x axis to a datetime scale in the domain [g_min_mjd,g_max_mjd]
-** Note that nothing gets reploted!
-*/
+
+// ---------------------------------------------------------------------------
+//  function to_mjd
+//
+//
+//  Attach the x axis to a datetime scale in the domain [g_min_mjd,g_max_mjd]
+//  The scale is Modified Julian Day. At the end, the SVG's x-axis label gets
+//  renamed to 'Date (Modified Julian Day)'.
+//  Note that nothing gets reploted, only the x-domain changes.
+//
+// ---------------------------------------------------------------------------
 function to_mjd()
 {
     x = d3.scaleLinear().range([0, width]); // v4.x
@@ -883,7 +993,21 @@ function to_mjd()
     svgN.selectAll(".x.axis").call(xAxis);
     svgE.selectAll(".x.axis").call(xAxis);
     svgU.selectAll(".x.axis").call(xAxis);
+    
+    g_xlabel = "Date (Modified Julian Day)";
+    add_axis_label(g_xlabel, g_yn_label, g_ye_label, g_yu_label);
 }
+
+// ---------------------------------------------------------------------------
+//  function to_gpsw
+//
+//
+//  Attach the x axis to a datetime scale in the domain [g_min_mjd,g_max_mjd]
+//  The scale is GPS Week. At the end, the SVG's x-axis label gets
+//  renamed to 'Date (GPS Week)'.
+//  Note that nothing gets reploted, only the x-domain changes.
+//
+// ---------------------------------------------------------------------------
 function to_gpsw()
 {
     x = d3.scaleLinear().range([0, width]); // v4.x
@@ -894,6 +1018,9 @@ function to_gpsw()
     svgN.selectAll(".x.axis").call(xAxis);
     svgE.selectAll(".x.axis").call(xAxis);
     svgU.selectAll(".x.axis").call(xAxis);
+
+    g_xlabel = "Date (GPS Week)";
+    add_axis_label(g_xlabel, g_yn_label, g_ye_label, g_yu_label);
 }
 
 // ---------------------------------------------------------------------------
