@@ -7,6 +7,7 @@ using namespace ngpt;
 int
 main(/*int argc, char* argv[]*/)
 {
+    // Do not touch from here ----
     datetime<milliseconds> start 
         { modified_julian_day{53005}, milliseconds{0} };    // 01-01-2004
     datetime<milliseconds> stop
@@ -20,6 +21,7 @@ main(/*int argc, char* argv[]*/)
     // create a vector of epochs (from start to step every step)
     std::vector<datetime<milliseconds>> epochs;
     for (auto t = start; t < stop; t+=step) epochs.emplace_back(t);
+    // -- to here
 
     // create a model
     ngpt::ts_model<milliseconds> model;
@@ -42,7 +44,7 @@ main(/*int argc, char* argv[]*/)
     //  make a synthetic time-series based on the epochs and model we already
     //+ constructed
     /* timeseries<milliseconds,pt_marker> */
-    auto ts = synthetic_ts<milliseconds,pt_marker>(epochs, model, 0, 0.1);
+    auto ts = synthetic_ts<milliseconds,pt_marker>(epochs, model, 0, 0.05);
 
     // write time-series to "foo.ts"
     std::cout<<"\n> TimeSeries written to \"foo.ts\"";
@@ -65,7 +67,7 @@ main(/*int argc, char* argv[]*/)
     std::cout<<"\n\tDominant frequency in time-series: "<<px[jmax]<<" (at index: "<<jmax<<")"<<"; this is a period of "<<1e0/px[jmax]<<" days";
     std::cout<<"\n\tMinimum frequency examined is: "<<px[0]<<", i.e. a period of "<<1e0/px[0]<<" days.";
     std::cout<<"\n\tMaximum frequency examined is: "<<px[nout-1]<<", i.e. a period of "<<1e0/px[nout-1]<<" days.";
-    std::cout<<"\n\tTesting frequency delta is "<<(px[2]-px[1])<<" or every "<<1e0/(px[2]-px[1])<<" days.";
+    std::cout<<"\n\tTesting frequency delta is "<<(px[2]-px[1]-px[0])<<" or every "<<1e0/(px[2]-px[1]-px[0])<<" days.";
 
     std::cout<<"\n> Writing Lomb-Scargle data to \"lomb.out\"";
     std::ofstream ls_out {"lomb.out"};
@@ -85,7 +87,7 @@ main(/*int argc, char* argv[]*/)
         new_ts.epoch_ptr() = ts.epoch_ptr();
         lomb_scargle_period(new_ts, ofac, hifac, px, py, nout, nout, jmax, prob);
         std::cout<<"\n\tIteration "<<i+1<<": Dominant frequency in time-series: "<<px[jmax]<<" (at index: "<<jmax<<")"
-            <<"; this is a period of "<<1e0/px[jmax]<<" days";
+            <<"; this is a period of "<<1e0/px[jmax]<<" days power="<<py[jmax]<<" probability="<<prob;
         mdl2.add_period(1e0/px[jmax]);
         double std;
         new_ts = ts.qr_ls_solve(mdl2, std);
