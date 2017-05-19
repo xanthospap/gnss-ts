@@ -34,7 +34,7 @@ template<class T>
     return static_cast<std::size_t>(dpts/ddt+1);
 }
 
-/// \brief Construct a synthetic time-series basd in input parameters.
+/// \brief Construct a synthetic time-series based in input parameters.
 ///
 /// \warning This function will allocate memory for the epoch vector; the user
 ///          is responsible for deallocating this vector!
@@ -62,7 +62,7 @@ template<class T, class F>
     return ts;
 }
 
-/// \brief Construct a synthetic time-series basd in input parameters.
+/// \brief Construct a synthetic time-series based in input parameters.
 ///
 template<class T, class F>
     timeseries<T,F>

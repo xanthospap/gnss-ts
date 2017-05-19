@@ -33,11 +33,11 @@ z = np.array([ j['z'] for j in resl ])
 min_mjd = t[0]
 t = t - min_mjd
 # random waves
-nin = len(t)
-phi = 0.5 * np.pi
-A   = 0.5
-w   = 1.0
-x = A * np.sin(w*t+phi)
+#nin = len(t)
+#phi = 0.5 * np.pi
+#A   = 0.5
+#w   = 1.0
+#x = A * np.sin(w*t+phi)
 
 frequency, power = LombScargle(t, x).autopower()
 print 'Component x:'
