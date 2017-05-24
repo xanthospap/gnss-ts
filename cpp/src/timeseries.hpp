@@ -173,12 +173,12 @@ public:
     ///
     /// \todo Should i allow this to throw?
     epoch
-    first_valid_epoch(std::size_t idx) const noexcept
+    first_valid_epoch(std::size_t& idx) const noexcept
     {
-        auto it = std::find_if(std::cbegin(*m_epochs), std::cend(*m_epochs),
+        auto it = std::find_if(std::cbegin(*m_data), std::cend(*m_data),
             [](const entry& i){return !(i.skip());});
-        idx = std::distance(std::cbegin(*m_epochs), it);
-        return *it;
+        idx = std::distance(std::cbegin(*m_data), it);
+        return m_epochs[idx];
     }
 
     /// Get the last epoch **NOT** skipped. Returns the value of the last,
@@ -186,12 +186,12 @@ public:
     ///
     /// \todo Should i allow this to throw?
     epoch
-    last_valid_epoch(std::size_t idx) const noexcept
+    last_valid_epoch(std::size_t& idx) const noexcept
     {
-        auto it = std::find_if(std::crbegin(*m_epochs), std::crend(*m_epochs),
+        auto it = std::find_if(std::crbegin(*m_data), std::crend(*m_data),
             [](const entry& i){return !(i.skip());});
-        idx = std::distance(it, std::crend(*m_epochs)) - 1;
-        return *it;
+        idx = std::distance(it, std::crend(*m_data)) - 1;
+        return m_epochs[idx];
     }
 
     /// Copy constructor. Note that the epoch vector is set to nullptr.

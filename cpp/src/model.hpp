@@ -15,6 +15,7 @@
 namespace ngpt
 {
 
+/// A class to represent a "jump" (i.e. offset) of a time-series.
 template<class T,
         typename = std::enable_if_t<T::is_of_sec_type>
         >
@@ -26,22 +27,22 @@ public:
     : m_start{start},
       m_offset{offset_in_meters}
     {};
-
     datetime<T>
     start() const noexcept { return m_start; }
-
     double
     value() const noexcept { return m_offset; }
-    
     double&
     value() noexcept { return m_offset; }
 
 private:
-    ngpt::datetime<T> m_start;
-    double            m_offset; // meters
+    ngpt::datetime<T> m_start;  ///< when the "jump" occured
+    double            m_offset; ///< value (i.e. offset amplitude)
 
 }; // md_jump
 
+/// A class to represent a harmonic signal in a time-series. The harmonic
+/// signal is described by in and out-of-phase amplitudes, a period/frequency,
+/// and the starting and ending times.
 template<class T,
         typename = std::enable_if_t<T::is_of_sec_type>
         >
@@ -59,35 +60,27 @@ public:
       m_in_phase{in_phase_val},
       m_out_phase{out_phase_val}
     {};
-
-
     ngpt::datetime<T>
     start() const noexcept { return m_start; }
-
     ngpt::datetime<T>
     stop() const noexcept { return m_stop; }
-
     double
     angular_frequency() const noexcept { return m_afreq; }
-
     double
     period() const noexcept { return D2PI/m_afreq;}
-
     double
     in_phase() const noexcept { return m_in_phase; }
-
     double
     out_of_phase() const noexcept { return m_out_phase; }
-    
     double&
     in_phase() noexcept { return m_in_phase; }
-
     double&
     out_of_phase() noexcept { return m_out_phase; }
 
 private:
-    ngpt::datetime<T> m_start, m_stop;
-    double            m_afreq;        // angular frequency i.e. omegas: 2 * pi * frequency)
+    ngpt::datetime<T> m_start,
+                      m_stop;
+    double            m_afreq;        // angular frequency (i.e. omegas: 2 * pi * frequency)
     double            m_in_phase,     // meters
                       m_out_phase;    // meters
 
