@@ -5,9 +5,11 @@
 using namespace ngpt;
 
 int
-main(/*int argc, char* argv[]*/)
+main(int argc, char* argv[])
 {
     int algorithm = 1;
+    if (argc>1) algorithm = atoi(argv[1]);
+
 
     // Do not touch from here ----
     datetime<milliseconds> start 
@@ -106,14 +108,16 @@ main(/*int argc, char* argv[]*/)
     } else {
         // compute lomb-scargle periodogram; write to output ("lomb.out")
         std::cout<<"\n> Computing Lomb-Scargle Periodogram";
-        std::size_t N = ts.data_pts() - ts.skipped_pts(), idx;
-        double minfreq {0};
-        double maxfreq {.5};
-        int    n0 {5};
+        std::size_t idx;
         double T = ts.last_valid_epoch(idx).as_mjd() - ts.first_valid_epoch(idx).as_mjd();
+        std::size_t N = ts.data_pts() - ts.skipped_pts();
+        double minfreq /*{0}*/ ( 1e0/(1.5*T) );
+        double maxfreq {.5};
+        int    n0 {4};
         double dfreq {1e0/(T*n0)};
-        int    nout = n0*T*maxfreq;
-        assert( nout == static_cast<int>((maxfreq-minfreq)/dfreq) + 1 );
+        int    nout = n0*T*maxfreq + 1;
+        std::cout<<"\nComputed nout="<<nout<<", estimate="<<static_cast<int>((maxfreq-minfreq)/dfreq) + 1;
+        // assert( nout == static_cast<int>((maxfreq-minfreq)/dfreq) + 1 );
         double *px, *py, prob;
         int    jmax;
         double days_in_year = 365.25e0;

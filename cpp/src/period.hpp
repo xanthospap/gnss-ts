@@ -39,6 +39,9 @@ template<class T, class F>
     
     /// size of output arrays (# of frequencies to be examined)
     nout = 0.5 * ofac * hifac * N;
+#ifdef DEBUG
+    std::cout<<"\nComputed nout="<<nout;
+#endif
     if (nout > np) {
         throw std::out_of_range
             {"lomb_scargle_period: [ERROR] output arrays too short in period"};
@@ -250,6 +253,9 @@ template<class T, class F>
             pymax=py[(jmax=i)];
         pnow += dfreq; // The next frequency.
     }
+#ifdef DEBUG
+    std::cout<<"\n\tLast computed frequency = "<<pnow-dfreq<<"; max freq = "<<maxfreq;
+#endif
 
     // Evaluate statistical significance of the maximum.
     expy = std::exp(-pymax);
