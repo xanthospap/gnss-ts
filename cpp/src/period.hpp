@@ -96,6 +96,12 @@ template<class T, class F>
         wr[j]  = std::cos(arg);
         wi[j]  = wpi[j];
     }
+#ifdef DEBUG
+    std::cout<<"\nAverage="<<xave;
+    for (std::size_t j = 0; j < N; j++) {
+        std::cout<<"\n"<<wpr[j]<<" "<<wpi[j]<<" "<<wr[j]<<" "<<wi[j];
+    }
+#endif
 
     // Main loop over the frequencies to be evaluated
     for (int i = 0; i < nout; i++) {
@@ -151,6 +157,8 @@ template<class T, class F>
     return;
 }
 
+//
+// THIS DOES NOT WORK
 template<class T, class F>
     void lomb_scargle_period(const timeseries<T,F>& ts, double minfreq, double maxfreq, double dfreq,
     double px[], double py[], int np, int& nout, int& jmax, double& prob)
@@ -217,6 +225,12 @@ template<class T, class F>
         wr[j]  = std::cos(arg);
         wi[j]  = wpi[j];
     }
+#ifdef DEBUG
+    std::cout<<"\nAverage="<<xave;
+    for (std::size_t j = 0; j < N; j++) {
+        std::cout<<"\n"<<wpr[j]<<" "<<wpi[j]<<" "<<wr[j]<<" "<<wi[j];
+    }
+#endif
 
     // Main loop over the frequencies to be evaluated
     for (int i = 0; i < nout; i++) {

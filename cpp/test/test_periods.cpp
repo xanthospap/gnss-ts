@@ -78,9 +78,7 @@ main(int argc, char* argv[])
         std::ofstream ls_out {"lomb.out"};
         for (int i=0;i<nout;i++) ls_out << "\n" << px[i] << " " << py[i];
 
-        // delete[] px;
-        // delete[] py;
-
+        /*
         std::cout<<"\n> Iteratively searching and modeling dominant freqs.";
         // create a model
         ngpt::ts_model<milliseconds> mdl2;
@@ -102,6 +100,7 @@ main(int argc, char* argv[])
             std::ofstream tot {"foo" + std::to_string(i) + ".ts"};
             new_ts.dump(tot);
         }
+        */
 
         delete[] px;
         delete[] py;
@@ -135,9 +134,7 @@ main(int argc, char* argv[])
         std::ofstream ls_out {"lomb.out"};
         for (int i=0;i<nout;i++) ls_out << "\n" << px[i] << " " << py[i];
 
-        // delete[] px;
-        // delete[] py;
-
+        /*
         std::cout<<"\n> Iteratively searching and modeling dominant freqs.";
         // create a model
         ngpt::ts_model<milliseconds> mdl2;
@@ -159,7 +156,7 @@ main(int argc, char* argv[])
             std::ofstream tot {"foo" + std::to_string(i) + ".ts"};
             new_ts.dump(tot);
         }
-
+        */
         delete[] px;
         delete[] py;
     }
