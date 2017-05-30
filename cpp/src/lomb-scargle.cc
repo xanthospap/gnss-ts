@@ -20,6 +20,35 @@ bitceil(int N)
     return N;
 }
 
+void
+extirpolate(const double* x, const double* y, std::size_t sz, int N=0, int M=4)
+{
+    static long nfac[/*11*/] = {0,1,1,2,6,24,120,720,5040,40320,362880};
+
+    if ( !N ) {
+        N = static_cast<int>(x[sz-1] + .5e0 * M + 1);
+    }
+    
+    // Now use legendre polynomial weights to populate the results array;
+    // This is an efficient recursive implementation (See Press et al. 1989)
+    int low {0}, high{N-M};
+    for (std::size_t i = 0; i< sz; i++) {
+        if (static_cast<double>(std::floor(x[i])) == x[i]) {
+            result[i] = y[i];
+        } else {
+            long tmp { x[i]-(M/2) };
+            if (tmp < low) {
+                tmp = low
+            } else if (tmp > high) {
+                tmp = high;
+            }
+            result[i] = tmp;
+        }
+    }
+
+
+}
+
 /*
  * Compute (approximate) trigonometric sums for a number of frequencies
  * 

@@ -55,11 +55,11 @@ main(int argc, char* argv[])
     std::ofstream ts_fout {"foo.ts"};
     ts.dump(ts_fout);
 
-    if (algorithm ==1 ) {
+    if ( algorithm == 1 ) {
         // compute lomb-scargle periodogram; write to output ("lomb.out")
         std::cout<<"\n> Computing Lomb-Scargle Periodogram";
         std::size_t N = ts.data_pts() - ts.skipped_pts();
-        double ofac{4}, hifac{.9};
+        double ofac{5}, hifac{1.5};
         int    nout = 0.5*ofac*hifac*N + 1;
         double *px, *py, prob;
         int    jmax;
@@ -112,7 +112,7 @@ main(int argc, char* argv[])
         std::size_t N = ts.data_pts() - ts.skipped_pts();
         double minfreq /*{0}*/ ( 1e0/(1.5*T) );
         double maxfreq {.5};
-        int    n0 {4};
+        int    n0 {5};
         double dfreq {1e0/(T*n0)};
         int    nout = n0*T*maxfreq + 1;
         std::cout<<"\nComputed nout="<<nout<<", estimate="<<static_cast<int>((maxfreq-minfreq)/dfreq) + 1;

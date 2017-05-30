@@ -48,16 +48,18 @@ template<class T, class F>
     }
 
     /// allocate memory
+    double* MEM;
     try {
-        wi  = new double[N];
-        wpi = new double[N];
-        wpr = new double[N];
-        wr  = new double[N];
-        ts_epochs = new double[N];
-        ts_vals   = new double[N];
+        MEM = new double[N*6];
     } catch (std::bad_alloc&) {
         throw 1;
     }
+    wi        = MEM;      /*new double[N];*/
+    wpi       = MEM+N;    /*new double[N];*/
+    wpr       = MEM+2*N;  /*new double[N];*/
+    wr        = MEM+3*N;  /*new double[N];*/
+    ts_epochs = MEM+4*N;  /*new double[N];*/
+    ts_vals   = MEM+5*N;  /*new double[N];*/
 
     auto ts_start = ts.cbegin(),
          ts_stop  = ts.cend();
@@ -78,7 +80,7 @@ template<class T, class F>
             ++index;
         }
     }
-    var = var/(N-1);
+    var /= (N-1);
     assert( index == N );
 
     xmin = ts_epochs[0];    // min epoch (MJD)
@@ -91,18 +93,19 @@ template<class T, class F>
     // Initialize values for the trigonometric recurrences at each data point.
     for (std::size_t j = 0; j < N; j++) { 
         arg    = D2PI*((ts_epochs[j]-xave)*pnow);
-        wpr[j] = -2.0*sin(0.5*arg)*sin(0.5*arg);
+        wpr[j] = -2.0*std::sin(0.5*arg)*std::sin(0.5*arg);
         wpi[j] = std::sin(arg);
         wr[j]  = std::cos(arg);
         wi[j]  = wpi[j];
     }
+/*
 #ifdef DEBUG
     std::cout<<"\nAverage="<<xave;
     for (std::size_t j = 0; j < N; j++) {
         std::cout<<"\n"<<wpr[j]<<" "<<wpi[j]<<" "<<wr[j]<<" "<<wi[j];
     }
 #endif
-
+*/
     // Main loop over the frequencies to be evaluated
     for (int i = 0; i < nout; i++) {
         px[i] = pnow;
@@ -146,12 +149,7 @@ template<class T, class F>
     if (prob > 0.01) prob=1.0-std::pow(1.0-expy,effm);
 
     // Free memory
-    delete[] wr;
-    delete[] wpr;
-    delete[] wpi;
-    delete[] wi;
-    delete[] ts_epochs;
-    delete[] ts_vals;
+    delete[] MEM;
 
     // The end
     return;
@@ -171,23 +169,25 @@ template<class T, class F>
     double arg,wtemp,*wi,*wpi,*wpr,*wr, *ts_epochs, *ts_vals;
     
     /// size of output arrays (# of frequencies to be examined)
-    nout = static_cast<int>((maxfreq-minfreq)/dfreq)+1;
+    nout = static_cast<int>( (maxfreq-minfreq)/dfreq )+1;
     if (nout > np) {
         throw std::out_of_range
             {"lomb_scargle_period: [ERROR] output arrays too short in period"};
     }
 
     /// allocate memory
+    double* MEM;
     try {
-        wi  = new double[N];
-        wpi = new double[N];
-        wpr = new double[N];
-        wr  = new double[N];
-        ts_epochs = new double[N];
-        ts_vals   = new double[N];
+        MEM = new double[N*6];
     } catch (std::bad_alloc&) {
         throw 1;
     }
+    wi        = MEM;
+    wpi       = MEM+N;
+    wpr       = MEM+2*N;
+    wr        = MEM+3*N;
+    ts_epochs = MEM+4*N;
+    ts_vals   = MEM+5*N;
 
     auto ts_start = ts.cbegin(),
          ts_stop  = ts.cend();
@@ -220,18 +220,19 @@ template<class T, class F>
     // Initialize values for the trigonometric recurrences at each data point.
     for (std::size_t j = 0; j < N; j++) { 
         arg    = D2PI*((ts_epochs[j]-xave)*pnow);
-        wpr[j] = -2.0*sin(0.5*arg)*sin(0.5*arg);
+        wpr[j] = -2.0*std::sin(0.5*arg)*std::sin(0.5*arg);
         wpi[j] = std::sin(arg);
         wr[j]  = std::cos(arg);
         wi[j]  = wpi[j];
     }
+/*
 #ifdef DEBUG
     std::cout<<"\nAverage="<<xave;
     for (std::size_t j = 0; j < N; j++) {
         std::cout<<"\n"<<wpr[j]<<" "<<wpi[j]<<" "<<wr[j]<<" "<<wi[j];
     }
 #endif
-
+*/
     // Main loop over the frequencies to be evaluated
     for (int i = 0; i < nout; i++) {
         px[i] = pnow;
@@ -278,12 +279,7 @@ template<class T, class F>
     if (prob > 0.01) prob=1.0-std::pow(1.0-expy,effm);
 
     // Free memory
-    delete[] wr;
-    delete[] wpr;
-    delete[] wpi;
-    delete[] wi;
-    delete[] ts_epochs;
-    delete[] ts_vals;
+    delete[] MEM;
 
     // The end
     return;
