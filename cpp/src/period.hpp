@@ -285,6 +285,96 @@ template<class T, class F>
     return;
 }
 
+// see https://arxiv.org/pdf/0901.2573.pdf
+template<class T, class F>
+    void lomb_scargle_period2(const timeseries<T,F>& ts, double minfreq, double maxfreq, double dfreq,
+    double px[], double py[], int np, int& nout, int& jmax, double& prob)
+{
+    /// real data size (i.e. ommiting outliers & skipped data points
+    std::size_t N = ts.data_pts() - ts.skipped_pts();
+    
+    double ave,c,cc,cwtau,effm,expy,pnow,pymax,s,ss,sumc,sumcy,sums,sumsh,
+           sumsy,swtau,var,wtau,xave,xmax,xmin,yy;
+    double arg,wtemp,*wi,*wpi,*wpr,*wr, *ts_epochs, *ts_vals;
+    
+    /// size of output arrays (# of frequencies to be examined)
+    nout = static_cast<int>( (maxfreq-minfreq)/dfreq )+1;
+    if (nout > np) {
+        throw std::out_of_range
+            {"lomb_scargle_period: [ERROR] output arrays too short in period"};
+    }
+
+    /// allocate memory
+    double* MEM;
+    try {
+        MEM = new double[N*7];
+    } catch (std::bad_alloc&) {
+        throw 1;
+    }
+    wi        = MEM;
+    wpi       = MEM+N;
+    wpr       = MEM+2*N;
+    wr        = MEM+3*N;
+    ts_epochs = MEM+4*N;
+    ts_vals   = MEM+5*N;
+    ts_wght   = MEM+6*N;
+
+    auto ts_start = ts.cbegin(),
+         ts_stop  = ts.cend();
+    std::size_t index = 0;
+
+    /// get mean and variance of the input data; also copy the ts data to
+    /// the arrays ts_epochs & ts_vals (i.e. x and y data points). Only valid
+    /// data points are considered.
+    ave = var = 0;
+    double prev_ave {0e0}, W{0e0}, Y{0e0}, YY_hat{0e0};
+    for (auto it = ts_start; it != ts_stop; ++it) {
+        if ( !it.data().skip() ) {
+            ts_epochs[index] = it.epoch().as_mjd();
+            ts_vals[index]   = it.data().value();
+            ts_wght[index]   = 1e0/(it.data().sigma()*it.data().sigma());
+            W               += 1e0/(it.data().sigma()*it.data().sigma());
+            Y               += it.data().value()/(it.data().sigma()*it.data().sigma());
+            YY_hat          += (it.data().value()*it.data().value())/(it.data().sigma() * it.data().sigma());
+            prev_ave         = ave;
+            ave             += (ts_vals[index]-ave)/(index+1);
+            var             += (ts_vals[index]-prev_ave)*(ts_vals[index]-ave);
+            ++index;
+        }
+    }
+    var = var/(N-1);
+    assert( index == N );
+
+    double Wfac {W/N};
+    double arg,carg,sarg,wnorm,C,S,YC_hat,YS_hat,CC_hat,SS_hat,CS_hat,
+           YY,YC,YS,CC,SS,CS,D;
+    std::size_t idx{0};
+    for (double omega = low; omega < high; omega += step) {
+        for (std::size_t i = 0; i < N; i++) {
+            arg     = omega * ts_epochs[i];
+            carg    = std::cos(arg);
+            sarg    = std::sin(arg);
+            wnorm   = ts_wght[i]/Wfac; // normalized weight
+            C      += wnorm * carg;
+            S      += wnorm * sarg;
+            YC_hat += wnorm * ts_vals[i] * carg;
+            YS_hat += wnorm * ts_vals[i] * sarg;
+            CC_hat += wnorm * carg * carg;
+            SS_hat += wnorm * sarg * sarg;
+            CS_hat += wnorm * sarg * carg;
+        }
+        YY = YY_hat - Y*Y;
+        YC = YC_hat - Y*C;
+        YS = YS_hat - Y*S;
+        CC = CC_hat - C*C;
+        SS = SS_hat - S*S;
+        CS = CS_hat - C*S;
+        D  = CC*SS  - CS*CS;
+        py[idx++] = (SS*YC*YC + CC*YS*YS - 2e0*CS*YC*YS)/(YY*D);
+    }
+}
+
+
 }// namespace ngpt
 
 #endif
