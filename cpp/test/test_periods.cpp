@@ -104,7 +104,7 @@ main(int argc, char* argv[])
 
         delete[] px;
         delete[] py;
-    } else {
+    } else if ( algorithm == 2 ) {
         // compute lomb-scargle periodogram; write to output ("lomb.out")
         std::cout<<"\n> Computing Lomb-Scargle Periodogram";
         std::size_t idx;
@@ -157,6 +157,35 @@ main(int argc, char* argv[])
             new_ts.dump(tot);
         }
         */
+        delete[] px;
+        delete[] py;
+    } else {
+        // compute lomb-scargle periodogram; write to output ("lomb.out")
+        std::cout<<"\n> Computing Lomb-Scargle Periodogram";
+        std::size_t idx;
+        double T = ts.last_valid_epoch(idx).as_mjd() - ts.first_valid_epoch(idx).as_mjd();
+        std::size_t N = ts.data_pts() - ts.skipped_pts();
+        double minfreq /*{0}*/ ( 1e0/(1.5*T) );
+        double maxfreq {.5};
+        double dfreq {1e0/(4*T)};
+        int    nout = static_cast<int>((maxfreq-minfreq)/dfreq) + 1;
+        std::cout<<"\nComputed nout="<<nout<<", estimate="<<static_cast<int>((maxfreq-minfreq)/dfreq) + 1;
+        // assert( nout == static_cast<int>((maxfreq-minfreq)/dfreq) + 1 );
+        double *px, *py, prob;
+        int    jmax;
+
+        px = new double[nout];
+        py = new double[nout];
+        lomb_scargle_period2(ts, minfreq, maxfreq, dfreq, px, py, nout, nout, jmax);
+
+        std::cout<<"\n\tDominant frequency in time-series: "<<px[jmax]<<" (at index: "<<jmax<<")"<<"; this is a period of "<<1e0/px[jmax]<<" days";
+        std::cout<<"\n\tMinimum frequency examined is: "<<px[0]<<", i.e. a period of "<<1e0/px[0]<<" days.";
+        std::cout<<"\n\tMaximum frequency examined is: "<<px[nout-1]<<", i.e. a period of "<<1e0/px[nout-1]<<" days.";
+        std::cout<<"\n\tTesting frequency delta is "<<(px[2]-px[1]-px[0])<<" or every "<<1e0/(px[2]-px[1]-px[0])<<" days.";
+
+        std::cout<<"\n> Writing Lomb-Scargle data to \"lomb.out\"";
+        std::ofstream ls_out {"lomb.out"};
+        for (int i=0;i<nout;i++) ls_out << "\n" << px[i] << " " << py[i];
         delete[] px;
         delete[] py;
     }
