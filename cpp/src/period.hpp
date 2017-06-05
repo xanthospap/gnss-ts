@@ -7,6 +7,7 @@
 
 // gtms headers
 #include "timeseries.hpp"
+#include "cfft.hpp"
 
 /*
  * TRIGONOMETRIC RECURRENCE FORMULA
@@ -27,12 +28,177 @@
 namespace ngpt
 {
 
-///  Given n data points with abscissas x[1..n] (which need not be equally 
-///  spaced) and ordinates y[1..n], and given a desired oversampling factor 
+/// Given an array yy[0..n-1], extirpolate (spread) a value y into m actual array
+/// elements that best approximate the "fictional" (i.e. possibly non-integer)
+/// array element number x. The weights used are coefficients of the Lagrange
+/// interpolating polynomial.
+/// This function is used for the fast Lomb-Scargle algorithm.
+///
+///  Reference: Numerical Recipes in C, Ch. 13.8
+void
+spread__(double y, double yy[], std::size_t n, double x, int m)
+{
+    long ihi,ilo,ix,j,nden;
+    static long nfac[] = {0,1,1,2,6,24,120,720,5040,40320,362880};
+    double fac;
+
+    if (m > 10) {
+        throw std::runtime_error{"spread__: factorial table too small in spread"};
+    }
+
+    ix = static_cast<long>(x);
+    if (x == static_cast<double>(ix)) {
+        yy[ix] += y;
+    } else {
+        ilo  = std::min( std::max(static_cast<long>(x-0.5*m+1.0), (long)1),
+                        (long)(n-m+1));
+        ihi  = ilo + m - 1;
+#ifdef DEBUG
+        assert( x   >= 0 );
+        assert( ihi <  (long)n );
+        assert( ilo >= 0 );
+#endif
+        nden = nfac[m];
+        fac  = x-ilo;
+        for (j = ilo+1;j <= ihi; j++) {
+            fac *= (x-j);
+        }
+        yy[ihi] += y*fac/(nden*(x-ihi));
+        for (j = ihi-1;j >= ilo; j--) {
+            nden=(nden/(j+1-ilo))*(j-ihi);
+            yy[j] += y*fac/(nden*(x-j));
+        }
+    }
+    return;
+}
+
+std::size_t
+lomb_scargle_fast_workspace(std::size_t N, double ofac, double hifac)
+{
+    constexpr int MACC {4};
+    std::size_t nfreqt = ofac*hifac*N*MACC;
+    std::size_t nfreq  = 64;
+    while (nfreq < nfreqt) { nfreq <<= 1; }
+    return nfreq << 1;
+}
+
+template<class T, class F>
+void lomb_scargle_fast(const timeseries<T,F>& ts, double ofac, double hifac, 
+    double wk1[], double wk2[], std::size_t nwk, std::size_t& nout, 
+    std::size_t& jmax, double& prob)
+{
+    // Number of interpolation points per 1/4 cycle of highest frequency.
+    constexpr int MACC {4};
+
+    // real data size (i.e. ommiting outliers & skipped data points
+    std::size_t  N = ts.data_pts() - ts.skipped_pts();
+    
+    std::size_t  j,k,ndim,nfreq,nfreqt;
+    double       ave,ck,ckk,cterm,cwt,den,df,effm,expy,fac,fndim,hc2wt,
+                 hs2wt,hypo,pmax,sterm,swt,var,xdif,xmax,xmin,*ts_epochs,*ts_vals;
+
+    nout   = 0.5*ofac*hifac*N;
+    // Size the FFT as next power of 2 above nfreqt
+    nfreqt = ofac*hifac*N*MACC;
+    nfreq  = 64;
+    while (nfreq < nfreqt) { nfreq <<= 1; }
+    ndim   = nfreq << 1;
+    std::cout<<"\n\t(fasper) workspace = "<<ndim;
+    if (ndim > nwk) {
+        auto s_ndim = std::to_string(ndim);
+        auto s_nwk  = std::to_string(nwk);
+        throw std::runtime_error
+        {"lomb_scargle_fast: workspaces too small ("+s_ndim+">"+s_nwk};
+    }
+
+    /// allocate memory
+    double* MEM;
+    try {
+        MEM = new double[N*2];
+    } catch (std::bad_alloc&) {
+        throw 1;
+    }
+    ts_epochs = MEM;
+    ts_vals   = MEM+N;
+
+    auto ts_start = ts.cbegin(),
+         ts_stop  = ts.cend();
+    std::size_t index = 0;
+
+    /// get mean and variance of the input data; also copy the ts data to
+    /// the arrays ts_epochs & ts_vals (i.e. x and y data points). Only valid
+    /// data points are considered.
+    ave = var = 0;
+    double prev_ave {0};
+    for (auto it = ts_start; it != ts_stop; ++it) {
+        if ( !it.data().skip() ) {
+            ts_epochs[index] = it.epoch().as_mjd();
+            ts_vals[index]   = it.data().value();
+            prev_ave = ave;
+            ave += (ts_vals[index]-ave)/(index+1);
+            var += (ts_vals[index]-prev_ave)*(ts_vals[index]-ave);
+            ++index;
+        }
+    }
+    var /= (N-1);
+    assert( index == N );
+
+    xmin = ts_epochs[0];    // min epoch (MJD)
+    xmax = ts_epochs[N-1];  // max epoch (MJD)
+    xdif = xmax - xmin;     // difference in days
+    
+    //  Zero the workspaces
+    for (j = 0; j< ndim; j++) { wk1[j] = wk2[j] = 0e0; }
+
+    fac   = ndim/(xdif*ofac);
+    fndim = ndim;
+    // Extirpolate the data into the workspaces.
+    for (j = 0; j < N; j++) {
+        ck  = (ts_epochs[j]-xmin)*fac;
+        while (ck > fndim) { ck -= fndim; }
+        ckk = 2e0*(ck++);
+        while (ckk > fndim) { ckk -= fndim; }
+        ++ckk;
+        spread__(ts_vals[j]-ave, wk1, ndim, ck, MACC);
+        spread__(1e0, wk2, ndim, ckk, MACC);
+    }
+
+    // Take the Fourier Transforms
+    realft__(wk1, ndim, 1);
+    realft__(wk2, ndim, 1);
+    df   = 1e0/(xdif*ofac);
+    pmax = -1e0;
+
+    // Compute the Lomb value for each frequency.
+    for (k = 2, j = 0; j < nout; j++, k += 2) {
+        hypo  = std::sqrt(wk2[k]*wk2[k]+wk2[k+1]*wk2[k+1]);
+        hc2wt = 0.5e0*wk2[k]/hypo;
+        hs2wt = 0.5e0*wk2[k+1]/hypo;
+        cwt   = std::sqrt(0.5e0+hc2wt);
+        swt   = std::copysign(std::sqrt(0.5e0-hc2wt),hs2wt);
+        den   = 0.5e0*N+hc2wt*wk2[k]+hs2wt*wk2[k+1];
+        cterm = std::sqrt(cwt*wk1[k]+swt*wk1[k+1])/den;
+        sterm = std::sqrt(cwt*wk1[k+1]-swt*wk1[k])/(N-den);
+        wk1[j]= j*df;
+        wk2[j]= (cterm+sterm)/(2.0e0*var);
+        if (wk2[j] > pmax) { pmax = wk2[(jmax=j)]; }
+    }
+    // Estimate significance of largest peak value.
+    expy = exp(-pmax);
+    effm = 2e0*(nout)/ofac;
+    prob = effm*expy;
+    if (prob > .01e0) { prob = 1e0-pow(1e0-expy,effm); }
+
+    delete[] MEM;
+
+}
+
+///  Given n data points with abscissas x[0..n-1] (which need not be equally 
+///  spaced) and ordinates y[0..n-1], and given a desired oversampling factor 
 ///  ofac (a typical value being 4 or larger), this routine fills array 
-///  px[1..np] with an increasing sequence of frequencies (not angular 
+///  px[0..np-1] with an increasing sequence of frequencies (not angular 
 ///  frequencies) up to hifac times the “average” Nyquist frequency, and fills
-///  array py[1..np] with the values of the Lomb normalized periodogram at 
+///  array py[0..np-1] with the values of the Lomb normalized periodogram at 
 ///  those frequencies. The arrays x and y are not altered. np, the dimension
 ///  of px and py, must be large enough to contain the output, or an error 
 ///  results. The routine also returns jmax such that py[jmax] is the maximum 
@@ -51,13 +217,10 @@ template<class T, class F>
     
     double ave,c,cc,cwtau,effm,expy,pnow,pymax,s,ss,sumc,sumcy,sums,sumsh,
            sumsy,swtau,var,wtau,xave,xdif,xmax,xmin,yy;
-    double arg,wtemp,*wi,*wpi,*wpr,*wr, *ts_epochs, *ts_vals;
+    double arg,wtemp,*wi,*wpi,*wpr,*wr,*ts_epochs,*ts_vals;
     
     /// size of output arrays (# of frequencies to be examined)
     nout = 0.5 * ofac * hifac * N;
-#ifdef DEBUG
-    std::cout<<"\nComputed nout="<<nout;
-#endif
     if (nout > np) {
         throw std::out_of_range
             {"lomb_scargle_period: [ERROR] output arrays too short in period"};
@@ -70,12 +233,12 @@ template<class T, class F>
     } catch (std::bad_alloc&) {
         throw 1;
     }
-    wi        = MEM;      /*new double[N];*/
-    wpi       = MEM+N;    /*new double[N];*/
-    wpr       = MEM+2*N;  /*new double[N];*/
-    wr        = MEM+3*N;  /*new double[N];*/
-    ts_epochs = MEM+4*N;  /*new double[N];*/
-    ts_vals   = MEM+5*N;  /*new double[N];*/
+    wi        = MEM;
+    wpi       = MEM+N;
+    wpr       = MEM+2*N;
+    wr        = MEM+3*N;
+    ts_epochs = MEM+4*N;
+    ts_vals   = MEM+5*N;
 
     auto ts_start = ts.cbegin(),
          ts_stop  = ts.cend();
@@ -163,18 +326,33 @@ template<class T, class F>
     return;
 }
 
-//
-// THIS DOES NOT WORK
+///
+///  Given n data points with abscissas x[1..n] (which need not be equally 
+///  spaced) and ordinates y[1..n], and given a desired oversampling factor 
+///  ofac (a typical value being 4 or larger), this routine fills array 
+///  px[1..np] with an increasing sequence of frequencies (not angular 
+///  frequencies) up to hifac times the “average” Nyquist frequency, and fills
+///  array py[1..np] with the values of the Lomb normalized periodogram at 
+///  those frequencies. The arrays x and y are not altered. np, the dimension
+///  of px and py, must be large enough to contain the output, or an error 
+///  results. The routine also returns jmax such that py[jmax] is the maximum 
+///  element in py, and prob, an estimate of the significance of that maximum
+///  against the hypothesis of random noise. A small value of prob indicates
+///  that a significant periodic signal is present.
+///
+///  Reference: Numerical Recipes in C, Ch. 13.8
+///
 template<class T, class F>
-    void lomb_scargle_period(const timeseries<T,F>& ts, double minfreq, double maxfreq, double dfreq,
-    double px[], double py[], int np, int& nout, int& jmax, double& prob)
+    void lomb_scargle_period(const timeseries<T,F>& ts, double minfreq,
+    double maxfreq, double dfreq, double px[], double py[], int np, int& nout,
+    int& jmax, double& prob)
 {
     /// real data size (i.e. ommiting outliers & skipped data points
     std::size_t N = ts.data_pts() - ts.skipped_pts();
     
     double ave,c,cc,cwtau,effm,expy,pnow,pymax,s,ss,sumc,sumcy,sums,sumsh,
            sumsy,swtau,var,wtau,xave,xmax,xmin,yy,wtemp;
-    double arg,wctmp,wstmp,*wi,*wpi,*wpr,*wr, *ts_epochs, *ts_vals;
+    double arg,wctmp,wstmp,*wi,*wpi,*wpr,*wr,*ts_epochs,*ts_vals;
     
     /// size of output arrays (# of frequencies to be examined)
     nout = static_cast<int>( (maxfreq-minfreq)/dfreq )+1;
@@ -219,9 +397,9 @@ template<class T, class F>
     var = var/(N-1);
     assert( index == N );
 
-    xmin = ts_epochs[0];    // min epoch (MJD)
-    xmax = ts_epochs[N-1];  // max epoch (MJD)
-    xave = 0.5*(xmax+xmin); // mean epoch
+    xmin  = ts_epochs[0];    // min epoch (MJD)
+    xmax  = ts_epochs[N-1];  // max epoch (MJD)
+    xave  = 0.5*(xmax+xmin); // mean epoch
     pnow  = minfreq;
     pymax = 0e0;
 
