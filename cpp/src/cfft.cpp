@@ -3,6 +3,7 @@
 #include <cmath>
 #ifdef DEBUG
 #include <cassert>
+#include <fenv.h>
 #endif
 
 // 
@@ -19,6 +20,9 @@ namespace ngpt
 void
 four1__(double data[], std::size_t nn, int isign)
 {
+#ifdef DEBUG
+    feenableexcept(FE_ALL_EXCEPT & ~FE_INEXACT);
+#endif
     std::size_t n,mmax,m,j,istep,i;
     double wtemp,wr,wpr,wpi,wi,theta,tempr,tempi;
 
@@ -77,6 +81,9 @@ four1__(double data[], std::size_t nn, int isign)
         }
         mmax = istep;
     }
+
+    // All done
+    return;
 }
 
 /// Calculates the Fourier transform of a set of n real-valued data points. 
@@ -91,6 +98,9 @@ four1__(double data[], std::size_t nn, int isign)
 void
 realft__(double data[], std::size_t n, int isign)
 {
+#ifdef DEBUG
+    feenableexcept(FE_ALL_EXCEPT & ~FE_INEXACT);
+#endif
     std::size_t i,i1,i2,i3,i4,np3;
     double c1=0.5e0,c2,h1r,h1i,h2r,h2i,wr,wi,wpr,wpi,wtemp,theta;
 
@@ -132,9 +142,11 @@ realft__(double data[], std::size_t n, int isign)
         // The recurrence.
         wr  = (wtemp=wr)*wpr-wi*wpi+wr;
         wi  = wi*wpr+wtemp*wpi+wi;
+/*
 #ifdef DEBUG
         assert( i1 < n && i2 < n && i3 < n && i4 < n );
 #endif
+*/
     }
 
     if (isign == 1) {
@@ -148,7 +160,9 @@ realft__(double data[], std::size_t n, int isign)
         data[1] = c1*(h1r-data[1]);
         four1__(data,n>>1,-1);
     }
-
+    
+    // All done
+    return;
 }
 
 } // namespace ngpt

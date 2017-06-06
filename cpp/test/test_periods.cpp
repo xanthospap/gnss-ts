@@ -1,6 +1,9 @@
 #include <iostream>
 #include <fstream>
 #include "artificial.hpp"
+#ifdef DEBUG
+#include <fenv.h>
+#endif
 
 using namespace ngpt;
 
@@ -199,8 +202,13 @@ main(int argc, char* argv[])
         std::size_t jmax;
         double days_in_year = 365.25e0;
 
+#ifdef OFFSET_BY_ONE
+        px = new double[nwk+1];
+        py = new double[nwk+1];
+#else
         px = new double[nwk];
         py = new double[nwk];
+#endif
         lomb_scargle_fast(ts, ofac, hifac, px, py, nwk, nout, jmax, prob);
 
         std::cout<<"\n\tDominant frequency in time-series: "<<px[jmax]<<" (at index: "<<jmax<<")"<<"; this is a period of "<<1e0/px[jmax]<<" days";
@@ -210,7 +218,11 @@ main(int argc, char* argv[])
 
         std::cout<<"\n> Writing Lomb-Scargle data to \"lomb.out\"";
         std::ofstream ls_out {"lomb.out"};
+#ifdef OFFSET_BY_ONE
         for (std::size_t i=0;i<nout;i++) ls_out << "\n" << px[i] << " " << py[i];
+#else
+        for (std::size_t i=0;i<nout;i++) ls_out << "\n" << px[i] << " " << py[i];
+#endif
 
         /*
         std::cout<<"\n> Iteratively searching and modeling dominant freqs.";

@@ -16,7 +16,8 @@ MCXXFLAGS = \
 	-W \
 	-Wshadow \
 	-Wdisabled-optimization \
-	-DDEBUG
+	-DDEBUG \
+	-DOFFSET_BY_ONE
 
 AM_LDFLAGS = -lggeodesy -lggdatetime
 
