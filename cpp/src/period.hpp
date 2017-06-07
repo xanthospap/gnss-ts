@@ -28,38 +28,37 @@
 namespace ngpt
 {
 
-/// Given an array yy[0..n-1], extirpolate (spread) a value y into m actual array
-/// elements that best approximate the "fictional" (i.e. possibly non-integer)
-/// array element number x. The weights used are coefficients of the Lagrange
-/// interpolating polynomial.
-/// This function is used for the fast Lomb-Scargle algorithm.
+/// Given an array yy[0..n-1], extirpolate (spread) a value y into m actual
+/// array elements that best approximate the "fictional" (i.e. possibly 
+/// non-integer) array element number x. The weights used are coefficients of 
+/// the Lagrange interpolating polynomial.
+/// This function is used for the fast Lomb-Scargle algorithm (i.e. via FFT).
 ///
 ///  Reference: Numerical Recipes in C, Ch. 13.8
 void
 spread__(double y, double yy[], std::size_t n, double x, int m)
 {
-    long ihi,ilo,ix,j,nden;
+    long        ihi,ilo,ix,j,nden;
     static long nfac[] = {0,1,1,2,6,24,120,720,5040,40320,362880};
-    double fac,intpart;
+    double      fac,intpart;
 
     if (m > 10) {
-        throw std::runtime_error{"spread__: factorial table too small in spread"};
+        throw std::runtime_error
+            {"spread__: factorial table too small in spread"};
     }
 
-    ix = static_cast<long>(x);
-    /*
-    if (x == static_cast<double>(ix)) {
-    */
-    if (std::modf(x, &intpart) == 0e0 ) {
+    ix = static_cast<long>(x);            // value x as index
+    if (std::modf(x, &intpart) == 0e0 ) { // if x is integer ....
         yy[ix] += y;
-        std::cout<<"\n\tSpread filled y["<<ix<<"]";
-    } else {
-        ilo  = std::min( std::max(static_cast<long>(x-0.5*m+1.0), (long)1),
+    } else {                              // x is not an integer ...
+        // lowest index to fill
+        ilo  = std::min( std::max(static_cast<long>(x-.5e0*m+1e0), (long)1),
                         (long)(n-m+1));
+        // highest index to fill
         ihi  = ilo + m - 1;
 #ifdef DEBUG
         assert( x   >= 0 );
-        assert( ihi <  (long)n );
+        assert( ihi <  (long)n && ihi >= 0 );
         assert( ilo >= 0 );
 #endif
         nden = nfac[m];
@@ -69,11 +68,12 @@ spread__(double y, double yy[], std::size_t n, double x, int m)
         }
         yy[ihi] += y*fac/(nden*(x-ihi));
         for (j = ihi-1;j >= ilo; j--) {
-            nden=(nden/(j+1-ilo))*(j-ihi);
+            nden   = (nden/(j+1-ilo))*(j-ihi);
             yy[j] += y*fac/(nden*(x-j));
         }
-        std::cout<<"\n\tSpread filled from y["<<ihi<<"] to y["<<ilo<<"] (x "<<x<<" is no integer)";
     }
+
+    // all done
     return;
 }
 
@@ -118,15 +118,6 @@ void lomb_scargle_fast(const timeseries<T,F>& ts, double ofac, double hifac,
 
     /// allocate memory
     double* MEM;
-#ifdef OFFSET_BY_ONE
-    try {
-        MEM = new double[(N+1)*2];
-    } catch (std::bad_alloc&) {
-        throw 1;
-    }
-    ts_epochs = MEM;
-    ts_vals   = MEM+1+N;
-#else
     try {
         MEM = new double[N*2];
     } catch (std::bad_alloc&) {
@@ -134,20 +125,14 @@ void lomb_scargle_fast(const timeseries<T,F>& ts, double ofac, double hifac,
     }
     ts_epochs = MEM;
     ts_vals   = MEM+N;
-#endif
 
     auto ts_start = ts.cbegin(),
          ts_stop  = ts.cend();
-#ifdef OFFSET_BY_ONE
-    std::size_t index = 1;
-#else
     std::size_t index = 0;
-#endif
 
     /// get mean and variance of the input data; also copy the ts data to
     /// the arrays ts_epochs & ts_vals (i.e. x and y data points). Only valid
     /// data points are considered.
-    std::cout<<"\n\tFilling arrays & computing var and mean";
     ave = var = 0;
     double prev_ave {0};
     for (auto it = ts_start; it != ts_stop; ++it) {
@@ -155,93 +140,55 @@ void lomb_scargle_fast(const timeseries<T,F>& ts, double ofac, double hifac,
             ts_epochs[index] = it.epoch().as_mjd();
             ts_vals[index]   = it.data().value();
             prev_ave = ave;
-#ifdef OFSET_BY_ONE
-            ave += (ts_vals[index]-ave)/(index);
-#else
             ave += (ts_vals[index]-ave)/(index+1);
-#endif
             var += (ts_vals[index]-prev_ave)*(ts_vals[index]-ave);
             ++index;
         }
     }
-#ifdef OFFSET_BY_ONE
-    var /= (double)N;
-    assert( index == N+1 );
-    std::cout<<"\n\tVariance="<<var;
-#else
     var /= (N-1);
     assert( index == N );
-    std::cout<<"\n\tVariance="<<var;
-#endif
-    std::cout<<"\n\tAll done";
 
-#ifdef OFFSET_BY_ONE
-    xmin = ts_epochs[1];    // min epoch (MJD)
-    xmax = ts_epochs[N];  // max epoch (MJD)
-#else
     xmin = ts_epochs[0];    // min epoch (MJD)
     xmax = ts_epochs[N-1];  // max epoch (MJD)
-#endif
     xdif = xmax - xmin;     // difference in days
     
     //  Zero the workspaces
-#ifdef OFFSET_BY_ONE
-    for (j = 1; j<= ndim; j++) { wk1[j] = wk2[j] = 0e0; }
-#else
     for (j = 0; j< ndim; j++) { wk1[j] = wk2[j] = 0e0; }
-#endif
-
     fac   = ndim/(xdif*ofac);
     fndim = ndim;
     // Extirpolate the data into the workspaces.
-#ifdef OFFSET_BY_ONE
-    for (j = 1; j <= N; j++) {
-#else
     for (j = 0; j < N; j++) {
-#endif
         ck  = (ts_epochs[j]-xmin)*fac;
         while (ck > fndim) { ck -= fndim; }
         ckk = 2e0*(ck++);
         while (ckk > fndim) { ckk -= fndim; }
         ++ckk;
-        std::cout<<"\n\tSpreading with j="<<j<<", ck="<<ck;
         spread__(ts_vals[j]-ave, wk1, ndim, ck, MACC);
-        std::cout<<"\n\tSpreading with j="<<1<<", ckk="<<ckk;
         spread__(1e0, wk2, ndim, ckk, MACC);
     }
 
     // Take the Fourier Transforms
     realft__(wk1, ndim, 1);
     realft__(wk2, ndim, 1);
-    for (std::size_t ii=0; ii<ndim; ii++) { std::cout<<"\nWK "<<wk1[ii]<< " " <<wk2[ii]; }
     df   = 1e0/(xdif*ofac);
     pmax = -1e0;
 
-std::cout<<"\nComputing LOmb-Scargle";
     // Compute the Lomb value for each frequency.
-#ifdef OFFSET_BY_ONE
-    for (k = 3, j = 1; j <= nout; j++, k += 2) {
-#else
     for (k = 2, j = 0; j < nout; j++, k += 2) {
-#endif
-        std::cout<<"\n\tComputing Lomg-Scargle for j="<<j<<" (k="<<k<<" wk2[k]="<<wk2[k]<<", wk2[k+1]="<<wk2[k+1];
-        std::cout<<", wk1[k]="<<wk1[k]<<", wk1[k+1]="<<wk1[k+1]<<")";
-        hypo  = std::sqrt(wk2[k]*wk2[k]+wk2[k+1]*wk2[k+1]);
-        hc2wt = 0.5e0*wk2[k]/hypo;
-        hs2wt = 0.5e0*wk2[k+1]/hypo;
-        cwt   = std::sqrt(0.5e0+hc2wt);
-        swt   = std::copysign(std::sqrt(0.5e0-hc2wt),hs2wt);
-        den   = 0.5e0*N+hc2wt*wk2[k]+hs2wt*wk2[k+1];
-        std::cout<<"\n\tden="<<den;
-        std::cout<<"\n\tsqrt of "<<cwt*wk1[k]+swt*wk1[k+1];
-        std::cout<<"\n\tsqrt of "<<cwt*wk1[k]+swt*wk1[k+1];
-        std::cout<<"\n\tsqrt of "<<cwt*wk1[k]+swt*wk1[k+1];
-        std::cout<<"\n\tsqrt of "<<cwt*wk1[k]+swt*wk1[k+1];
-        std::cout<<"\n\tsqrt of "<<cwt*wk1[k]+swt*wk1[k+1];
-        cterm = std::sqrt(cwt*wk1[k]+swt*wk1[k+1])/den;
-        sterm = std::sqrt(cwt*wk1[k+1]-swt*wk1[k])/(N-den);
-        wk1[j]= j*df;
-        wk2[j]= (cterm+sterm)/(2.0e0*var);
+        hypo   = std::sqrt(wk2[k]*wk2[k]+wk2[k+1]*wk2[k+1]);
+        hc2wt  = 0.5e0*wk2[k]/hypo;
+        hs2wt  = 0.5e0*wk2[k+1]/hypo;
+        cwt    = std::sqrt(0.5e0+hc2wt);
+        swt    = std::copysign(std::sqrt(0.5e0-hc2wt),hs2wt);
+        den    = 0.5e0*N+hc2wt*wk2[k]+hs2wt*wk2[k+1];
+        cterm  = cwt*wk1[k]+swt*wk1[k+1];
+        cterm *= cterm;
+        cterm /= den;
+        sterm  = cwt*wk1[k+1]-swt*wk1[k];
+        sterm *= sterm;
+        sterm /= (N-den);
+        wk1[j] = (j+1)*df;
+        wk2[j] = (cterm+sterm)/(2e0*var);
         if (wk2[j] > pmax) { pmax = wk2[(jmax=j)]; }
     }
     // Estimate significance of largest peak value.

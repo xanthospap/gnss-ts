@@ -202,27 +202,18 @@ main(int argc, char* argv[])
         std::size_t jmax;
         double days_in_year = 365.25e0;
 
-#ifdef OFFSET_BY_ONE
-        px = new double[nwk+1];
-        py = new double[nwk+1];
-#else
         px = new double[nwk];
         py = new double[nwk];
-#endif
         lomb_scargle_fast(ts, ofac, hifac, px, py, nwk, nout, jmax, prob);
 
         std::cout<<"\n\tDominant frequency in time-series: "<<px[jmax]<<" (at index: "<<jmax<<")"<<"; this is a period of "<<1e0/px[jmax]<<" days";
-        std::cout<<"\n\tMinimum frequency examined is: "<<px[0]<<", i.e. a period of "<<1e0/px[0]<<" days.";
-        std::cout<<"\n\tMaximum frequency examined is: "<<px[nout-1]<<", i.e. a period of "<<1e0/px[nout-1]<<" days.";
-        std::cout<<"\n\tTesting frequency delta is "<<(px[2]-px[1]-px[0])<<" or every "<<1e0/(px[2]-px[1]-px[0])<<" days.";
+        // std::cout<<"\n\tMinimum frequency examined is: "<<px[0]<<", i.e. a period of "<<1e0/px[0]<<" days.";
+        // std::cout<<"\n\tMaximum frequency examined is: "<<px[nout-1]<<", i.e. a period of "<<1e0/px[nout-1]<<" days.";
+        // std::cout<<"\n\tTesting frequency delta is "<<(px[2]-px[1]-px[0])<<" or every "<<1e0/(px[2]-px[1]-px[0])<<" days.";
 
         std::cout<<"\n> Writing Lomb-Scargle data to \"lomb.out\"";
         std::ofstream ls_out {"lomb.out"};
-#ifdef OFFSET_BY_ONE
         for (std::size_t i=0;i<nout;i++) ls_out << "\n" << px[i] << " " << py[i];
-#else
-        for (std::size_t i=0;i<nout;i++) ls_out << "\n" << px[i] << " " << py[i];
-#endif
 
         /*
         std::cout<<"\n> Iteratively searching and modeling dominant freqs.";
