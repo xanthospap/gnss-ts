@@ -4,7 +4,7 @@
 #ifdef DEBUG
 #include <cassert>
 #include <fenv.h>
-#include <initializer_list>
+#include <iostream>
 #endif
 
 // Fast Fourier Transform header
@@ -21,7 +21,6 @@ namespace ngpt
 void
 four1__(double data[], std::size_t nn, int isign)
 {
-
 #ifdef DEBUG
     // enable catching of floating point exceptions in debug mode.
     feenableexcept(FE_ALL_EXCEPT & ~FE_INEXACT);
@@ -88,7 +87,6 @@ four1__(double data[], std::size_t nn, int isign)
 void
 realft__(double data[], std::size_t n, int isign)
 {
-
 #ifdef DEBUG
     // enable catching of floating point exceptions in debug mode.
     feenableexcept(FE_ALL_EXCEPT & ~FE_INEXACT);
@@ -131,7 +129,7 @@ realft__(double data[], std::size_t n, int isign)
         wr  = (wtemp=wr)*wpr-wi*wpi+wr;
         wi  = wi*wpr+wtemp*wpi+wi;
 #ifdef DEBUG
-        //assert( std::min(std::initializer_list<std::size_t>{i1, i2, i3, i4}) > 1 );
+        assert( std::min(std::min(i1, i2), std::min(i3, i4)) > 1 );
         assert( i1 < n && i2 < n && i3 < n && i4 < n );
 #endif
     }
@@ -147,7 +145,7 @@ realft__(double data[], std::size_t n, int isign)
         data[1] = c1*(h1r-data[1]);
         four1__(data,n>>1,-1);
     }
-    
+ 
     // All done
     return;
 }

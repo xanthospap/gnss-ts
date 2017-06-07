@@ -4,6 +4,10 @@
 // c++ standard headers
 #include <stdexcept>
 #include <cmath>
+#ifdef DEBUG
+#include <fenv.h>
+#include <cassert>
+#endif
 
 // gtms headers
 #include "timeseries.hpp"
@@ -28,6 +32,8 @@
 namespace ngpt
 {
 
+constexpr double __MAX_EXP_ARG__ {708.0e0};
+
 /// Given an array yy[0..n-1], extirpolate (spread) a value y into m actual
 /// array elements that best approximate the "fictional" (i.e. possibly 
 /// non-integer) array element number x. The weights used are coefficients of 
@@ -38,6 +44,12 @@ namespace ngpt
 void
 spread__(double y, double yy[], std::size_t n, double x, int m)
 {
+
+#ifdef DEBUG
+    // enable catching of floating point exceptions in debug mode.
+    feenableexcept(FE_ALL_EXCEPT & ~FE_INEXACT);
+#endif
+
     long        ihi,ilo,ix,j,nden;
     static long nfac[] = {0,1,1,2,6,24,120,720,5040,40320,362880};
     double      fac,intpart;
@@ -92,6 +104,12 @@ void lomb_scargle_fast(const timeseries<T,F>& ts, double ofac, double hifac,
     double wk1[], double wk2[], std::size_t nwk, std::size_t& nout, 
     std::size_t& jmax, double& prob)
 {
+
+#ifdef DEBUG
+    // enable catching of floating point exceptions in debug mode.
+    feenableexcept(FE_ALL_EXCEPT & ~FE_INEXACT);
+#endif
+
     // Number of interpolation points per 1/4 cycle of highest frequency.
     constexpr int MACC {4};
 
@@ -146,7 +164,9 @@ void lomb_scargle_fast(const timeseries<T,F>& ts, double ofac, double hifac,
         }
     }
     var /= (N-1);
+#ifdef DEBUG
     assert( index == N );
+#endif
 
     xmin = ts_epochs[0];    // min epoch (MJD)
     xmax = ts_epochs[N-1];  // max epoch (MJD)
@@ -192,7 +212,8 @@ void lomb_scargle_fast(const timeseries<T,F>& ts, double ofac, double hifac,
         if (wk2[j] > pmax) { pmax = wk2[(jmax=j)]; }
     }
     // Estimate significance of largest peak value.
-    expy = exp(-pmax);
+    if (pmax>709.8) {std::cerr<<"\nPmax="<<pmax<<" will cause FE"; pmax=__MAX_EXP_ARG__;}
+    expy = std::exp(-pmax);
     effm = 2e0*(nout)/ofac;
     prob = effm*expy;
     if (prob > .01e0) { prob = 1e0-pow(1e0-expy,effm); }
@@ -220,6 +241,12 @@ template<class T, class F>
     void lomb_scargle_period(const timeseries<T,F>& ts, double ofac, double hifac,
     double px[], double py[], int np, int& nout, int& jmax, double& prob)
 {
+
+#ifdef DEBUG
+    // enable catching of floating point exceptions in debug mode.
+    feenableexcept(FE_ALL_EXCEPT & ~FE_INEXACT);
+#endif
+
     /// real data size (i.e. ommiting outliers & skipped data points
     std::size_t N = ts.data_pts() - ts.skipped_pts();
     
@@ -268,7 +295,9 @@ template<class T, class F>
         }
     }
     var /= (N-1);
+#ifdef DEBUG
     assert( index == N );
+#endif
 
     xmin = ts_epochs[0];    // min epoch (MJD)
     xmax = ts_epochs[N-1];  // max epoch (MJD)
@@ -322,6 +351,7 @@ template<class T, class F>
     }
 
     // Evaluate statistical significance of the maximum.
+    if (pymax>709.8) {std::cerr<<"\nPmax="<<pymax<<" will cause FE"; pymax=__MAX_EXP_ARG__;}
     expy = std::exp(-pymax);
     effm = 2.0*nout/ofac;
     prob = effm*expy;
@@ -355,6 +385,12 @@ template<class T, class F>
     double maxfreq, double dfreq, double px[], double py[], int np, int& nout,
     int& jmax, double& prob)
 {
+
+#ifdef DEBUG
+    // enable catching of floating point exceptions in debug mode.
+    feenableexcept(FE_ALL_EXCEPT & ~FE_INEXACT);
+#endif
+
     /// real data size (i.e. ommiting outliers & skipped data points
     std::size_t N = ts.data_pts() - ts.skipped_pts();
     
@@ -403,7 +439,9 @@ template<class T, class F>
         }
     }
     var = var/(N-1);
+#ifdef DEBUG
     assert( index == N );
+#endif
 
     xmin  = ts_epochs[0];    // min epoch (MJD)
     xmax  = ts_epochs[N-1];  // max epoch (MJD)
@@ -512,6 +550,7 @@ template<class T, class F>
 #endif
 
     // Evaluate statistical significance of the maximum.
+    if (pymax>709.8) {std::cerr<<"\nPmax="<<pymax<<" will cause FE"; pymax=__MAX_EXP_ARG__;}
     expy = std::exp(-pymax);
     effm = 2.0*nout;
     prob = effm*expy;
@@ -529,6 +568,12 @@ template<class T, class F>
     void lomb_scargle_period2(const timeseries<T,F>& ts, double minfreq,
     double maxfreq, double dfreq, double px[], double py[], int np, int& nout, int& jmax)
 {
+
+#ifdef DEBUG
+    // enable catching of floating point exceptions in debug mode.
+    feenableexcept(FE_ALL_EXCEPT & ~FE_INEXACT);
+#endif
+
     /// real data size (i.e. ommiting outliers & skipped data points
     std::size_t N = ts.data_pts() - ts.skipped_pts();
     

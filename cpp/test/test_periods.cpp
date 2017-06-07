@@ -81,7 +81,6 @@ main(int argc, char* argv[])
         std::ofstream ls_out {"lomb.out"};
         for (int i=0;i<nout;i++) ls_out << "\n" << px[i] << " " << py[i];
 
-        /*
         std::cout<<"\n> Iteratively searching and modeling dominant freqs.";
         // create a model
         ngpt::ts_model<milliseconds> mdl2;
@@ -103,17 +102,17 @@ main(int argc, char* argv[])
             std::ofstream tot {"foo" + std::to_string(i) + ".ts"};
             new_ts.dump(tot);
         }
-        */
 
         delete[] px;
         delete[] py;
+    
     } else if ( algorithm == 2 ) {
         // compute lomb-scargle periodogram; write to output ("lomb.out")
         std::cout<<"\n> Computing Lomb-Scargle Periodogram";
         std::size_t idx;
         double T = ts.last_valid_epoch(idx).as_mjd() - ts.first_valid_epoch(idx).as_mjd();
         std::size_t N = ts.data_pts() - ts.skipped_pts();
-        double minfreq /*{0}*/ ( 1e0/(1.5*T) );
+        double minfreq ( 1e0/(1.5*T) );
         double maxfreq {.5};
         int    n0 {5};
         double dfreq {1e0/(T*n0)};
@@ -137,7 +136,6 @@ main(int argc, char* argv[])
         std::ofstream ls_out {"lomb.out"};
         for (int i=0;i<nout;i++) ls_out << "\n" << px[i] << " " << py[i];
 
-        /*
         std::cout<<"\n> Iteratively searching and modeling dominant freqs.";
         // create a model
         ngpt::ts_model<milliseconds> mdl2;
@@ -159,9 +157,9 @@ main(int argc, char* argv[])
             std::ofstream tot {"foo" + std::to_string(i) + ".ts"};
             new_ts.dump(tot);
         }
-        */
         delete[] px;
         delete[] py;
+
     } else if (algorithm == 3) {
         // compute lomb-scargle periodogram; write to output ("lomb.out")
         std::cout<<"\n> Computing Lomb-Scargle Periodogram";
@@ -191,6 +189,7 @@ main(int argc, char* argv[])
         for (int i=0;i<nout;i++) ls_out << "\n" << px[i] << " " << py[i];
         delete[] px;
         delete[] py;
+
     } else {
         // compute lomb-scargle periodogram; write to output ("lomb.out")
         std::cout<<"\n> Computing Lomb-Scargle Periodogram (fast)";
@@ -207,15 +206,15 @@ main(int argc, char* argv[])
         lomb_scargle_fast(ts, ofac, hifac, px, py, nwk, nout, jmax, prob);
 
         std::cout<<"\n\tDominant frequency in time-series: "<<px[jmax]<<" (at index: "<<jmax<<")"<<"; this is a period of "<<1e0/px[jmax]<<" days";
-        // std::cout<<"\n\tMinimum frequency examined is: "<<px[0]<<", i.e. a period of "<<1e0/px[0]<<" days.";
-        // std::cout<<"\n\tMaximum frequency examined is: "<<px[nout-1]<<", i.e. a period of "<<1e0/px[nout-1]<<" days.";
-        // std::cout<<"\n\tTesting frequency delta is "<<(px[2]-px[1]-px[0])<<" or every "<<1e0/(px[2]-px[1]-px[0])<<" days.";
+        //std::cout<<"\n\tMinimum frequency examined is: "<<px[0]<<", i.e. a period of "<<1e0/px[0]<<" days.";
+        //std::cout<<"\n\tMaximum frequency examined is: "<<px[nout-1]<<", i.e. a period of "<<1e0/px[nout-1]<<" days.";
+        //std::cout<<"\n\tTesting frequency delta is "<<(px[2]-px[1]-px[0])<<" or every "<<1e0/(px[2]-px[1]-px[0])<<" days.";
 
         std::cout<<"\n> Writing Lomb-Scargle data to \"lomb.out\"";
         std::ofstream ls_out {"lomb.out"};
         for (std::size_t i=0;i<nout;i++) ls_out << "\n" << px[i] << " " << py[i];
 
-        /*
+        
         std::cout<<"\n> Iteratively searching and modeling dominant freqs.";
         // create a model
         ngpt::ts_model<milliseconds> mdl2;
@@ -225,7 +224,7 @@ main(int argc, char* argv[])
         auto new_ts { ts };
         for (std::size_t i = 0; i <= model.harmonics().size(); i++) {
             new_ts.epoch_ptr() = ts.epoch_ptr();
-            lomb_scargle_period(new_ts, ofac, hifac, px, py, nout, nout, jmax, prob);
+            lomb_scargle_fast(new_ts, ofac, hifac, px, py, nwk, nout, jmax, prob);
             std::cout<<"\n\tIteration "<<i+1<<": Dominant frequency in time-series: "<<px[jmax]<<" (at index: "<<jmax<<")"
                 <<"; this is a period of "<<1e0/px[jmax]<<" days power="<<py[jmax]<<" probability="<<prob;
             mdl2.add_period(1e0/px[jmax]);
@@ -233,11 +232,10 @@ main(int argc, char* argv[])
             new_ts = ts.qr_ls_solve(mdl2, std);
             new_ts.epoch_ptr() = ts.epoch_ptr();
             std::ofstream lot {"lomb" + std::to_string(i) + ".out"};
-            for (int k=0;k<nout;k++) lot << "\n" << px[k] << " " << py[k];
+            for (std::size_t k=0;k<nout;k++) lot << "\n" << px[k] << " " << py[k];
             std::ofstream tot {"foo" + std::to_string(i) + ".ts"};
             new_ts.dump(tot);
         }
-        */
 
         delete[] px;
         delete[] py;
