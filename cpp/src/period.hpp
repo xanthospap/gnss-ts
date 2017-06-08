@@ -64,8 +64,8 @@ spread__(double y, double yy[], std::size_t n, double x, int m)
         yy[ix] += y;
     } else {                              // x is not an integer ...
         // lowest index to fill
-        ilo  = std::min( std::max(static_cast<long>(x-.5e0*m+1e0), (long)1),
-                        (long)(n-m+1));
+        ilo  = std::min( std::max(static_cast<long>(x-.5e0*m+1e0), 0L),
+                        (long)(n-m));
         // highest index to fill
         ihi  = ilo + m - 1;
 #ifdef DEBUG
@@ -180,9 +180,10 @@ void lomb_scargle_fast(const timeseries<T,F>& ts, double ofac, double hifac,
     for (j = 0; j < N; j++) {
         ck  = (ts_epochs[j]-xmin)*fac;
         while (ck > fndim) { ck -= fndim; }
-        ckk = 2e0*(ck++);
+        ckk = 2e0*ck;
+        // ++ck;
         while (ckk > fndim) { ckk -= fndim; }
-        ++ckk;
+        // ++ckk;
         spread__(ts_vals[j]-ave, wk1, ndim, ck, MACC);
         spread__(1e0, wk2, ndim, ckk, MACC);
     }

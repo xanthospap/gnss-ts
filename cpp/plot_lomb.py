@@ -1,6 +1,6 @@
 #! /bin/python
 
-from math import pow, exp
+from math import pow, exp, log
 import matplotlib.pyplot as plt
 
 numfreq = 0
@@ -22,7 +22,8 @@ def read_pxy(filename):
 
 px, py   = read_pxy('lomb.out')
 numfreq  = len(px)
-sig_prob = [ 1-pow(1-exp(-z), 2*numfreq/ofac) for z in sig_lev ]
+# sig_prob = [ 1-pow(1-exp(-z), 2*numfreq/ofac) for z in sig_lev ]
+
 
 fig = plt.figure()
 ax1 = fig.add_subplot(111)
