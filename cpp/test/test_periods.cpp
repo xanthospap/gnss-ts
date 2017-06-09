@@ -52,6 +52,10 @@ main(int argc, char* argv[])
     //+ constructed
     /* timeseries<milliseconds,pt_marker> */
     auto ts = synthetic_ts<milliseconds,pt_marker>(epochs, model, 0, 0.05);
+    // --just to see that this is working --
+    /*auto*/timeseries<milliseconds,pt_marker> ts2 {ts,100,150};
+    assert( ts2[0]  == ts[100] );
+    assert( ts2[49] == ts[149] );
 
     // write time-series to "foo.ts"
     std::cout<<"\n> TimeSeries written to \"foo.ts\"";

@@ -33,16 +33,26 @@ template<class T, class F> class running_window;
 /// A time-series is a series of data points. This data_point class is designed
 /// to assist the handling of timeseries. The class itself does very little 
 /// and is pretty generic. The only limitation is that the F template parameter
-/// is a enumeration class that can act as a flag, i.e. ngpt::flag<F> makes sense
-/// and has a default constructor.
+/// is an enumeration class that can act as a flag, i.e. ngpt::flag<F> makes
+/// sense and has a default constructor.
 /// For example, coordinate time-series, could use: ngpt::pt_marker (as the F
 /// parameter).
+/// Each instance of the data_point class, has:
+///     - a value
+///     - a sigma (i.e. std. deviation) and
+///     - a flag (of type ngpt::flag<F>)
 ///
-/// \see ngpt::flag template class
+/// @see ngpt::flag template class
 ///
-/// \todo there should be a restriction on F that the function: bool skip(ngpt::flag<F>) noexcept
-///       exists.
-template<class F> class data_point
+/// @todo there should be a restriction on F that the function: 
+///       'bool skip(ngpt::flag<F>) noexcept' exists.
+///
+/// @tparam F An enumeration class to act as flag; F must have:
+///           - a default constructor
+///           - a function with signature 'bool skip(ngpt::flag<F>) noexcept'
+///
+template<class F>
+    class data_point
 {
 public:
 
@@ -50,33 +60,48 @@ public:
     using tflag = ngpt::flag<F>;
     
     /// Constructor.
-    explicit data_point(double val=0.0, double sigma=1.0, tflag f=tflag{})
+    explicit
+    data_point(double val=0.0, double sigma=1.0, tflag f=tflag{})
     noexcept
     : m_value{val},
       m_sigma{sigma},
       m_flag{f}
     {}
 
-    /// const get.
-    double value() const noexcept { return m_value; }
+    /// (const) get the value.
+    double
+    value() const noexcept { return m_value; }
 
-    /// get/set
-    double& value() noexcept { return m_value; }
-
-    /// const get
-    double sigma() const noexcept { return m_sigma; }
-
-    /// get/set
-    double& sigma() noexcept { return m_sigma; }
-
-    /// const get
-    tflag flag() const noexcept { return m_flag; }
-
-    /// get/set
-    tflag& flag() noexcept { return m_flag; }
-
+    /// get the value.
+    double&
+    value() noexcept { return m_value; }
+    
+    /// (const) get the sigma (std. dev).
+    double
+    sigma() const noexcept { return m_sigma; }
+    
+    /// get the sigma (std. dev).
+    double&
+    sigma() noexcept { return m_sigma; }
+    
+    /// (const) get the flag.
+    tflag
+    flag() const noexcept { return m_flag; }
+    
+    /// get the flag.
+    tflag&
+    flag() noexcept { return m_flag; }
+    
     /// Should the data point be skipped/ignored ?
-    bool skip() const noexcept { return ngpt::__skip__(this->m_flag); }
+    /// @todo what the fuck is this? see also the detailed class description.
+    bool
+    skip() const noexcept { return ngpt::__skip__(this->m_flag); }
+
+    /// equality operator
+    bool
+    operator==(const data_point& other) noexcept
+    { return (m_value == other.m_value && m_sigma == other.m_sigma)
+                                       && (m_flag == other.m_flag); }
 
 private:
     double m_value; ///< The data point's value
@@ -86,11 +111,29 @@ private:
 }; // end class data_point
 
 
-/// A generic time-series class
-/// Mean value and number of skipped points should always be correct (i.e. updated).
+/// A generic time-series class.
+/// Mean value and number of skipped points should always be correct
+/// (i.e. updated).
+///
+/// @note     A time-series instance does **NOT** own an epoch vector; each
+///           instance only holds a pointer to a vector of epochs. The
+///           construction/desctruction of this vector, is the responsibility
+///           of the user.
+///
+/// @todo     Should the time-series be always in correct time-order. Say more
+///           about this ....
+///
+/// @tparam T The time precision; this can be any class (of ggdatetime), for
+///           which is_of_sec_type is true. This means that T could be e.g.
+///           ngpt::seconds, ngpt::milliseconds, etc. The individual epochs
+///           (time points) of the time-series, will have a time-stamp of type
+///           ngpt::datetime<T>.
+/// @param F  An enumeration class to act as flag; each data point of the
+///           time-series will have a flag of type ngpt::flag<F> (see class
+///           data_point for details).
 template<class T,
-        class F,
-        typename = std::enable_if_t<T::is_of_sec_type>
+         class F,
+         typename = std::enable_if_t<T::is_of_sec_type>
         >
     class timeseries
 {
@@ -107,11 +150,37 @@ public:
     /// The type of the time-series data points.
     using entry = ngpt::data_point<F>;
 
-    /// The type of a time-series data entry, i.e. a pair of epoch and data-point.
+    /// The type of a time-series data entry, i.e. a pair of 
+    /// <epoch, data_point>.
     using record = std::tuple<epoch&, entry&>;
+
+    /*
+    std::size_t
+    ts2array(F* epoch_arr, F* val_arr, F& ave, F& var) const
+    {   
+        std::size_t N {this->data_pts() - this->skipped_pts()};
+        F prev_ave{0};
+        auto ts_start {this->cbegin()},
+             ts_stop  {this->cend()};
+        std::size_t index {0};
+
+        for (auto it = ts_start; it != ts_stop; ++it) {
+            if ( !it.data().skip() ) {
+                epoch_arr[index] = it.epoch().as_mjd();
+                val_arr[index]   = it.data().value();
+                prev_ave = ave;
+                ave += (val_arr[index]-ave)/(index+1e0);
+                var += (val_arr[index]-prev_ave)*(val_arr[index]-ave);
+                ++index;
+            }
+        }
+        var /= (N-1e0);
+        return N;
+    }
+    */
     
     /// Constructor. If a vector of epochs is passed in, then we know we have
-    /// our epochs.
+    /// our epochs. In this case, reserve space (memory) for the data points.
     explicit
     timeseries(std::vector<epoch>* epochs=nullptr) noexcept
     : m_epochs(epochs),
@@ -121,8 +190,9 @@ public:
         if ( m_epochs ) m_data.reserve(m_epochs->size());
     }
     
-    /// Constructor. Use this constructor if we don't know how many elements the
-    /// time-series will have, but we do have a clue.
+    /// Constructor. Use this constructor if you don't know exactly how many
+    /// elements (i.e. data points) the time-series will have, but you do have
+    /// a clue.
     explicit
     timeseries(std::size_t size_hint) noexcept
     : m_epochs(nullptr),
@@ -133,45 +203,66 @@ public:
     }
 
     /// Get the (pointer to) epoch vector.
-    std::vector<epoch>*& epoch_ptr() noexcept { return m_epochs; }
+    std::vector<epoch>*&
+    epoch_ptr() noexcept { return m_epochs; }
 
     /// Get the (pointer to) epoch vector (const version).
-    const std::vector<epoch>* epoch_ptr() const noexcept { return m_epochs; }
+    const std::vector<epoch>*
+    epoch_ptr() const noexcept { return m_epochs; }
 
-    /// Get the data point at index i (const version).
-    entry operator[](std::size_t i) const { return m_data[i]; }
+    /// Get the data point (i.e. data_point<F>) at index i (const version).
+    entry
+    operator[](std::size_t i) const { return m_data[i]; }
 
-    /// Get the data point at index i.
-    entry& operator[](std::size_t i) { return m_data[i]; }
+    /// Get the data point (i.e. data_point<F>) at index i.
+    entry&
+    operator[](std::size_t i) { return m_data[i]; }
     
-    /// Get the record at index i.
-    record& operator()(std::size_t i) { return std::tie((*m_epochs[i]), m_data[i]); }
+    /// Get the record (i.e. std::tuple<epoch&, entry&>) at index i.
+    record&
+    operator()(std::size_t i) { return std::tie((*m_epochs[i]), m_data[i]); }
 
-    /// Get the mean value
-    double mean() const noexcept { return m_mean; }
+    /// Get the mean value (average).
+    /// @warning The mean value is **not** computed here; only the instance's
+    ///          member m_value is returned.
+    double
+    mean() const noexcept { return m_mean; }
 
-    /// Get the number of data points.
-    std::size_t data_pts() const noexcept { return m_data.size(); }
+    /// Get the number of data points (all data points, regardless of their
+    /// flag).
+    std::size_t
+    data_pts() const noexcept { return m_data.size(); }
 
-    /// Get the number of epochs.
-    std::size_t epochs() const noexcept { return m_epochs ? m_epochs->size() : 0; }
+    /// Get the number of epochs (all epochs, regardless if the corresponding
+    /// data_point flags). If an epoch vector is not set, 0 is returned.
+    std::size_t
+    epochs() const noexcept { return m_epochs ? m_epochs->size() : 0; }
     
-    /// Get the number of data points that are skipped.
-    std::size_t skipped_pts() const noexcept { return m_skipped; }
+    /// Get the number of data points that are skipped. Not computation (check)
+    /// is performed here; only the instance's member m_skipped is returned.
+    /// This is the const version.
+    std::size_t
+    skipped_pts() const noexcept { return m_skipped; }
     
-    /// Get the number of data points that are skipped.
-    std::size_t& skipped_pts() noexcept { return m_skipped; }
+    /// Get the number of data points that are skipped. Not computation (check)
+    /// is performed here; only the instance's member m_skipped is returned.
+    std::size_t&
+    skipped_pts() noexcept { return m_skipped; }
 
-    /// Get the first epoch
-    epoch first_epoch() const noexcept { return (*m_epochs)[0]; }
+    /// Get the first epoch of the time-series (regardles of it's data_point
+    /// flag).
+    epoch
+    first_epoch() const noexcept { return (*m_epochs)[0]; }
     
-    /// Get the last epoch
-    epoch last_epoch() const noexcept { return (*m_epochs)[m_epochs->size()-1]; }
+    /// Get the last epoch (regardles of it's data_point flag)
+    epoch
+    last_epoch() const noexcept { return (*m_epochs)[m_epochs->size()-1]; }
 
     /// Get the first epoch **NOT** skipped. Returns the value of the first,
     /// valid epoch and sets the idx parameter to its index.
     ///
-    /// \todo Should i allow this to throw?
+    /// @param[out] idx  The index of the first not-skipped epoch.
+    /// @todo            Should i allow this to throw?
     epoch
     first_valid_epoch(std::size_t& idx) const noexcept
     {
@@ -184,7 +275,8 @@ public:
     /// Get the last epoch **NOT** skipped. Returns the value of the last,
     /// valid epoch and sets the idx parameter to its index.
     ///
-    /// \todo Should i allow this to throw?
+    /// @param[out] idx  The index of the last not-skipped epoch.
+    /// @todo            Should i allow this to throw?
     epoch
     last_valid_epoch(std::size_t& idx) const noexcept
     {
@@ -194,9 +286,24 @@ public:
         return (*m_epochs)[idx];
     }
 
-    /// Copy constructor. Note that the epoch vector is set to nullptr.
-    timeseries(const timeseries& ts, std::size_t start=0, std::size_t end=0)
-    : m_epochs(nullptr),
+    /// Copy constructor.
+    ///
+    /// @warning Note that the epoch vector is not (deep) copied; it is only
+    ///          set to point to the same epoch vector as the copied-from time-
+    ///          series.
+    /// 
+    /// @param[in] ts    The original time-series to be copied.
+    /// @param[in] start The index to start copying from; if not given, it is
+    ///                  set to 0 (i.e. from start)
+    /// @param[in] end   The index of one-past-the-end to stop copying; if not
+    ///                  given, it will be set to ts.m_data.size().
+    ///
+    /// timeseries<...> ts1 { ... };
+    /// timeseries<...> ts2{ts1, 10, 100} will copy to ts2 all ts2 values 
+    /// between indexes [10,...,99]
+    timeseries
+    (const timeseries& ts, std::size_t start=0, std::size_t end=0)
+    : m_epochs(ts.m_epochs),
       m_mean{ts.m_mean},
       m_skipped{ts.m_skipped}
     {
@@ -209,12 +316,12 @@ public:
             }
             m_data.reserve(end-start);
             double sz;
-            m_mean   = 0.0;
+            m_mean    = 0e0;
             m_skipped = 0;
             for (std::size_t i = start; i < end; ++i) {
                 sz = i - start;
                 m_data.emplace_back(ts[i]);
-                m_mean = (ts[i].value() + sz*m_mean)/(sz+1.0);
+                m_mean = (ts[i].value() + sz*m_mean)/(sz+1e0);
                 if ( m_data[i].skip() ) ++m_skipped;
             }
         } else {
@@ -222,43 +329,48 @@ public:
         }
     }
 
-    /// Move constructor. 
+    /// Move constructor.
+    /// @note The resluting time-serie's epoch vector (pointer), will be set to
+    /// (point to) the original (i.e. ts). 
     timeseries(timeseries&& ts) noexcept
     : m_epochs(ts.m_epochs),
       m_mean{std::move(ts.m_mean)},
       m_data{std::move(ts.m_data)},
       m_skipped{std::move(ts.m_skipped)}
-    {
-    //    ts.m_epochs = nullptr;
-    }
+    {}
 
-    /// Assignment operator. Note that the epoch vector is set to nullptr.
-    timeseries& operator=(const timeseries& ts) noexcept
+    /// Assignment operator.
+    timeseries&
+    operator=(const timeseries& ts) noexcept
     {
         if (this != &ts) {
-            m_epochs = nullptr;
-            m_mean   = ts.m_mean;
-            m_data   = ts.m_data;
+            m_epochs  = ts.m_epochs;
+            m_mean    = ts.m_mean;
+            m_data    = ts.m_data;
             m_skipped = ts.m_skipped;
         }
         return *this;
     }
     
     /// Move assignment operator.
-    timeseries& operator=(timeseries&& ts) noexcept
+    timeseries&
+    operator=(timeseries&& ts) noexcept
     {
         if (this != &ts) {
             m_epochs = ts.m_epochs;
             m_mean   = std::move(ts.m_mean);
             m_data   = std::move(ts.m_data);
             m_skipped = std::move(ts.m_skipped);
-            // ts.m_epochs = nullptr;
         }
         return *this;
     }
 
     /// Split a time-series; return two new time-series in the interval:
-    /// [0-idx) and [idx-end). Note that the epoch vector is left as is.
+    /// [0-idx) and [idx-end).
+    ///
+    /// @return A tuple (pair) containing the two new time-series.
+    ///
+    /// @todo   What the fuck should i do with the epochs of each sub-timeseries??
     auto
     split(std::size_t idx) const
     {

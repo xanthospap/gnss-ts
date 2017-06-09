@@ -58,6 +58,14 @@ public:
     /// Check if a flag is clean (nothing is set)
     bool is_clean() const noexcept { return !static_cast<ft>(_f); }
 
+    /// Equality operator
+    bool
+    operator==(flag f) const noexcept { return _f == f._f; }
+
+    /// InEquality operator
+    bool
+    operator!=(flag f) const noexcept { return !(this->operator==(f)); }
+
 }; // class flag<FlagEnum>
 
 /// An enumeration type to hold possible flags for coordinate time-series data

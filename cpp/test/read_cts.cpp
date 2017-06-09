@@ -38,7 +38,7 @@ main(int argc, char* argv[])
 
     // Transform cartesian to topocentric (including sigmas)
     ts.cartesian2topocentric();
-    
+
     // If events file provided, read and apply the events
     if (argc > 2) {
         std::cout<<"\nApplying events list file: \""<<argv[2]<<"\".";
