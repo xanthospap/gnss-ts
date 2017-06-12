@@ -120,8 +120,9 @@ private:
 ///           construction/desctruction of this vector, is the responsibility
 ///           of the user.
 ///
-/// @todo     Should the time-series be always in correct time-order. Say more
-///           about this ....
+/// @todo     - Should the time-series be always in correct time-order. Say more
+///             about this ....
+///           - is the mean values really valid, always ??
 ///
 /// @tparam T The time precision; this can be any class (of ggdatetime), for
 ///           which is_of_sec_type is true. This means that T could be e.g.
@@ -181,6 +182,12 @@ public:
     
     /// Constructor. If a vector of epochs is passed in, then we know we have
     /// our epochs. In this case, reserve space (memory) for the data points.
+    ///
+    /// @param[in] epochs A pointer to a vector of ngpt::datetime<T> instances.
+    ///
+    /// @note Even though no data points are added to the time-series, enough
+    ///       space is allocated to hold them (only allocated **not**
+    ///       initialized!
     explicit
     timeseries(std::vector<epoch>* epochs=nullptr) noexcept
     : m_epochs(epochs),
@@ -193,6 +200,12 @@ public:
     /// Constructor. Use this constructor if you don't know exactly how many
     /// elements (i.e. data points) the time-series will have, but you do have
     /// a clue.
+    ///
+    /// @param[in] size_hint  A hint for (or even better the actual) number of
+    ///                       data points in the time-series.
+    ///
+    /// @note The epoch array will be empty after the construction. Users have
+    ///       to set it afterwards.
     explicit
     timeseries(std::size_t size_hint) noexcept
     : m_epochs(nullptr),
@@ -340,6 +353,9 @@ public:
     {}
 
     /// Assignment operator.
+    /// @warning Note that the epoch vector is not (deep) copied; it is only
+    ///          set to point to the same epoch vector as the copied-from time-
+    ///          series.
     timeseries&
     operator=(const timeseries& ts) noexcept
     {
@@ -379,64 +395,68 @@ public:
         return std::make_tuple(std::move(left), std::move(right));
     }
 
-
     /// Add a data point; returns the new mean value.
+    /// @note   The instance's mean value is updated; so is the number of
+    ///         skipped data points (if needed).
+    /// @return The updated time-series mean value.
     double
-    add_point(entry&& e)
+    add_point(const entry& e)
+
     {
         double sz = static_cast<double>(m_data.size());
         m_data.emplace_back(e);
         if ( e.skip() ) {
             ++m_skipped;
         } else {
-            m_mean = (e.value() + sz * m_mean)/(sz+1.0);
+            m_mean = (e.value() + sz * m_mean)/(sz+1e0);
         }
         return m_mean;
     }
 
     /// Add a data point; returns the new mean value.
+    /// @note   The instance's mean value is updated; so is the number of
+    ///         skipped data points (if needed).
+    /// @return The updated time-series mean value.
     double
-    add_point(double val, double sigma=1.0, tflag f=tflag{})
+    add_point(double val, double sigma=1e0, tflag f=tflag{})
     {
         return this->add_point( entry{val, sigma, f} );
     }
 
     /// Mark a data point given its index.
+    /// @param[in] index The index of the data point to be marked.
+    /// @param[in] f     An enum (class instance) of type F. The enum f is
+    ///                  added to the flag of the data point with index `index` 
+    /// @note            The number of skipped data points is updated if needed.'
+    /// @todo            WTF is up with __skip__ ??? And, somethin should be
+    ///                  done with the epoch vectors
     void
-    mark(std::size_t index, F f)
+    mark(std::size_t index, F f)/* noexcept noop, m_data[index] could throw */
     {
         tflag previous = m_data[index].flag();
         m_data[index].flag().set(f);
-        if ( !__skip__(previous) && __skip__(tflag{f}) ) { ++m_skipped; }
+        if ( !__skip__(previous) && __skip__(tflag{f}) ) ++m_skipped;
     }
 
-    /// \brief Compute the mean (i.e. central epoch)
-    ///
-    /// This version uses the very first and last epochs to compute the mean,
-    /// regardless if they are marked as unused.
-    ///
-    /// \see first_epoch
-    /// \see last_epoch
-    /// \see cenral_valid_epoch
+    /// Compute the mean (i.e. central epoch). This version uses the very 
+    /// first and last epochs to compute the mean, regardless if they are 
+    /// marked as unused. The mean epoch is obviously half the distance
+    /// between the first and last epochs.
     epoch
     central_epoch() const noexcept
     {
-        auto delta_dt = ngpt::delta_date(last_epoch(), first_epoch());
+        auto delta_dt  = ngpt::delta_date(last_epoch(), first_epoch());
         auto central_epoch { first_epoch() };
-        central_epoch += delta_dt/2;
+        central_epoch += (delta_dt / 2);
         return central_epoch;
     }
     
-    /// \brief Compute the mean (i.e. central epoch)
-    ///
-    /// This version uses the first and last epochs that are not marked as
-    /// unused to compute the mean epoch. I.e., if the first 10 epochs --data
-    /// points-- are marked as outliers, then they shall not be used to compute
-    /// the mean.
-    /// 
-    /// \see first_valid_epoch
-    /// \see last_valid_epoch
-    /// \see cenral_epoch
+    /// Compute the mean (i.e. central epoch). This version uses the first and
+    /// last epochs that are not marked as unused, to compute the mean epoch. 
+    /// I.e., if the first 10 epochs --data points-- are marked as outliers, 
+    /// then they shall not be used to compute the mean.
+    /// The mean epoch is obviously half the distance between the first and 
+    /// last epochs.
     epoch
     central_valid_epoch() const noexcept
     {
@@ -446,7 +466,8 @@ public:
         return start_epoch;
     }
 
-    // 
+    /// Given a model, ...., he... well solve for it!
+    /// @todo document a little, just a bit, better. 
     auto
     qr_ls_solve(
         ngpt::ts_model<T>&    model,
@@ -510,7 +531,6 @@ public:
         auto S   = R.transpose();
         std::cout<<"\nCoef: "<<R(1,1);
         */
-        
 
         // residual vector u = A*x - b; note that the reisdual vector may not
         // have the same size as the (original) time-series. Instead, it has
@@ -559,31 +579,39 @@ public:
     }
 
     /// Return a const iterator to the first entry of the data points vector
+    /// (i.e. return m_data.cbegin())
     typename std::vector<entry>::const_iterator
     citer_start() const noexcept
     { return m_data.cbegin(); }
 
-    /// Return an (non-const) iterator to the first entry of the data points vector
+    /// Return an (non-const) iterator to the first entry of the data points
+    /// vector (i.e. return m_data.begin())
     typename std::vector<entry>::iterator
     iter_start() noexcept
     { return m_data.begin(); }
     
-    /// Return a const iterator to the last+1 (=end) entry of the data points vector
+    /// Return a const iterator to the last+1 (=end) entry of the data points
+    /// vector (i.e. return m_data.cend())
     typename std::vector<entry>::const_iterator
     citer_stop() const noexcept
     { return m_data.cend(); }
     
-    /// Return a (non-const) iterator to the last+1 (=end) entry of the data points vector
+    /// Return a (non-const) iterator to the last+1 (=end) entry of the data
+    /// points vector (i.e. return m_data.end())
     typename std::vector<entry>::iterator
     iter_stop() noexcept
     { return m_data.end(); }
 
+    /// Return a timeseries_iterator to the first element of this instance
+    /// (reagrdless of its flag).
+    /// @todo is it noexcept?
     timeseries_iterator<T, F>
     begin()
-    {
-        return timeseries_iterator<T, F> {*this};
-    }
+    { return timeseries_iterator<T, F> {*this}; }
 
+    /// Return a timeseries_iterator to the one-past-the-end element of this 
+    /// instance (reagrdless of its flag).
+    /// @todo is it noexcept?
     timeseries_iterator<T, F>
     end()
     {
@@ -592,16 +620,18 @@ public:
         return it;
     }
     
+    /// Return a cosnt timeseries_iterator to the first element of this instance
+    /// (reagrdless of its flag).
+    /// @todo is it noexcept?
     timeseries_const_iterator<T, F>
-    cbegin()
-    const
-    {
-        return timeseries_const_iterator<T, F> {*this};
-    }
+    cbegin() const
+    { return timeseries_const_iterator<T, F> {*this}; }
 
+    /// Return a const timeseries_iterator to the one-past-the-end element of 
+    /// this instance (reagrdless of its flag).
+    /// @todo is it noexcept?
     timeseries_const_iterator<T, F>
-    cend()
-    const
+    cend() const
     {
         timeseries_const_iterator<T, F> it {*this};
         it.end();
@@ -649,6 +679,29 @@ private:
 
 }; // class timeseries
 
+/// The time_series class, should be iterable, i.e. the user should be able to
+/// 'walk through' an instance, data-point by data-point. This class, enables
+/// this feature.
+/// It is an effort to make something like an std::vector<T>::(const)_)iterator.
+/// The data-points flags do not play any role in the iteration, i.e. when we
+/// iterate we walk through all data-points regardless of their flags.
+/// The template parameters (T and F), should be the same as for the actual
+/// timeseries we want to iterate.
+/// The internals of this class are pretty simple; it just holds a (reference
+/// to) time_series instance and two iterators, one for the epoch vector and
+/// one for the data_point vector (both are of type std::vector).
+///
+/// @todo Do i really need the epoch iterator as a member ?? Maybe just use
+///       pointer arithmetic for this!
+///
+/// @tparam T The time precision; this can be any class (of ggdatetime), for
+///           which is_of_sec_type is true. This means that T could be e.g.
+///           ngpt::seconds, ngpt::milliseconds, etc. The individual epochs
+///           (time points) of the time-series, will have a time-stamp of type
+///           ngpt::datetime<T>.
+/// @param F  An enumeration class to act as flag; each data point of the
+///           time-series will have a flag of type ngpt::flag<F> (see class
+///           data_point for details).
 template<class T, class F>
     class timeseries_iterator
 {
@@ -661,31 +714,31 @@ public:
     using entry       = ngpt::data_point<F>;
     using record      = std::tuple<epoch_td&, entry&>;
 
+    /// Constructor given a time-series instance.
     explicit
     timeseries_iterator(timeseries<T, F, typename std::enable_if_t<T::is_of_sec_type>>& ts)
     : m_timeseries{ts},
       m_data_iter{ts.iter_start()},
       m_epoch_iter{ts.epoch_ptr()->begin()}
-    {
-        assert( ts.epoch_ptr() && ts.data_pts() == ts.epochs() );
-    }
+    { assert( ts.epoch_ptr() && ts.data_pts() == ts.epochs() ); }
 
-    //
+    /// Copy constructor
     timeseries_iterator(const timeseries_iterator& it) noexcept
     : m_timeseries{it.m_timeseries},
       m_data_iter{it.m_data_iter},
       m_epoch_iter{it.m_epoch_iter}
     {}
 
+    /// Move constructor
     timeseries_iterator(timeseries_iterator&& it) noexcept
     : m_timeseries{it.m_timeseries},
       m_data_iter{it.m_data_iter},
       m_epoch_iter{it.m_epoch_iter}
-    {
-    }
+    {}
 
-    //
-    timeseries_iterator& operator=(const timeseries_iterator& it) noexcept
+    /// Assignment operator
+    timeseries_iterator&
+    operator=(const timeseries_iterator& it) noexcept
     {
         if (*this != it) {
             m_timeseries = it.m_timeseries;
@@ -695,7 +748,9 @@ public:
         return *this;
     }
     
-    timeseries_iterator& operator=(timeseries_iterator&& it) noexcept
+    /// Move assignment operator
+    timeseries_iterator&
+    operator=(timeseries_iterator&& it) noexcept
     {
         if (*this != it) {
             m_timeseries = std::move(it.m_timeseries);
@@ -705,66 +760,86 @@ public:
         return *this;
     }
 
-    void begin() noexcept
+    /// Set the iterator to the beggining of the time-series
+    void
+    begin() noexcept
     {
         m_data_iter  = m_timeseries.iter_start();
         m_epoch_iter = m_timeseries.epoch_ptr()->begin();
     }
 
-    void end() noexcept
+    /// Set the iterator to one-past-the-end of the time-series
+    void
+    end() noexcept
     {
         m_data_iter  = m_timeseries.iter_stop();
         m_epoch_iter = m_timeseries.epoch_ptr()->end();
     }
 
-    void advance() noexcept
+    /// Move the iterator to the next data_point/epoch.
+    void
+    advance() noexcept
     {
         ++m_data_iter;
         ++m_epoch_iter;
     }
 
+    /// Return the index of the iterator (i.e. the number of the current
+    /// epoch/data-point)
     std::size_t
     index() noexcept
-    {
-        return std::distance(m_timeseries.iter_start(), m_data_iter);
-    }
+    { return std::distance(m_timeseries.iter_start(), m_data_iter); }
 
+    /// Equality operator (i.e. both iterators point to the same element)
     bool
     operator==(const timeseries_iterator& it) const noexcept
     {
-        return ( m_data_iter == it.m_data_iter && m_epoch_iter == it.m_epoch_iter );
+        return ( m_data_iter  == it.m_data_iter
+              && m_epoch_iter == it.m_epoch_iter );
     }
 
+    /// InEquality operator (i.e. iterators do not point to the same element)
     bool
     operator!=(const timeseries_iterator& it) const noexcept
-    {
-        return !((*this) == it);
-    }
+    { return !((*this) == it); }
 
+    /// Bigger-than operator. Checks the order (i.e. indexes) of the two
+    /// iterators.
     bool
     operator>(const timeseries_iterator& it) const noexcept
     {
-        return ( m_data_iter > it.m_data_iter && m_epoch_iter > it.m_epoch_iter );
+        return ( m_data_iter  > it.m_data_iter
+              && m_epoch_iter > it.m_epoch_iter );
     }
     
+    /// Bigger-or-equal-to operator. Checks the order (i.e. indexes) of the two
+    /// iterators.
     bool
     operator>=(const timeseries_iterator& it) const noexcept
     {
-        return ( m_data_iter >= it.m_data_iter && m_epoch_iter >= it.m_epoch_iter );
+        return ( m_data_iter  >= it.m_data_iter
+              && m_epoch_iter >= it.m_epoch_iter );
     }
     
+    /// Less than operator. Checks the order (i.e. indexes) of the two
+    /// iterators.
     bool
     operator<(const timeseries_iterator& it) const noexcept
     {
-        return ( m_data_iter < it.m_data_iter && m_epoch_iter < it.m_epoch_iter );
+        return ( m_data_iter  < it.m_data_iter
+              && m_epoch_iter < it.m_epoch_iter );
     }
     
+    /// Less-or-equal-to operator. Checks the order (i.e. indexes) of the two
+    /// iterators.
     bool
     operator<=(const timeseries_iterator& it) const noexcept
     {
-        return ( m_data_iter <= it.m_data_iter && m_epoch_iter <= it.m_epoch_iter );
+        return ( m_data_iter  <= it.m_data_iter
+              && m_epoch_iter <= it.m_epoch_iter );
     }
 
+    /// Move the iterator n places (indexes) forward.
     timeseries_iterator /* pointer arithmetic */
     operator+(int n) const noexcept
     {
@@ -773,6 +848,7 @@ public:
         ti.m_epoch_iter + n;
         return ti;
     }
+    /// Move the iterator n places (indexes) backwards.
     timeseries_iterator /* pointer arithmetic */
     operator-(int n) const noexcept
     {
@@ -782,15 +858,16 @@ public:
         return ti;
     }
 
-    // prefix
-    timeseries_iterator& operator++()
+    // Prefix operator (addition).
+    timeseries_iterator&
+    operator++()
     {
         ++m_data_iter;
         ++m_epoch_iter;
         return *this;
     }
     
-    // prefix
+    // Prefix operator (subtraction)
     timeseries_iterator& operator--()
     {
         --m_data_iter;
@@ -798,14 +875,17 @@ public:
         return *this;
     }
 
-    // postfix
-    timeseries_iterator operator++(int)
+    // Postfix operator (addition)
+    timeseries_iterator
+    operator++(int)
     {
         auto tmp {*this};
         this->operator++();
         return tmp;
     }
 
+    /// Return the distance (i.e. index difference) between two iterators.
+    /// Obviously, they must belong to the same time-series.
     int
     distance_from(const timeseries_iterator& it) const
     {
@@ -813,6 +893,7 @@ public:
         return std::distance(it.m_data_iter, this->m_data_iter);
     }
 
+    /// Return the time-delta between two iterators.
     interval_td
     delta_time(const timeseries_iterator& it) const
     {
@@ -820,12 +901,15 @@ public:
         return m_epoch_iter->delta_date( *(it.m_epoch_iter) );
     }
 
+    /// Return the epoch the iterator instance is currently at.
     epoch_td&
     epoch() noexcept { return *m_epoch_iter;}
 
+    /// Return the entry the iterator instance is currently at.
     entry&
     data() noexcept { return *m_data_iter; }
     
+    /// Mark the data point this instance is currently at.
     void
     mark(F f)
     {
@@ -836,15 +920,239 @@ public:
         }
     }
 
+    /// Return (a reference to) the time_series instance this iterator points to.
     timeseries<T, F>&
     timeseries_ref() noexcept
     { return m_timeseries; }
 
 private:
+    /// The (reference to) time_series instance this iterator points to.
     timeseries<T, F>&                        m_timeseries;
+    /// Iterator (i.e std::vector<>::iterator) of the data-points vector
     typename std::vector<entry>::iterator    m_data_iter;
+    /// Iterator (i.e std::vector<>::iterator) of the epochs vector
     typename std::vector<epoch_td>::iterator m_epoch_iter;
 };
+
+#ifdef TIME_SERIES_ITERATOR_V2
+/// The time_series class, should be iterable, i.e. the user should be able to
+/// 'walk through' an instance, data-point by data-point. This class, enables
+/// this feature.
+/// It is an effort to make something like an std::vector<T>::(const)_)iterator.
+/// The data-points flags do not play any role in the iteration, i.e. when we
+/// iterate we walk through all data-points regardless of their flags.
+/// The template parameters (T and F), should be the same as for the actual
+/// timeseries we want to iterate.
+/// The internals of this class are pretty simple; it just holds a (reference
+/// to) time_series instance and one index (for both the poch and the data
+/// points vector)
+///
+/// @todo     This needs to be tested.
+///
+/// @tparam T The time precision; this can be any class (of ggdatetime), for
+///           which is_of_sec_type is true. This means that T could be e.g.
+///           ngpt::seconds, ngpt::milliseconds, etc. The individual epochs
+///           (time points) of the time-series, will have a time-stamp of type
+///           ngpt::datetime<T>.
+/// @param F  An enumeration class to act as flag; each data point of the
+///           time-series will have a flag of type ngpt::flag<F> (see class
+///           data_point for details).
+template<class T, class F>
+    class timeseries_iterator
+{
+public:
+
+    /// The specific datetime<T> class we will be using.
+    using epoch_td    = ngpt::datetime<T>;
+    using interval_td = ngpt::datetime_interval<T>;
+    using tflag       = ngpt::flag<F>;
+    using entry       = ngpt::data_point<F>;
+    using record      = std::tuple<epoch_td&, entry&>;
+
+    /// Constructor given a time-series instance.
+    explicit
+    timeseries_iterator(timeseries<T, F, typename std::enable_if_t<T::is_of_sec_type>>& ts)
+    : m_timeseries{ts},
+      m_idx{0}
+    { assert( ts.epoch_ptr() && ts.data_pts() == ts.epochs() ); }
+
+    /// Copy constructor
+    timeseries_iterator(const timeseries_iterator& it) noexcept
+    : m_timeseries{it.m_timeseries},
+      m_idx{it.idx}
+    {}
+
+    /// Move constructor
+    timeseries_iterator(timeseries_iterator&& it) noexcept
+    : m_timeseries{it.m_timeseries},
+      m_idx{it.m_idx}
+    {}
+
+    /// Assignment operator
+    timeseries_iterator&
+    operator=(const timeseries_iterator& it) noexcept
+    {
+        if (*this != it) {
+            m_timeseries = it.m_timeseries;
+            m_idx        = it.m_idx;
+        }
+        return *this;
+    }
+    
+    /// Move assignment operator
+    timeseries_iterator&
+    operator=(timeseries_iterator&& it) noexcept
+    {
+        if (*this != it) {
+            m_timeseries = std::move(it.m_timeseries);
+            m_idx        = std::move(it.m_idx);
+        }
+        return *this;
+    }
+
+    /// Set the iterator to the beggining of the time-series
+    void
+    begin() noexcept
+    { m_idx = 0; }
+
+    /// Set the iterator to one-past-the-end of the time-series
+    void
+    end() noexcept
+    { m_idx = m_timeseries.data_pts(); }
+
+    /// Move the iterator to the next data_point/epoch.
+    void
+    advance() noexcept { ++idx; }
+
+    /// Return the index of the iterator (i.e. the number of the current
+    /// epoch/data-point)
+    std::size_t
+    index() noexcept { return m_idx; }
+
+    /// Equality operator (i.e. both iterators point to the same element)
+    bool
+    operator==(const timeseries_iterator& it) const noexcept
+    { return m_idx == it.m_idx; }
+
+    /// InEquality operator (i.e. iterators do not point to the same element)
+    bool
+    operator!=(const timeseries_iterator& it) const noexcept
+    { return !((*this) == it); }
+
+    /// Bigger-than operator. Checks the order (i.e. indexes) of the two
+    /// iterators.
+    bool
+    operator>(const timeseries_iterator& it) const noexcept
+    { return m_idx > it.m_idx; }
+    
+    /// Bigger-or-equal-to operator. Checks the order (i.e. indexes) of the two
+    /// iterators.
+    bool
+    operator>=(const timeseries_iterator& it) const noexcept
+    { m_idx >= it.m_idx; }
+    
+    /// Less than operator. Checks the order (i.e. indexes) of the two
+    /// iterators.
+    bool
+    operator<(const timeseries_iterator& it) const noexcept
+    { m_idx < it.m_idx; }
+    
+    /// Less-or-equal-to operator. Checks the order (i.e. indexes) of the two
+    /// iterators.
+    bool
+    operator<=(const timeseries_iterator& it) const noexcept
+    { m_idx <= it.m_idx; }
+
+    /// Move the iterator n places (indexes) forward.
+    timeseries_iterator /* pointer arithmetic */
+    operator+(int n) const noexcept
+    {
+        timeseries_iterator ti {*this};
+        ti.m_idx += n;
+        return ti;
+    }
+    /// Move the iterator n places (indexes) backwards.
+    timeseries_iterator /* pointer arithmetic */
+    operator-(int n) const noexcept
+    {
+        timeseries_iterator ti {*this};
+        ti.m_idx -= n;
+        return ti;
+    }
+
+    // Prefix operator (addition).
+    timeseries_iterator&
+    operator++()
+    { 
+        ++m_idx;
+        return *this;
+    }
+    
+    // Prefix operator (subtraction)
+    timeseries_iterator& operator--()
+    {
+        --m_idx;
+        return *this;
+    }
+
+    // Postfix operator (addition)
+    timeseries_iterator
+    operator++(int)
+    {
+        auto tmp {*this};
+        this->operator++();
+        return tmp;
+    }
+
+    /// Return the distance (i.e. index difference) between two iterators.
+    /// Obviously, they must belong to the same time-series.
+    int
+    distance_from(const timeseries_iterator& it) const
+    {
+        assert( &m_timeseries == &it.m_timeseries );
+        return m_idx - it.m_idx;
+    }
+
+    /// Return the time-delta between two iterators.
+    interval_td
+    delta_time(const timeseries_iterator& it) const
+    {
+        assert( &m_timeseries == &(it.m_timeseries) );
+        auto t1 { m_timeseries.epoch_ptr[m_idx] };
+        auto t2 { m_timeseries.epoch_ptr[it.m_idx] };
+        return t1.delta_date( t2 );
+    }
+
+    /// Return the epoch the iterator instance is currently at.
+    epoch_td&
+    epoch() noexcept { return  m_timeseries.epoch_ptr[m_idx]; }
+
+    /// Return the entry the iterator instance is currently at.
+    entry&
+    data() noexcept { return m_timeseries[m_idx]; }
+    
+    /// Mark the data point this instance is currently at.
+    void
+    mark(F f)
+    {
+        tflag previous = m_timeseries[idx].flag();
+        m_timeseries[idx].flag().set(f);
+        if ( !__skip__(previous) && __skip__(tflag{f}) ) {
+            m_timeseries.skipped_pts() = m_timeseries.skipped_pts() + 1;
+        }
+    }
+
+    /// Return (a reference to) the time_series instance this iterator points to.
+    timeseries<T, F>&
+    timeseries_ref() noexcept
+    { return m_timeseries; }
+
+private:
+    /// The (reference to) time_series instance this iterator points to.
+    timeseries<T, F>&                        m_timeseries;
+    long                                     m_idx;
+};
+#endif
 
 template<class T, class F>
     class timeseries_const_iterator
@@ -878,11 +1186,11 @@ public:
     : m_timeseries{it.m_timeseries},
       m_data_iter{it.m_data_iter},
       m_epoch_iter{it.m_epoch_iter}
-    {
-    }
+    {}
 
     //
-    timeseries_const_iterator& operator=(const timeseries_const_iterator& it) noexcept
+    timeseries_const_iterator&
+    operator=(const timeseries_const_iterator& it) noexcept
     {
         if (*this != it) {
             m_timeseries = it.m_timeseries;
@@ -892,7 +1200,8 @@ public:
         return *this;
     }
     
-    timeseries_const_iterator& operator=(timeseries_const_iterator&& it) noexcept
+    timeseries_const_iterator&
+    operator=(timeseries_const_iterator&& it) noexcept
     {
         if (*this != it) {
             m_timeseries = std::move(it.m_timeseries);
@@ -902,19 +1211,22 @@ public:
         return *this;
     }
 
-    void begin() noexcept
+    void
+    begin() noexcept
     {
         m_data_iter  = m_timeseries.citer_start();
         m_epoch_iter = m_timeseries.epoch_ptr()->cbegin();
     }
 
-    void end() noexcept
+    void
+    end() noexcept
     {
         m_data_iter  = m_timeseries.citer_stop();
         m_epoch_iter = m_timeseries.epoch_ptr()->cend();
     }
 
-    void advance() noexcept
+    void
+    advance() noexcept
     {
         ++m_data_iter;
         ++m_epoch_iter;
@@ -929,37 +1241,40 @@ public:
     bool
     operator==(const timeseries_const_iterator& it) const noexcept
     {
-        return ( m_data_iter == it.m_data_iter && m_epoch_iter == it.m_epoch_iter );
+        return ( m_data_iter  == it.m_data_iter
+              && m_epoch_iter == it.m_epoch_iter );
     }
 
     bool
     operator!=(const timeseries_const_iterator& it) const noexcept
-    {
-        return !((*this) == it);
-    }
+    { return !((*this) == it); }
 
     bool
     operator>(const timeseries_const_iterator& it) const noexcept
     {
-        return ( m_data_iter > it.m_data_iter && m_epoch_iter > it.m_epoch_iter );
+        return ( m_data_iter  > it.m_data_iter
+              && m_epoch_iter > it.m_epoch_iter );
     }
     
     bool
     operator>=(const timeseries_const_iterator& it) const noexcept
     {
-        return ( m_data_iter >= it.m_data_iter && m_epoch_iter >= it.m_epoch_iter );
+        return ( m_data_iter  >= it.m_data_iter
+              && m_epoch_iter >= it.m_epoch_iter );
     }
     
     bool
     operator<(const timeseries_const_iterator& it) const noexcept
     {
-        return ( m_data_iter < it.m_data_iter && m_epoch_iter < it.m_epoch_iter );
+        return ( m_data_iter < it.m_data_iter
+              && m_epoch_iter < it.m_epoch_iter );
     }
     
     bool
     operator<=(const timeseries_const_iterator& it) const noexcept
     {
-        return ( m_data_iter <= it.m_data_iter && m_epoch_iter <= it.m_epoch_iter );
+        return ( m_data_iter  <= it.m_data_iter
+              && m_epoch_iter <= it.m_epoch_iter );
     }
 
     timeseries_const_iterator /* pointer arithmetic */
@@ -981,7 +1296,8 @@ public:
     }
 
     // prefix
-    timeseries_const_iterator& operator++()
+    timeseries_const_iterator&
+    operator++()
     {
         ++m_data_iter;
         ++m_epoch_iter;
@@ -989,7 +1305,8 @@ public:
     }
     
     // prefix
-    timeseries_const_iterator& operator--()
+    timeseries_const_iterator&
+    operator--()
     {
         --m_data_iter;
         --m_epoch_iter;
@@ -997,7 +1314,8 @@ public:
     }
 
     // postfix
-    timeseries_const_iterator operator++(int)
+    timeseries_const_iterator
+    operator++(int)
     {
         auto tmp {*this};
         this->operator++();

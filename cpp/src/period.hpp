@@ -100,10 +100,6 @@ lomb_scargle_fast_workspace(std::size_t N, double ofac, double hifac)
 }
 
 template<class T, class F>
-    std::size_t
-    ts2array(const timeseries<T,F>& ts,
-
-template<class T, class F>
 void lomb_scargle_fast(const timeseries<T,F>& ts, double ofac, double hifac, 
     double wk1[], double wk2[], std::size_t nwk, std::size_t& nout, 
     std::size_t& jmax, double& prob)
