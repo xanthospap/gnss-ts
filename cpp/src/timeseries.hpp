@@ -19,7 +19,8 @@
 #include "ggdatetime/dtcalendar.hpp"
 
 // gtms headers
-#include "genflags.hpp"
+// #include "genflags.hpp"
+#include "tsflag.hpp"
 #include "model.hpp"
 
 namespace ngpt
@@ -123,6 +124,9 @@ private:
 /// @todo     - Should the time-series be always in correct time-order. Say more
 ///             about this ....
 ///           - is the mean values really valid, always ??
+///           - using access to data_points (& epochs) via the iterator class,
+///             can change the time-serie's mean value etc, without the instance
+///             knowing it (that affects mostly the mean value and m_skipped)
 ///
 /// @tparam T The time precision; this can be any class (of ggdatetime), for
 ///           which is_of_sec_type is true. This means that T could be e.g.
@@ -132,6 +136,9 @@ private:
 /// @param F  An enumeration class to act as flag; each data point of the
 ///           time-series will have a flag of type ngpt::flag<F> (see class
 ///           data_point for details).
+///
+/// @example  test_ts.cpp
+///
 template<class T,
          class F,
          typename = std::enable_if_t<T::is_of_sec_type>
@@ -662,6 +669,12 @@ public:
         return it;
     }
 
+#ifdef DEBUG
+    /// Write the time-series to an output stream. This is only very basic, it
+    /// needs work.
+    /// @todo 
+    ///       - make this function an '<<' operator.
+    ///       - this means that the flag has an << operator
     std::ostream&
     dump(std::ostream& os) const
     {
@@ -675,6 +688,8 @@ public:
         }
         return os;
     }
+#endif
+
 private:
     /// A pointer to a vector of datetime<T> instances.
     std::vector<epoch>* m_epochs;
@@ -700,7 +715,9 @@ private:
 /// one for the data_point vector (both are of type std::vector).
 ///
 /// @todo Do i really need the epoch iterator as a member ?? Maybe just use
-///       pointer arithmetic for this!
+///       pointer arithmetic for this! This indeed can be done (see the code
+///       below that is commented out), but shows no significant difference
+///       in efficiency (it is not faster!).
 ///
 /// @tparam T The time precision; this can be any class (of ggdatetime), for
 ///           which is_of_sec_type is true. This means that T could be e.g.
@@ -710,6 +727,9 @@ private:
 /// @param F  An enumeration class to act as flag; each data point of the
 ///           time-series will have a flag of type ngpt::flag<F> (see class
 ///           data_point for details).
+///
+/// @example  test_ts.cpp
+///
 template<class T, class F>
     class timeseries_iterator
 {
@@ -953,7 +973,7 @@ private:
 /// timeseries we want to iterate.
 /// The internals of this class are pretty simple; it just holds a (reference
 /// to) time_series instance and one index (for both the poch and the data
-/// points vector)
+/// points vector).
 ///
 /// @tparam T The time precision; this can be any class (of ggdatetime), for
 ///           which is_of_sec_type is true. This means that T could be e.g.
@@ -963,6 +983,8 @@ private:
 /// @param F  An enumeration class to act as flag; each data point of the
 ///           time-series will have a flag of type ngpt::flag<F> (see class
 ///           data_point for details).
+///
+/// @example  test_ts.cpp
 template<class T, class F>
     class timeseries_iterator
 {
@@ -1180,8 +1202,8 @@ private:
 /// Remember, this a **const** iterator; you can't use an instance of this
 /// class to alter the values of the timeseries (either the time or data_points).
 /// The internals of this class are pretty simple; it just holds a (reference
-/// to) time_series instance and one index (for both the poch and the data
-/// points vector)
+/// to) time_series instance and two iterators, one for the epoch vector and
+/// one for the data_point vector (both are of type std::vector).
 ///
 /// @tparam T The time precision; this can be any class (of ggdatetime), for
 ///           which is_of_sec_type is true. This means that T could be e.g.
@@ -1191,6 +1213,9 @@ private:
 /// @param F  An enumeration class to act as flag; each data point of the
 ///           time-series will have a flag of type ngpt::flag<F> (see class
 ///           data_point for details).
+///
+/// @example test_ts.cpp
+///
 template<class T, class F>
     class timeseries_const_iterator
 {
@@ -1408,7 +1433,7 @@ private:
 }; // class timeseries_const_iterator
 
 
-// TODO
+// @todo This class needs seriously more work (!!)
 // when loping i must use hit_the_end() else it wont work!
 // wtf?
 template<class T, class F>
@@ -1711,6 +1736,7 @@ private:
                                m_iterator_end,
                                m_END;
 };
+
 
 template<class T, class F>
     void

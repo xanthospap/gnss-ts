@@ -22,6 +22,7 @@ libgtms_la_CXXFLAGS = \
 dist_include_HEADERS = \
         cfft.hpp \
 	genflags.hpp \
+	tsflag.hpp \
 	timeseries.hpp \
 	period.hpp \
 	cts_read.hpp \
@@ -32,4 +33,5 @@ dist_include_HEADERS = \
 	artificial.hpp
 
 dist_libgtms_la_SOURCES = \
+	tsflag.cpp \
         cfft.cpp

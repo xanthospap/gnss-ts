@@ -15,22 +15,33 @@
 namespace ngpt
 {
 
-/// A class to represent a "jump" (i.e. offset) of a time-series.
+/// A class to represent a "jump" (i.e. offset) of a time-series. A 'jump' is
+/// determined by the value of the offset and the epoch (time tag) at which it
+/// occured.
 template<class T,
         typename = std::enable_if_t<T::is_of_sec_type>
         >
     class md_jump
 {
 public:
+    /// Constructor.
+    /// @param[in] start  The epoch the jump happened
+    /// @param[in] offset The value of the offset (default is 0)
     explicit
-    md_jump(ngpt::datetime<T> start, double offset_in_meters=0) noexcept
+    md_jump(ngpt::datetime<T> start, double offset=0e0) noexcept
     : m_start{start},
-      m_offset{offset_in_meters}
+      m_offset{offset}
     {};
+
+    /// Get the epoch the jump happened at (const).
     datetime<T>
     start() const noexcept { return m_start; }
+
+    /// Get the value of the offset (const).
     double
     value() const noexcept { return m_offset; }
+    
+    /// Get the value of the offset (non-const).
     double&
     value() noexcept { return m_offset; }
 
@@ -42,47 +53,72 @@ private:
 
 /// A class to represent a harmonic signal in a time-series. The harmonic
 /// signal is described by in and out-of-phase amplitudes, a period/frequency,
-/// and the starting and ending times.
+/// and the starting and ending times (i.e. its validity interval).
 template<class T,
         typename = std::enable_if_t<T::is_of_sec_type>
         >
     class md_harmonics
 {
 public:
+    /// Constructor.
+    /// @param[in] period    The period of the harmonic
+    /// @param[in] start     Start of the validity interval (default value
+    ///                      datetime<T>::min())
+    /// @param[in] stop      End of the validity interval (default value
+    ///                      datetime<T>::max())
+    /// @param[in] in_phase  Amplitude of the in-phase component.
+    /// @param[in] out_phase Amplitude of the out-of-phase component.
+    //
     explicit
-    md_harmonics(double period_in_days, ngpt::datetime<T> start = ngpt::datetime<T>::min(),
-            ngpt::datetime<T> stop = ngpt::datetime<T>::max(), double in_phase_val=0,
-            double out_phase_val=0)
-    noexcept
+    md_harmonics(double period,
+        ngpt::datetime<T> start=ngpt::datetime<T>::min(),
+        ngpt::datetime<T> stop = ngpt::datetime<T>::max(),
+        double in_phase=0e0, double out_phase=0e0) noexcept
     : m_start{start},
       m_stop{stop},
-      m_afreq{D2PI/period_in_days},
-      m_in_phase{in_phase_val},
-      m_out_phase{out_phase_val}
+      m_afreq{D2PI/period},
+      m_in_phase{in_phase},
+      m_out_phase{out_phase}
     {};
+
+    /// Get the starting epoch (of the validity interval).
     ngpt::datetime<T>
     start() const noexcept { return m_start; }
+
+    /// Get the ending epoch (of the validity interval).
     ngpt::datetime<T>
     stop() const noexcept { return m_stop; }
+
+    /// Get the angular frequency
     double
     angular_frequency() const noexcept { return m_afreq; }
+
+    /// Get the period (i.e. 2*pi/angular_frequency).
     double
     period() const noexcept { return D2PI/m_afreq;}
+
+    /// Get the in-phase component amplitude (const version).
     double
     in_phase() const noexcept { return m_in_phase; }
+    
+    /// Get the out-of-phase component amplitude (const version).
     double
     out_of_phase() const noexcept { return m_out_phase; }
+    
+    /// Get the in-phase component amplitude (non-const version).
     double&
     in_phase() noexcept { return m_in_phase; }
+    
+    /// Get the out-of-phase component amplitude (non-const version).
     double&
     out_of_phase() noexcept { return m_out_phase; }
 
 private:
-    ngpt::datetime<T> m_start,
-                      m_stop;
-    double            m_afreq;        // angular frequency (i.e. omegas: 2 * pi * frequency)
-    double            m_in_phase,     // meters
-                      m_out_phase;    // meters
+    ngpt::datetime<T> m_start,      ///< Starting epoch of the harmonic
+                      m_stop;       ///< Ending epoch of the harmonic
+    double            m_afreqr,     ///< Angular frequency (i.e. omega: 2 * pi * frequency)
+                      m_in_phase,   ///< In-Phase component (amplitude)
+                      m_out_phase;  ///< Out-Of-Phase component (amplitude)
 
 }; // harmonic_coef
 
@@ -93,9 +129,9 @@ template<class T,
 {
 public:
     explicit
-    md_velocity_change(ngpt::datetime<T> start, ngpt::datetime<T> stop = ngpt::datetime<T>::max(),
-        double new_vel=0)
-    noexcept
+    md_velocity_change(ngpt::datetime<T> start,
+        ngpt::datetime<T> stop = ngpt::datetime<T>::max(),
+        double new_vel=0e0) noexcept
     : m_start{start},
       m_stop{stop},
       m_newvel{new_vel}
@@ -114,7 +150,8 @@ public:
     value() noexcept { return m_newvel; }
 private:
 
-    ngpt::datetime<T> m_start, m_stop;
+    ngpt::datetime<T> m_start,
+                      m_stop;
     double            m_newvel;       // meters/year
 
 }; // velocity_change

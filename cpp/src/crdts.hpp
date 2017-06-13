@@ -30,7 +30,8 @@
 #endif
 
 // gtms headers
-#include "genflags.hpp"
+// #include "genflags.hpp"
+#include "tsflag.hpp"
 #include "timeseries.hpp"
 #include "earthquake_cat.hpp"
 #include "event_list.hpp"
