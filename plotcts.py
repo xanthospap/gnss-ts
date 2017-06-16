@@ -15,7 +15,7 @@ except:
     sys.exit(1)
 
 ## read from dso cts format
-cts = gts.readers.read_ntua_cts(sys.argv[1])
+cts = gts.readers.read_cts(sys.argv[1])
 
 ## trasnform to topocentric
 cts = cts.transform(ts.CoordinateType.Topocentric)

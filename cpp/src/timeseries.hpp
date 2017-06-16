@@ -162,30 +162,45 @@ public:
     /// <epoch, data_point>.
     using record = std::tuple<epoch&, entry&>;
 
-    /*
+    /// Assign the (non-skipped) time-series data_points and epochs to c-style
+    /// double arrays. The input arrays, must be large enough to hold the data
+    /// (they must have size >= data_pts() - skipped_pts()).
+    /// The function also computes and assigns the time-series's data mean and
+    /// variance.
+    /// The average and variance are computed as:
+    /// \f$\widetilde{x}_{n+1}=\frac{x_{n+1}+n*\widetilde{x_n}}{n+1} = \widetilde{x_n}+\frac{x_{n+1}-\widetilde{x_n}}{n+1}\f$
+    /// \f$S_{n}=S_{n-1}+\frac{x_{n}-\widetilde{x}_{n-1}}{x_{n}-\widetilde{x_n}}\f$
+    /// If we use weights, then the equations become:
+    /// \f$\widetilde{x}_{n}=\widetilde{x}_{n-1}+\frac{w_n}{W_n}*(x_{n}-\widetilde{x}_{n-1})\f$
+    /// \f$S_{n}=S_{n-1}+w_{n}(x_{n}-\widetilde{x}_{n-1})(x_{n}-\widetilde{x_n})\f$
+    /// where \f$W_n=\sum_{i=1}^{n} w_i\f$
     std::size_t
-    ts2array(F* epoch_arr, F* val_arr, F& ave, F& var) const
+    ts2array(double* epoch_arr, double* val_arr, double& ave, double& var)
+    const
     {   
         std::size_t N {this->data_pts() - this->skipped_pts()};
-        F prev_ave{0};
-        auto ts_start {this->cbegin()},
-             ts_stop  {this->cend()};
+        double prev_ave {0e0};
+        auto   ts_start {this->cbegin()},
+               ts_stop  {this->cend()};
         std::size_t index {0};
+        double x,y;
 
+        ave = var = 0e0;
         for (auto it = ts_start; it != ts_stop; ++it) {
             if ( !it.data().skip() ) {
-                epoch_arr[index] = it.epoch().as_mjd();
-                val_arr[index]   = it.data().value();
-                prev_ave = ave;
-                ave += (val_arr[index]-ave)/(index+1e0);
-                var += (val_arr[index]-prev_ave)*(val_arr[index]-ave);
+                x = it.epoch().as_mjd();
+                y = it.data().value();
+                epoch_arr[index] = x;
+                val_arr[index]   = y;
+                prev_ave         = ave;
+                ave += ((y-ave)/(index+1e0));
+                var += ((y-prev_ave)*(y-ave));
                 ++index;
             }
         }
-        var /= (N-1e0);
+
         return N;
     }
-    */
     
     /// Constructor. If a vector of epochs is passed in, then we know we have
     /// our epochs. In this case, reserve space (memory) for the data points.
@@ -482,11 +497,35 @@ public:
     }
 
     /// Given a model, ...., he... well solve for it!
-    /// @todo document a little, just a bit, better. 
+    /// @todo document a little, just a bit, better.
+    /// @param[in] model           An instance of type md_model; the parameter
+    ///                            estimation process, is based on this model.
+    /// @param[out] post_std_dev   A-posteriori std. deviation.
+    /// @param[in] sigma0          A-priori std. deviation.
+    /// @param[in] set_model_epoch A boolean variable, to denote:
+    ///                            set_model_epoch | Action
+    ///                            ----------------|--------------------------
+    ///                             true           | To estimate the paramters,
+    ///                                            | the timeserie's mean epoch
+    ///                                            | is used; this value is also
+    ///                                            | assigned to the model's
+    ///                                            | mean_epoch member variable.
+    ///                             ---------------|---------------------------
+    ///                              false         | To estimate the paramters,
+    ///                                            | the model's mean_epoch
+    ///                                            | is used (as central epoch
+    ///                                            | for the computations).
+    ///
+    /// @note
+    ///        - Number of model parametrs must be positive (>0)
+    ///        - Number of observations must be larger than number of
+    ///          parameters
+    ///        - Only non-skiiped data points are considered (i.e. all
+    ///          data-points for which the skip() function returns false value.
     auto
     qr_ls_solve(
         ngpt::ts_model<T>&    model,
-        double&               a_posteriori_std_dev,
+        double&               post_std_dev,
         double sigma0         = 1e-03,
         bool   set_model_epoch= false /* set or not the mean epoch for the (input) model */
     )
@@ -539,15 +578,8 @@ public:
 
         // Solve via QR
         x = A.colPivHouseholderQr().solve(b);
-        /*
-        auto sm1 = A.colPivHouseholderQr();
-        x        = sm1.solve(b);
-        auto R   = sm1.matrixQR().triangularView<Eigen::Upper>();
-        auto S   = R.transpose();
-        std::cout<<"\nCoef: "<<R(1,1);
-        */
 
-        // residual vector u = A*x - b; note that the reisdual vector may not
+        // residual vector u = A*x - b; note that the residual vector may not
         // have the same size as the (original) time-series. Instead, it has
         // a size of: original_ts.size() - original_ts.skipped_pts().
         //
@@ -564,27 +596,27 @@ public:
         model.dump(std::cout);
 
         // Cast residuals to time-series and compute a-posteriori std. dev
-        // The resulting residual ts will have the same size as the originak ts,
+        // The resulting residual ts will have the same size as the original ts,
         // where data points marked as 'skipped' will have their original value.
-        a_posteriori_std_dev = 0;
+        post_std_dev = 0;
         timeseries<T, F> res {*this};
         res.epoch_ptr() = this->epoch_ptr();
         idx = counter = 0;
         double residual;
         for (std::size_t i = 0; i < epochs(); i++) {
             if ( !m_data[i].skip() ) {
-                residual = u(idx)/(sigma0/m_data[i].sigma());
+                residual = u(idx)/(sigma0/m_data[i].sigma()); /* is this correct, or should it be u(idx)/(sigma0^2/m_data[i].sigma()^2) */
                 data_point<F> dp { residual, m_data[i].sigma(),  m_data[i].flag() };
-                a_posteriori_std_dev += residual*residual;
+                post_std_dev += residual*residual;
                 res[i] = dp;
                 ++idx;
             } else {
                 res[i] = m_data[i];
             }
         }
-        a_posteriori_std_dev = std::sqrt(a_posteriori_std_dev)
+        post_std_dev = std::sqrt(post_std_dev)
             /(double)(idx-parameters);
-        std::cout<<"\nA-posteriori std. deviation: " << a_posteriori_std_dev << "(m).";
+        std::cout<<"\nA-posteriori std. deviation: " << post_std_dev << "(m).";
 
         // apply outlier detection algorithm and mark them
         datetime_interval<T> window {modified_julian_day{90}, T{0}};

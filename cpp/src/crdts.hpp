@@ -514,19 +514,14 @@ public:
     {
         datetime_interval<T> dt {ngpt::modified_julian_day{1}, T{0}};
         
-        std::vector<std::pair<datetime<T>, double>> v1, v2, v3;
-        std::size_t size_hint = last_epoch().as_mjd() - first_epoch().as_mjd();
-        v1.reserve(size_hint);
-        v2.reserve(size_hint);
-        v3.reserve(size_hint);
+        std::vector<datetime<T>> tvec;
+        auto v1 = modelx.make_model(first_epoch(), last_epoch(), dt, &tvec);
+        auto v2 = modely.make_model(tvec);
+        auto v3 = modelz.make_model(tvec);
 
-        modelx.make_model(first_epoch(), last_epoch(), dt, v1);
-        modely.make_model(first_epoch(), last_epoch(), dt, v2);
-        modelz.make_model(first_epoch(), last_epoch(), dt, v3);
-
-        for (std::size_t i = 0; i < v1.size(); ++i) {
-            os << "\n" << v1[i].first.as_mjd() << " " << v1[i].second << " "
-                << v2[i].second << " " << v3[i].second;
+        for (std::size_t i = 0; i < tvec.size(); ++i) {
+            os << "\n" << tvec[i].as_mjd() << " " << v1[i] << " "
+                << v2[i] << " " << v3[i];
         }
         return os;
     }
