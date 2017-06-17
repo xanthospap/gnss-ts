@@ -17,7 +17,8 @@ libgtms_la_CXXFLAGS = \
 	-Winline \
 	-Wdisabled-optimization \
 	-march=native \
-	-DDEBUG
+	-DDEBUG \
+        -DMY_FOO
 
 dist_include_HEADERS = \
         cfft.hpp \

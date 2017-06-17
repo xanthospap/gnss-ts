@@ -198,6 +198,7 @@ public:
                 ++index;
             }
         }
+        var = std::sqrt(var/N);
 
         return N;
     }

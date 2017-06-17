@@ -144,31 +144,12 @@ void lomb_scargle_fast(const timeseries<T,F>& ts, double ofac, double hifac,
     ts_epochs = MEM;
     ts_vals   = MEM+N;
 
-    /*
-    auto ts_start = ts.cbegin(),
-         ts_stop  = ts.cend();
-    */
     std::size_t index = 0;
-
     /// get mean and variance of the input data; also copy the ts data to
     /// the arrays ts_epochs & ts_vals (i.e. x and y data points). Only valid
     /// data points are considered.
-    index = ts.ts2array(ts_epochs, ts_vals, ave, var);
-    /*
     ave = var = 0;
-    double prev_ave {0};
-    for (auto it = ts_start; it != ts_stop; ++it) {
-        if ( !it.data().skip() ) {
-            ts_epochs[index] = it.epoch().as_mjd();
-            ts_vals[index]   = it.data().value();
-            prev_ave = ave;
-            ave += (ts_vals[index]-ave)/(index+1);
-            var += (ts_vals[index]-prev_ave)*(ts_vals[index]-ave);
-            ++index;
-        }
-    }
-    var /= (N-1);
-    */
+    index = ts.ts2array(ts_epochs, ts_vals, ave, var);
 #ifdef DEBUG
     assert( index == N );
 #endif
@@ -281,31 +262,12 @@ template<class T, class F>
     ts_epochs = MEM+4*N;
     ts_vals   = MEM+5*N;
 
-    /*
-    auto ts_start = ts.cbegin(),
-         ts_stop  = ts.cend();
-    */
     std::size_t index = 0;
-
     /// get mean and variance of the input data; also copy the ts data to
     /// the arrays ts_epochs & ts_vals (i.e. x and y data points). Only valid
     /// data points are considered.
     ave = var = 0;
     index = ts.ts2array(ts_epochs, ts_vals, ave, var);
-    /*
-    double prev_ave {0};
-    for (auto it = ts_start; it != ts_stop; ++it) {
-        if ( !it.data().skip() ) {
-            ts_epochs[index] = it.epoch().as_mjd();
-            ts_vals[index]   = it.data().value();
-            prev_ave = ave;
-            ave += (ts_vals[index]-ave)/(index+1);
-            var += (ts_vals[index]-prev_ave)*(ts_vals[index]-ave);
-            ++index;
-        }
-    }
-    var /= (N-1);
-    */
 #ifdef DEBUG
     assert( index == N );
 #endif
@@ -430,26 +392,12 @@ template<class T, class F>
     ts_epochs = MEM+4*N;
     ts_vals   = MEM+5*N;
 
-    auto ts_start = ts.cbegin(),
-         ts_stop  = ts.cend();
     std::size_t index = 0;
-
     /// get mean and variance of the input data; also copy the ts data to
     /// the arrays ts_epochs & ts_vals (i.e. x and y data points). Only valid
     /// data points are considered.
-    ave = var = 0e0;
-    double prev_ave {0e0};
-    for (auto it = ts_start; it != ts_stop; ++it) {
-        if ( !it.data().skip() ) {
-            ts_epochs[index] = it.epoch().as_mjd();
-            ts_vals[index]   = it.data().value();
-            prev_ave         = ave;
-            ave             += (ts_vals[index]-ave)/(index+1);
-            var             += (ts_vals[index]-prev_ave)*(ts_vals[index]-ave);
-            ++index;
-        }
-    }
-    var = var/(N-1);
+    ave = var = 0;
+    index = ts.ts2array(ts_epochs, ts_vals, ave, var);
 #ifdef DEBUG
     assert( index == N );
 #endif
