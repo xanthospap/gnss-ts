@@ -17,7 +17,7 @@ main(/*int argc, char* argv[]*/)
         { modified_julian_day{55562}, milliseconds{0} };    // 01-01-2011
     datetime_interval<milliseconds> step
         { modified_julian_day{1}, milliseconds{0} };        // 1-day step size
-    long mean_mjd = (stop.as_mjd()-start.as_mjd()/2) + start.as_mjd();
+    long mean_mjd = ((stop.as_mjd()-start.as_mjd())/2) + start.as_mjd();
     datetime<milliseconds> mean
         { modified_julian_day{mean_mjd}, milliseconds{0} }; // mean date
 
@@ -30,7 +30,7 @@ main(/*int argc, char* argv[]*/)
     ngpt::ts_model<milliseconds> ref_model;
     ref_model.mean_epoch() = mean;
     ref_model.x0()         = 0e0;  // constant coef.
-    ref_model.vx()         = 0e0;  // velocity
+    ref_model.vx()         = 5e-3;  // velocity
     // add a jump at 1/1/2009
     // datetime<milliseconds> event {modified_julian_day{54832}, milliseconds{0}};
     // ref_model.add_jump(event, 1.235); // add a jump
@@ -40,14 +40,15 @@ main(/*int argc, char* argv[]*/)
     // add an earthquake
     datetime<milliseconds> event
         {modified_julian_day{55058}, milliseconds{0}};  // 15-08-2009
-    ref_model.add_earthquake(event, 0.056, 0.5);
+    ref_model.add_earthquake(event, -49.21e0/1e3, 1.9498e0, -39.81e0/1e3, 0.2373e0);
     std::cout<<"\nReference Model";
-    std::cout<<"\n------------------------------------------------------------";
+    std::cout<<"\n------------------------------------------------------------\n";
+    ref_model.dump(std::cout);
 
     //  make a synthetic time-series based on the epochs and ref_model we already
     //+ constructed
     /* timeseries<milliseconds,pt_marker> */
-    auto ts = synthetic_ts<milliseconds,pt_marker>(epochs, ref_model, 0, 0.05);
+    auto ts = synthetic_ts<milliseconds,pt_marker>(epochs, ref_model, 0, 1e-3);
     // --just to see that this is working --
     /*auto*/timeseries<milliseconds,pt_marker> ts2 {ts,100,150};
     assert( ts2[0]  == ts[100] );
@@ -55,14 +56,21 @@ main(/*int argc, char* argv[]*/)
 
     // let's dare an estimate
     ngpt::ts_model<milliseconds> estim_mdl;
+    estim_mdl.mean_epoch() = ref_model.mean_epoch();
     estim_mdl.add_period(365.25/52);
     estim_mdl.add_period(365.25/12);
+    //  instead of adding an earthquake, lets add a jump (at the time of the
+    //+ earthquake)
     estim_mdl.add_earthquake(event);
+    // estim_mdl.add_jump(event);
     double post_std_dev;
+    std::cout<<"\nInput Model (for estimation):";
+    std::cout<<"\n------------------------------------------------------------\n";
+    estim_mdl.dump(std::cout);
     for (int i=0; i<1; i++) {
         ts.qr_ls_solve(estim_mdl, post_std_dev);
         std::cout<<"\nEstimated Model";
-        std::cout<<"\n------------------------------------------------------------";
+        std::cout<<"\n------------------------------------------------------------\n";
         estim_mdl.dump(std::cout);
     }
 

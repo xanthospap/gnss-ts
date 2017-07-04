@@ -62,8 +62,8 @@ template<class T,
 {
 public:
     explicit
-    md_earthquake(ngpt::datetime<T> t, double a1=0e0, double t1=1e0,
-        double a2=0e0, double t2=1e0)
+    md_earthquake(ngpt::datetime<T> t, double a1=0e0, double t1=1e-1,
+        double a2=0e0, double t2=1e-1)
     noexcept
     : m_start{t},
       m_alog{a1},
@@ -254,7 +254,7 @@ template<class T>
 public:
 
     /// Constructor; this default to a linear model.
-    ts_model() noexcept {};
+    ts_model() noexcept : m_x0{0e0}, m_vx{0e0} {};
 
     /// A model is non-linear if it must estimate PSD/earthquakes.
     bool
@@ -340,10 +340,13 @@ public:
             // Set up earthquake PSD corrections
             for (auto j = m_earthqs.cbegin(); j != m_earthqs.cend(); ++j) {
                 if ( t >= j->start() ) {
-                    double t1 = (dt/365.25)/j->tau_log();
-                    double t2 = (dt/365.25)/j->tau_exp();
+                    auto   dti = ngpt::delta_date(t, j->start());
+                    double dtj = dti.as_mjd()/365.25e0;
+                    double t1  = (dtj)/j->tau_log();
+                    double t2  = (dtj)/j->tau_exp();
                     value += j->mag_log() * std::log(1e0-t1);
                     value += j->mag_exp() * (1e0 + std::exp(-t2));
+                    // std::cout<<"\nDdays = "<<dtj*365.25e0<<", dyr="<<dtj<<", log="<<j->mag_log() * std::log(1e0-t1)<<", exp="<<j->mag_exp() * (1e0 + std::exp(-t2));
                 }
             }
 
@@ -724,7 +727,7 @@ public:
         for (auto j = m_harmonics.cbegin(); j != m_harmonics.cend(); ++j) {
             if ( t >= j->start()&& t < j->stop() ) {
                 // cosinus or phase
-                A(row, col) = std::cos(j->angular_frequency() * dt) * w;
+                A(row, col)   = std::cos(j->angular_frequency() * dt) * w;
                 // sinus or out-of-phase
                 A(row, col+1) = std::sin(j->angular_frequency() * dt) * w;
             } else {
@@ -763,17 +766,14 @@ public:
                 double dtj = dti.as_mjd();
                 double t1  = (dtj/365.25)/j->tau_log();
                 double t2  = (dtj/365.25)/j->tau_exp();
-                A(row, col) = w * std::log(1e0 + t1);
-                ++col;
-                A(row, col) = w * j->mag_log() * (-t1/j->tau_log()) / (1e0+t1);
-                ++col;
-                A(row, col) = w * (1e0 - std::exp(-t2));
-                ++col;
-                A(row, col) = w * j->mag_exp() * std::exp(-t2) * (-t2/j->tau_exp());
-                ++col;
+                A(row, col)   = w * std::log(1e0 + t1);
+                A(row, col+1) = w * j->mag_log() * (-t1/j->tau_log()) / (1e0+t1);
+                A(row, col+2) = w * (1e0 - std::exp(-t2));
+                A(row, col+3) = w * j->mag_exp() * std::exp(-t2) * (-t2/j->tau_exp());
             } else {
-                for (auto i = 0; i < 4; i++, col++) A(row, col) = 0e0;
+                for (auto i = 0; i < 4; i++) A(row, col) = 0e0;
             }
+            col += 4;
         }
 
         // Observation Matrix (vector b)
@@ -830,6 +830,8 @@ private:
     {
         assert( x_estim.size() >= 2 
                 && (int)x_estim.size() == (int)this->parameters() );
+        for (std::size_t i = 0; i < this->parameters(); i++)
+            std::cout<<"\n\tparam: "<<x_estim(i);
 
         std::size_t idx = 0;
         m_x0 += x_estim(idx); ++idx;
@@ -846,10 +848,10 @@ private:
         }
         for (auto j = m_earthqs.begin(); j != m_earthqs.end(); ++j) {
             j->mag_log() += x_estim(idx); ++idx;
-            std::cout<<"\n\ttau_log="<<j->tau_log()<<", x = "<<x_estim(idx);
+            // std::cout<<"\n\ttau_log="<<j->tau_log()<<", x = "<<x_estim(idx);
             j->tau_log() += x_estim(idx); ++idx;
             j->mag_exp() += x_estim(idx); ++idx;
-            std::cout<<"\n\ttau_exp="<<j->tau_exp()<<", x = "<<x_estim(idx);
+            // std::cout<<"\n\ttau_exp="<<j->tau_exp()<<", x = "<<x_estim(idx);
             j->tau_exp() += x_estim(idx); ++idx;
         }
         return;
