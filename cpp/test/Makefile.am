@@ -3,10 +3,11 @@ noinst_PROGRAMS = \
 		readcts \
 		readcat \
 		period \
-		lomb_scargle
+		lomb_scargle \
+                synthetic
 
 MCXXFLAGS = \
-	-std=c++14 \
+	-std=c++17 \
 	-g \
 	-pg \
 	-Wno-unused-variable \
@@ -44,3 +45,7 @@ readcat_SOURCES   = test_earthqcat.cpp
 readcat_CXXFLAGS  = $(MCXXFLAGS) -I$(top_srcdir)/src -L$(top_srcdir)/src
 readcat_LDADD     = $(top_srcdir)/src/libgtms.la
 #readcat_LDFLAGS   = -llibggeodesy.so -llibggdatetime.so
+
+synthetic_SOURCES   = test_synthetic.cpp
+synthetic_CXXFLAGS  = $(MCXXFLAGS) -I$(top_srcdir)/src -L$(top_srcdir)/src
+synthetic_LDADD     = $(top_srcdir)/src/libgtms.la

@@ -5,7 +5,7 @@ lib_LTLIBRARIES = libgtms.la
 ## --------------------------------------------------
 ##
 libgtms_la_CXXFLAGS = \
-	-std=c++14 \
+	-std=c++17 \
 	-g \
 	-pg \
 	-Wall \

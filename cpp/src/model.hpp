@@ -55,6 +55,53 @@ private:
 
 }; // md_jump
 
+template<class T,
+        typename = std::enable_if_t<T::is_of_sec_type>
+        >
+    class md_earthquake
+{
+public:
+    explicit
+    md_earthquake(ngpt::datetime<T> t, double a1=0e0, double t1=1e0,
+        double a2=0e0, double t2=1e0)
+    noexcept
+    : m_start{t},
+      m_alog{a1},
+      m_tlog{t1},
+      m_aexp{a2},
+      m_texp{t2}
+    {}
+
+    double&
+    mag_log() noexcept { return m_alog; }
+    double&
+    mag_exp() noexcept { return m_aexp; }
+    double&
+    tau_log() noexcept { return m_tlog; }
+    double&
+    tau_exp() noexcept { return m_texp; }
+    ngpt::datetime<T>&
+    start() noexcept { return m_start; }
+
+    double
+    mag_log() const noexcept { return m_alog; }
+    double
+    mag_exp() const noexcept { return m_aexp; }
+    double
+    tau_log() const noexcept { return m_tlog; }
+    double
+    tau_exp() const noexcept { return m_texp; }
+    ngpt::datetime<T>
+    start() const noexcept { return m_start; }
+
+private:
+    ngpt::datetime<T> m_start;
+    double m_alog,
+           m_tlog,
+           m_aexp,
+           m_texp;
+}; // md_earthquake
+
 /// A class to represent a harmonic signal (in a time-series). The harmonic
 /// signal is described by in and out-of-phase amplitudes, a period/frequency,
 /// and the starting and ending times (i.e. its validity interval).
@@ -208,6 +255,10 @@ public:
 
     /// Constructor; this default to a linear model.
     ts_model() noexcept {};
+
+    /// A model is non-linear if it must estimate PSD/earthquakes.
+    bool
+    is_linear() const noexcept { return !m_earthqs.size(); }
     
     /// Constructor using an event_list instance.
     /// @param[in] events An instance of type event_list; all events recorded
@@ -215,8 +266,7 @@ public:
     ///                   constructed model. This includes:
     ///                   - jumps
     ///                   - velocity changes
-    ///                   - earthquakes (translated to jumps)
-    /// @warning earthquake events are translated to jumps. 
+    ///                   - earthquakes
     explicit
     ts_model(const event_list<T>& events) noexcept
     : m_x0{0e0},
@@ -229,7 +279,7 @@ public:
             } else if ( it->second == ts_event::velocity_change ) {
                 m_vel_changes.emplace_back(it->first);
             } else if ( it->second == ts_event::earthquake ) {
-                m_jumps.emplace_back(it->first);
+                m_earthqs.emplace_back(it->first);
             }
         }
         ngpt::datetime<T> t0 {modified_julian_day{0}, T{0}};
@@ -286,6 +336,17 @@ public:
             for (auto j = m_vel_changes.cbegin(); j != m_vel_changes.cend(); ++j) {
                 if (t >= j->start() && t < j->stop()) value += j->value()*(dt/365.25);
             }
+            
+            // Set up earthquake PSD corrections
+            for (auto j = m_earthqs.cbegin(); j != m_earthqs.cend(); ++j) {
+                if ( t >= j->start() ) {
+                    double t1 = (dt/365.25)/j->tau_log();
+                    double t2 = (dt/365.25)/j->tau_exp();
+                    value += j->mag_log() * std::log(1e0-t1);
+                    value += j->mag_exp() * (1e0 + std::exp(-t2));
+                }
+            }
+
             vals.emplace_back(value);
         }
         return vals;
@@ -347,7 +408,7 @@ public:
     }
     
     /// Given an Eigen vector, this function will translate all values of the
-    /// vector to the corresponding model parameter. The size of the vector
+    /// vector to the corresponding model parameters. The size of the vector
     /// (i.e. num of rows) must match the number of parameters of the instance.
     /// This function is used e.g. in the following scenario:
     /// - construct a model instance (to fit to some time-series)
@@ -356,9 +417,16 @@ public:
     ///   function
     /// @param[in] x_estim An Eigen vector with the values of the model
     ///                    parameters
+    /// @note If the model is non-linear, then the estimates (from the input
+    ///       solution vector) are going to be added to the model parameters
+    ///       (not assigned).
     void
     assign_solution_vector(const Eigen::VectorXd& x_estim)
     {
+        if ( !this->is_linear() ) {
+            return this->add_solution_vector(x_estim);
+        }
+
         assert( x_estim.size() >= 2 
                 && (int)x_estim.size() == (int)this->parameters() );
 
@@ -374,6 +442,12 @@ public:
         }
         for (auto j = m_vel_changes.begin(); j != m_vel_changes.end(); ++j) {
             j->value() = x_estim(idx); ++idx;
+        }
+        for (auto j = m_earthqs.begin(); j != m_earthqs.end(); ++j) {
+            j->mag_log() = x_estim(idx); ++idx;
+            j->tau_log() = x_estim(idx); ++idx;
+            j->mag_exp() = x_estim(idx); ++idx;
+            j->tau_exp() = x_estim(idx); ++idx;
         }
         return;
     }
@@ -415,6 +489,13 @@ public:
             os << "\n\t" << j->value();
             os << " From: " << (j->start()==datetime<T>::min()?"start":strftime_ymd_hms<T>(j->start()) );
             os << " To: "  << (j->stop()==datetime<T>::max()?"end":strftime_ymd_hms<T>(j->stop()) );
+        }
+        
+        // write velocity changes (if any)
+        if ( m_earthqs.size() ) os << "\nPSD (Earthquake Post Deformation):";
+        for (auto j = m_earthqs.begin(); j != m_earthqs.end(); ++j) {
+            os << "\n\tLogarithmic Mag: "<<j->mag_log()<<", Tau: "<<j->tau_log();
+            os << "\n\tExponential Mag: "<<j->mag_exp()<<", Tau: "<<j->tau_exp();
         }
 
         // all done
@@ -577,15 +658,24 @@ public:
         m_vel_changes.emplace_back(start, stop, val);
     }
 
+    void
+    add_earthquake(datetime<T> start, double a1=0e0, double t1=1e0,
+        double a2=0e0, double t2=1e0)
+    noexcept
+    {
+        m_earthqs.emplace_back(start, a1, t1, a2, t2);
+    }
+
     /// Return the total number of parameters of this instance.
     /// (i.e. 2 for the linear term + 1 for each velocity change + 2 for each
-    /// harmonic + 1 for each jump)
+    /// harmonic + 1 for each jump + 4 for each PSD/earthquake)
     std::size_t
     parameters() const noexcept
     { return  2                        // 2 params for linear terms
             + m_jumps.size()           // 1 param per jump
             + m_vel_changes.size()     // 1 param per vel. change
-            + 2*m_harmonics.size();    // 2 params per harmonic
+            + 2*m_harmonics.size()     // 2 params per harmonic
+            + 4*m_earthqs.size();      // 4 params per PSD
     }
 
     /// This function is usefull for filling values in A and b matrices, for
@@ -657,11 +747,33 @@ public:
         // Set up velocity changes ...
         for (auto j = m_vel_changes.cbegin(); j != m_vel_changes.cend(); ++j) {
             if ( t >= j->start() && t < j->stop() ) {
-                A(row, col) = w * (dt/365.25);
+                auto   dti = ngpt::delta_date(t, j->start());
+                double dtj = dti.as_mjd();
+                A(row, col) = w * (dtj/365.25);
             } else {
                 A(row, col) = 0e0;
             }
             ++col;
+        }
+        
+        // Set up earthquake PSD corrections
+        for (auto j = m_earthqs.cbegin(); j != m_earthqs.cend(); ++j) {
+            if ( t >= j->start() ) {
+                auto   dti = ngpt::delta_date(t, j->start());
+                double dtj = dti.as_mjd();
+                double t1  = (dtj/365.25)/j->tau_log();
+                double t2  = (dtj/365.25)/j->tau_exp();
+                A(row, col) = w * std::log(1e0 + t1);
+                ++col;
+                A(row, col) = w * j->mag_log() * (-t1/j->tau_log()) / (1e0+t1);
+                ++col;
+                A(row, col) = w * (1e0 - std::exp(-t2));
+                ++col;
+                A(row, col) = w * j->mag_exp() * std::exp(-t2) * (-t2/j->tau_exp());
+                ++col;
+            } else {
+                for (auto i = 0; i < 4; i++, col++) A(row, col) = 0e0;
+            }
         }
 
         // Observation Matrix (vector b)
@@ -671,7 +783,7 @@ public:
         return;
     }
 
-    /// Get the mean epoch of the model (akak the central epoch of computation).
+    /// Get the mean epoch of the model (aka the central epoch of computation).
     /// Const version.
     datetime<T>
     mean_epoch() const noexcept
@@ -710,7 +822,38 @@ private:
     std::vector<md_jump<T>>            m_jumps;       ///< vector of jumps
     std::vector<md_harmonics<T>>       m_harmonics;   ///< vector of harmonics
     std::vector<md_velocity_change<T>> m_vel_changes; ///< vector of velocity changes
+    std::vector<md_earthquake<T>>      m_earthqs;     ///< vector of earthquakes
     datetime<T>                        m_mean_epoch;  ///< mean epoch (aka central computation epoch)
+    
+    void
+    add_solution_vector(const Eigen::VectorXd& x_estim)
+    {
+        assert( x_estim.size() >= 2 
+                && (int)x_estim.size() == (int)this->parameters() );
+
+        std::size_t idx = 0;
+        m_x0 += x_estim(idx); ++idx;
+        m_vx += x_estim(idx); ++idx;
+        for (auto j = m_harmonics.begin(); j != m_harmonics.end(); ++j) {
+            j->in_phase()     += x_estim(idx); ++idx;
+            j->out_of_phase() += x_estim(idx); ++idx;
+        }
+        for (auto j = m_jumps.begin(); j != m_jumps.end(); ++j) {
+            j->value() += x_estim(idx); ++idx;
+        }
+        for (auto j = m_vel_changes.begin(); j != m_vel_changes.end(); ++j) {
+            j->value() += x_estim(idx); ++idx;
+        }
+        for (auto j = m_earthqs.begin(); j != m_earthqs.end(); ++j) {
+            j->mag_log() += x_estim(idx); ++idx;
+            std::cout<<"\n\ttau_log="<<j->tau_log()<<", x = "<<x_estim(idx);
+            j->tau_log() += x_estim(idx); ++idx;
+            j->mag_exp() += x_estim(idx); ++idx;
+            std::cout<<"\n\ttau_exp="<<j->tau_exp()<<", x = "<<x_estim(idx);
+            j->tau_exp() += x_estim(idx); ++idx;
+        }
+        return;
+    }
 
 }; // end class ts_model
 

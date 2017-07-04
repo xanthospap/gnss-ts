@@ -593,8 +593,8 @@ public:
     
         // assign solution vector to the model.
         model.assign_solution_vector(x);
-        model.filter_parameters();
-        model.dump(std::cout);
+        // model.filter_parameters();
+        // model.dump(std::cout);
 
         // Cast residuals to time-series and compute a-posteriori std. dev
         // The resulting residual ts will have the same size as the original ts,
@@ -620,8 +620,8 @@ public:
         std::cout<<"\nA-posteriori std. deviation: " << post_std_dev << "(m).";
 
         // apply outlier detection algorithm and mark them
-        datetime_interval<T> window {modified_julian_day{90}, T{0}};
-        nikolaidis(res, *this, window);
+        // datetime_interval<T> window {modified_julian_day{90}, T{0}};
+        // nikolaidis(res, *this, window);
 
         return res;
     }
