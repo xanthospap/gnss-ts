@@ -35,11 +35,11 @@ main(/*int argc, char* argv[]*/)
     // datetime<milliseconds> event {modified_julian_day{54832}, milliseconds{0}};
     // ref_model.add_jump(event, 1.235); // add a jump
     // add harmonics
-    ref_model.add_period(365.25/52, -0.020, -0.0051); // harmonic every week
-    ref_model.add_period(365.25/12, -0.0060, -0.011); // harmonic every month
+    // ref_model.add_period(365.25/52, -0.020, -0.0051); // harmonic every week
+    // ref_model.add_period(365.25/12, -0.0060, -0.011); // harmonic every month
     // add an earthquake
     datetime<milliseconds> event
-        {modified_julian_day{55058}, milliseconds{0}};  // 15-08-2009
+        {modified_julian_day{54693}, milliseconds{0}};  // 15-08-2008
     ref_model.add_earthquake(event, -49.21e0/1e3, 1.9498e0, -39.81e0/1e3, 0.2373e0);
     std::cout<<"\nReference Model";
     std::cout<<"\n------------------------------------------------------------\n";
@@ -57,19 +57,18 @@ main(/*int argc, char* argv[]*/)
     // let's dare an estimate
     ngpt::ts_model<milliseconds> estim_mdl;
     estim_mdl.mean_epoch() = ref_model.mean_epoch();
-    estim_mdl.add_period(365.25/52);
-    estim_mdl.add_period(365.25/12);
+    // estim_mdl.add_period(365.25/52);
+    // estim_mdl.add_period(365.25/12);
     //  instead of adding an earthquake, lets add a jump (at the time of the
     //+ earthquake)
-    estim_mdl.add_earthquake(event);
+    // estim_mdl.add_earthquake(event, -0.05, 1.95, -0.04, 0.24);
+    estim_mdl.add_jump(event);
+    estim_mdl.add_velocity_change(event);
     // estim_mdl.add_jump(event);
     double post_std_dev;
-    std::cout<<"\nInput Model (for estimation):";
-    std::cout<<"\n------------------------------------------------------------\n";
-    estim_mdl.dump(std::cout);
-    for (int i=0; i<1; i++) {
+    for (int i = 0; i < 15; i++) {
         ts.qr_ls_solve(estim_mdl, post_std_dev);
-        std::cout<<"\nEstimated Model";
+        std::cout<<"\n\nEstimated Model, iteration: "<<i;
         std::cout<<"\n------------------------------------------------------------\n";
         estim_mdl.dump(std::cout);
     }

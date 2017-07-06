@@ -2,6 +2,10 @@
 #define __NGPT_TS_MODEL__
 
 #include <iostream>
+#ifdef DEBUG
+#include <cfenv>
+#include <cstdlib>
+#endif
 
 // Eigen headers
 #include "eigen3/Eigen/Core"
@@ -62,8 +66,8 @@ template<class T,
 {
 public:
     explicit
-    md_earthquake(ngpt::datetime<T> t, double a1=0e0, double t1=1e-1,
-        double a2=0e0, double t2=1e-1)
+    md_earthquake(ngpt::datetime<T> t, double a1=1e-3, double t1=1e-1,
+        double a2=1e-3, double t2=1e-1)
     noexcept
     : m_start{t},
       m_alog{a1},
@@ -334,7 +338,11 @@ public:
 
             // Set up velocity changes ...
             for (auto j = m_vel_changes.cbegin(); j != m_vel_changes.cend(); ++j) {
-                if (t >= j->start() && t < j->stop()) value += j->value()*(dt/365.25);
+                if (t >= j->start() && t < j->stop()) {
+                    auto   dti  = ngpt::delta_date(t, j->start());
+                    double dtj  = dti.as_mjd();
+                    value += j->value()*(dtj/365.25);
+                }
             }
             
             // Set up earthquake PSD corrections
@@ -344,9 +352,31 @@ public:
                     double dtj = dti.as_mjd()/365.25e0;
                     double t1  = (dtj)/j->tau_log();
                     double t2  = (dtj)/j->tau_exp();
-                    value += j->mag_log() * std::log(1e0-t1);
-                    value += j->mag_exp() * (1e0 + std::exp(-t2));
-                    // std::cout<<"\nDdays = "<<dtj*365.25e0<<", dyr="<<dtj<<", log="<<j->mag_log() * std::log(1e0-t1)<<", exp="<<j->mag_exp() * (1e0 + std::exp(-t2));
+                    value += j->mag_log() * std::log(1e0+t1);
+                    value += j->mag_exp() * (1e0-std::exp(-t2));
+#ifdef DEBUG
+                    if ( std::fetestexcept(FE_ALL_EXCEPT & ~FE_INEXACT) ) {
+                        std::cerr<<"\n\nFloating Point Exception at \"make_model()\"";
+                        std::cerr<<"\nHere are the variables:";
+                        std::cerr<<"\n\tdti.as_mjd()="<<dti.as_mjd();
+                        std::cerr<<"\n\ttau_log     ="<<j->tau_log();
+                        std::cerr<<"\n\ttau_exp     ="<<j->tau_exp();
+                        std::cerr<<"\n\tdtj         ="<<dtj;
+                        std::cerr<<"\n\tt1          ="<<t1;
+                        std::cerr<<"\n\tt2          ="<<t2;
+                        std::cerr<<"\n\tmag_log     ="<<j->mag_log();
+                        std::cerr<<"\n\tmag_exp     ="<<j->mag_exp();
+                        std::cerr<<"\n\tt.as_mjd()  ="<<t.as_mjd();
+                        std::cerr<<"\n\tindex       ="<<vals.size()+1;
+                        std::cerr<<"\nFP Exceptions Set:";
+                        std::cerr<<"\n\tFE_DIVBYZERO: "<<std::fetestexcept(FE_DIVBYZERO);
+                        std::cerr<<"\n\tFE_INEXACT  : "<<std::fetestexcept(FE_INEXACT);
+                        std::cerr<<"\n\tFE_INVALID  : "<<std::fetestexcept(FE_INVALID);
+                        std::cerr<<"\n\tFE_OVERFLOW : "<<std::fetestexcept(FE_OVERFLOW);
+                        std::cerr<<"\n\tFE_UNDERFLOW: "<<std::fetestexcept(FE_UNDERFLOW);
+                        std::exit(1);
+                    }
+#endif
                 }
             }
 
@@ -662,8 +692,8 @@ public:
     }
 
     void
-    add_earthquake(datetime<T> start, double a1=0e0, double t1=1e0,
-        double a2=0e0, double t2=1e0)
+    add_earthquake(datetime<T> start, double a1=1e-3, double t1=1e-1,
+        double a2=1e-3, double t2=1e-1)
     noexcept
     {
         m_earthqs.emplace_back(start, a1, t1, a2, t2);
@@ -715,21 +745,27 @@ public:
         const datetime<T>& t, double w, double dt, double y, std::size_t row)
     const
     {
-        std::size_t col = 0;
+        std::size_t col {0};
+        //  the observation model value based on approximate values; this is
+        //+ used in the non-linear case.
+        double l {0e0}; 
         
         // coef for constant (linear) velocity i.e. m/year
         A(row, col) = 1.0e0 * w;
         ++col;
         A(row, col) = w * (dt/365.25);
         ++col;
+        l += x0() + (dt/365.25)*vx();
         
         // Harmonic coefficients for each period ...
         for (auto j = m_harmonics.cbegin(); j != m_harmonics.cend(); ++j) {
             if ( t >= j->start()&& t < j->stop() ) {
                 // cosinus or phase
-                A(row, col)   = std::cos(j->angular_frequency() * dt) * w;
+                A(row, col)   = std::cos(j->angular_frequency()*dt) * w;
+                l += j->in_phase()*std::cos(j->angular_frequency()*dt);
                 // sinus or out-of-phase
-                A(row, col+1) = std::sin(j->angular_frequency() * dt) * w;
+                A(row, col+1) = std::sin(j->angular_frequency()*dt) * w;
+                l += j->out_of_phase()*std::sin(j->angular_frequency()*dt);
             } else {
                 A(row, col)   = 0e0;
                 A(row, col+1) = 0e0;
@@ -741,6 +777,7 @@ public:
         for (auto j = m_jumps.cbegin(); j != m_jumps.cend(); ++j) {
             if ( t >= j->start() ) {
                 A(row, col) = w;
+                l += j->value();
             } else {
                 A(row, col) = 0e0;
             }
@@ -750,9 +787,10 @@ public:
         // Set up velocity changes ...
         for (auto j = m_vel_changes.cbegin(); j != m_vel_changes.cend(); ++j) {
             if ( t >= j->start() && t < j->stop() ) {
-                auto   dti = ngpt::delta_date(t, j->start());
-                double dtj = dti.as_mjd();
+                auto   dti  = ngpt::delta_date(t, j->start());
+                double dtj  = dti.as_mjd();
                 A(row, col) = w * (dtj/365.25);
+                l += j->value()*(dtj/365.25);
             } else {
                 A(row, col) = 0e0;
             }
@@ -770,6 +808,34 @@ public:
                 A(row, col+1) = w * j->mag_log() * (-t1/j->tau_log()) / (1e0+t1);
                 A(row, col+2) = w * (1e0 - std::exp(-t2));
                 A(row, col+3) = w * j->mag_exp() * std::exp(-t2) * (-t2/j->tau_exp());
+                l += j->mag_log() * std::log(1e0+t1);
+                l += j->mag_exp() * (1e0-std::exp(-t2));
+#ifdef DEBUG
+                if ( std::fetestexcept(FE_ALL_EXCEPT & ~FE_INEXACT) ) {
+                    std::cerr<<"\n\nFloating Point Exception at \"assign_row()\"";
+                    std::cerr<<"\nHere are the variables:";
+                    std::cerr<<"\n\tdtj         ="<<dtj;
+                    std::cerr<<"\n\ttau_log     ="<<j->tau_log();
+                    std::cerr<<"\n\ttau_exp     ="<<j->tau_exp();
+                    std::cerr<<"\n\tdtj         ="<<dtj;
+                    std::cerr<<"\n\tt1          ="<<t1;
+                    std::cerr<<"\n\tt2          ="<<t2;
+                    std::cerr<<"\n\tmag_log     ="<<j->mag_log();
+                    std::cerr<<"\n\tmag_exp     ="<<j->mag_exp();
+                    std::cerr<<"\n\tt.as_mjd()  ="<<t.as_mjd();
+                    std::cerr<<"\n\tindex       ="<<row;
+                    std::cerr<<"\nCommon Errors:";
+                    std::cerr<<"\n\t(1+t1) < 0                       -> 1+t1 = "<<1e0+t1;
+                    std::cerr<<"\n\t-t2 not in range [-708.4, 709.8] -> -t2 = "<<-t2;
+                    std::cerr<<"\nFP Exceptions Set:";
+                    std::cerr<<"\n\tFE_DIVBYZERO: "<<std::fetestexcept(FE_DIVBYZERO);
+                    std::cerr<<"\n\tFE_INEXACT  : "<<std::fetestexcept(FE_INEXACT);
+                    std::cerr<<"\n\tFE_INVALID  : "<<std::fetestexcept(FE_INVALID);
+                    std::cerr<<"\n\tFE_OVERFLOW : "<<std::fetestexcept(FE_OVERFLOW);
+                    std::cerr<<"\n\tFE_UNDERFLOW: "<<std::fetestexcept(FE_UNDERFLOW);
+                    std::exit(1);
+                }
+#endif
             } else {
                 for (auto i = 0; i < 4; i++) A(row, col) = 0e0;
             }
@@ -777,7 +843,10 @@ public:
         }
 
         // Observation Matrix (vector b)
-        b(row) = y*w;
+        b(row) = y*w;                                   // linear case
+        if ( m_earthqs.size() ) {
+            b(row) = b(row) - l*w;  // non-linear case
+        }
 
         // All done
         return;
@@ -830,8 +899,6 @@ private:
     {
         assert( x_estim.size() >= 2 
                 && (int)x_estim.size() == (int)this->parameters() );
-        for (std::size_t i = 0; i < this->parameters(); i++)
-            std::cout<<"\n\tparam: "<<x_estim(i);
 
         std::size_t idx = 0;
         m_x0 += x_estim(idx); ++idx;
@@ -848,11 +915,16 @@ private:
         }
         for (auto j = m_earthqs.begin(); j != m_earthqs.end(); ++j) {
             j->mag_log() += x_estim(idx); ++idx;
-            // std::cout<<"\n\ttau_log="<<j->tau_log()<<", x = "<<x_estim(idx);
             j->tau_log() += x_estim(idx); ++idx;
             j->mag_exp() += x_estim(idx); ++idx;
-            // std::cout<<"\n\ttau_exp="<<j->tau_exp()<<", x = "<<x_estim(idx);
             j->tau_exp() += x_estim(idx); ++idx;
+#ifdef DEBUG
+            // TODO this is incorrect here but should be implemented somehow
+            if ( 10e0/j->tau_log() + 1e0 < 0 ) {
+                std::cout<<"\n[WARNING] Need to adjust tau_log estimate!";
+                while (10e0/j->tau_log() + 1e0 <= 0) j->tau_log()+=1e-5;
+            }
+#endif
         }
         return;
     }
