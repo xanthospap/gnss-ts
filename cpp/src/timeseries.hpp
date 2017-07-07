@@ -617,7 +617,7 @@ public:
         }
         post_std_dev = std::sqrt(post_std_dev)
             /(double)(idx-parameters);
-        std::cout<<"\nA-posteriori std. deviation: " << post_std_dev << "(m).";
+        // std::cout<<"\nA-posteriori std. deviation: " << post_std_dev << "(m).";
 
         // apply outlier detection algorithm and mark them
         // datetime_interval<T> window {modified_julian_day{90}, T{0}};

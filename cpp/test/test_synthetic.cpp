@@ -8,8 +8,26 @@
 using namespace ngpt;
 
 int
-main(/*int argc, char* argv[]*/)
+main(int argc, char* argv[])
 {
+    if ( argc < 2 ) {
+        std::cerr<<"\nError. Need to provide a file with earthquake coeffs.\n";
+        return 1;
+    }
+    // open the file and read PSD coeffs
+    std::ifstream fin (argv[1]);
+    if (!fin.is_open()) {
+        std::cerr<<"\nCould not open file \""+std::string(argv[1])+"\"";
+        return 1;
+    }
+    double a1_ref, t1_ref, a2_ref, t2_ref;
+    double a1_app, t1_app, a2_app, t2_app;
+    fin >> a1_ref>> t1_ref>> a2_ref>> t2_ref;
+    fin >> a1_app>> t1_app>> a2_app>> t2_app;
+    fin.close();
+
+    int ITERS = 7;
+
     // Do not touch from here ----
     datetime<milliseconds> start 
         { modified_julian_day{53005}, milliseconds{0} };    // 01-01-2004
@@ -40,7 +58,8 @@ main(/*int argc, char* argv[]*/)
     // add an earthquake
     datetime<milliseconds> event
         {modified_julian_day{54693}, milliseconds{0}};  // 15-08-2008
-    ref_model.add_earthquake(event, -49.21e0/1e3, 1.9498e0, -39.81e0/1e3, 0.2373e0);
+    // ref_model.add_earthquake(event, -49.21e0/1e3, 1.9498e0, -39.81e0/1e3, 0.2373e0);
+    ref_model.add_earthquake(event, a1_ref, t1_ref, a2_ref, t2_ref);
     std::cout<<"\nReference Model";
     std::cout<<"\n------------------------------------------------------------\n";
     ref_model.dump(std::cout);
@@ -61,12 +80,12 @@ main(/*int argc, char* argv[]*/)
     // estim_mdl.add_period(365.25/12);
     //  instead of adding an earthquake, lets add a jump (at the time of the
     //+ earthquake)
-    // estim_mdl.add_earthquake(event, -0.05, 1.95, -0.04, 0.24);
-    estim_mdl.add_jump(event);
-    estim_mdl.add_velocity_change(event);
+    estim_mdl.add_earthquake(event, a1_app, t1_app, a2_app, t2_app);
+    // estim_mdl.add_jump(event);
+    // estim_mdl.add_velocity_change(event);
     // estim_mdl.add_jump(event);
     double post_std_dev;
-    for (int i = 0; i < 15; i++) {
+    for (int i = 0; i < ITERS; i++) {
         ts.qr_ls_solve(estim_mdl, post_std_dev);
         std::cout<<"\n\nEstimated Model, iteration: "<<i;
         std::cout<<"\n------------------------------------------------------------\n";
