@@ -26,7 +26,9 @@ main(int argc, char* argv[])
     fin >> a1_app>> t1_app>> a2_app>> t2_app;
     fin.close();
 
-    int ITERS = 7;
+    int ITERS = 10;
+    psd_model psd_type = psd_model::log;
+    if ( psd_type == psd_model::pwl ) ITERS = 1;
 
     // Do not touch from here ----
     datetime<milliseconds> start 
@@ -59,7 +61,7 @@ main(int argc, char* argv[])
     datetime<milliseconds> event
         {modified_julian_day{54693}, milliseconds{0}};  // 15-08-2008
     // ref_model.add_earthquake(event, -49.21e0/1e3, 1.9498e0, -39.81e0/1e3, 0.2373e0);
-    ref_model.add_earthquake(event, a1_ref, t1_ref, a2_ref, t2_ref);
+    ref_model.add_earthquake(event, psd_type, a1_ref, t1_ref, a2_ref, t2_ref);
     std::cout<<"\nReference Model";
     std::cout<<"\n------------------------------------------------------------\n";
     ref_model.dump(std::cout);
@@ -80,17 +82,27 @@ main(int argc, char* argv[])
     // estim_mdl.add_period(365.25/12);
     //  instead of adding an earthquake, lets add a jump (at the time of the
     //+ earthquake)
-    estim_mdl.add_earthquake(event, a1_app, t1_app, a2_app, t2_app);
+    estim_mdl.add_earthquake(event, psd_type, a1_app, t1_app, a2_app, t2_app);
     // estim_mdl.add_jump(event);
     // estim_mdl.add_velocity_change(event);
     // estim_mdl.add_jump(event);
+    std::cout<<"\n\nApproximate Model";
+    std::cout<<"\n------------------------------------------------------------\n";
+    estim_mdl.dump(std::cout);
     double post_std_dev;
+    ITERS  = 0;
     for (int i = 0; i < ITERS; i++) {
         ts.qr_ls_solve(estim_mdl, post_std_dev);
         std::cout<<"\n\nEstimated Model, iteration: "<<i;
         std::cout<<"\n------------------------------------------------------------\n";
         estim_mdl.dump(std::cout);
     }
+
+    std::size_t idx;
+    ts.upper_bound(event, idx);
+    std::cout<<"\nIdx="<<idx<<"/"<<ts.epochs();
+    timeseries<milliseconds,pt_marker> ts_earth {ts, idx};
+    ts_earth.qr_ls_solve(estim_mdl, post_std_dev);
 
     // write time-series to "foo.ts"
     std::cout<<"\n> TimeSeries written to \"foo.ts\"";

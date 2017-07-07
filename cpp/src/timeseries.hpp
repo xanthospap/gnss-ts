@@ -355,8 +355,8 @@ public:
             if (start && !end) {
                 end = ts.m_data.size();
             }
-            if (end < start || end >= ts.m_data.size()) {
-                throw std::domain_error("Invalid start/stop indexes for ts split()");
+            if (end < start || end > ts.m_data.size()) {
+                throw std::domain_error("Invalid start/stop indexes for copy c'tor");
             }
             m_data.reserve(end-start);
             double sz;
@@ -684,6 +684,23 @@ public:
         timeseries_const_iterator<T, F> it {*this};
         it.end();
         return it;
+    }
+
+    timeseries_const_iterator<T, F>
+    upper_bound(const datetime<T>& t, std::size_t& idx)
+    const noexcept
+    {
+        auto it = std::upper_bound(std::cbegin(*m_epochs),
+                                   std::cend(*m_epochs),
+                                   t);
+        if ( it == m_epochs->cend() ) {
+            idx = m_epochs->size();
+            return this->cend();
+        } else {
+            idx = std::distance(std::cbegin(*m_epochs), it);
+            timeseries_const_iterator<T,F> itt (*this);
+            return ( itt+idx );
+        }
     }
 
     running_window<T, F>
@@ -1268,7 +1285,7 @@ public:
     : m_timeseries{ts},
       m_data_iter{ts.citer_start()},
       m_epoch_iter{ts.epoch_ptr()->cbegin()}
-    { assert( ts.epoch_ptr() && ts.data_pts() == ts.epochs() ); }
+    { assert( ts.epoch_ptr() && (ts.data_pts() == ts.epochs()) ); }
 
     /// Copy constructor
     timeseries_const_iterator(const timeseries_const_iterator& it) noexcept

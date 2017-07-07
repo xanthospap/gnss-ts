@@ -29,6 +29,7 @@ dist_include_HEADERS = \
 	cts_read.hpp \
 	earthquake_cat.hpp \
 	event_list.hpp \
+	psd.hpp \
 	model.hpp \
 	crdts.hpp \
 	artificial.hpp

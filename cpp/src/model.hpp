@@ -14,6 +14,7 @@
 #include "ggdatetime/dtcalendar.hpp"
 
 // gtms headers
+#include "psd.hpp"
 #include "event_list.hpp"
 
 namespace ngpt
@@ -58,53 +59,6 @@ private:
     double            m_offset; ///< Value (i.e. offset amplitude).
 
 }; // md_jump
-
-template<class T,
-        typename = std::enable_if_t<T::is_of_sec_type>
-        >
-    class md_earthquake
-{
-public:
-    explicit
-    md_earthquake(ngpt::datetime<T> t, double a1=1e-3, double t1=1e-1,
-        double a2=1e-3, double t2=1e-1)
-    noexcept
-    : m_start{t},
-      m_alog{a1},
-      m_tlog{t1},
-      m_aexp{a2},
-      m_texp{t2}
-    {}
-
-    double&
-    mag_log() noexcept { return m_alog; }
-    double&
-    mag_exp() noexcept { return m_aexp; }
-    double&
-    tau_log() noexcept { return m_tlog; }
-    double&
-    tau_exp() noexcept { return m_texp; }
-    ngpt::datetime<T>&
-    start() noexcept { return m_start; }
-
-    double
-    mag_log() const noexcept { return m_alog; }
-    double
-    mag_exp() const noexcept { return m_aexp; }
-    double
-    tau_log() const noexcept { return m_tlog; }
-    double
-    tau_exp() const noexcept { return m_texp; }
-    ngpt::datetime<T>
-    start() const noexcept { return m_start; }
-
-private:
-    ngpt::datetime<T> m_start;
-    double m_alog,
-           m_tlog,
-           m_aexp,
-           m_texp;
-}; // md_earthquake
 
 /// A class to represent a harmonic signal (in a time-series). The harmonic
 /// signal is described by in and out-of-phase amplitudes, a period/frequency,
@@ -262,7 +216,14 @@ public:
 
     /// A model is non-linear if it must estimate PSD/earthquakes.
     bool
-    is_linear() const noexcept { return !m_earthqs.size(); }
+    is_linear() const noexcept { 
+        if ( m_earthqs.size() ) {
+            for (auto j = m_earthqs.cbegin(); j != m_earthqs.cend(); ++j)
+                if ( j->parameters() != 1 )
+                    return false;
+        }
+        return true;
+    }
     
     /// Constructor using an event_list instance.
     /// @param[in] events An instance of type event_list; all events recorded
@@ -283,7 +244,7 @@ public:
             } else if ( it->second == ts_event::velocity_change ) {
                 m_vel_changes.emplace_back(it->first);
             } else if ( it->second == ts_event::earthquake ) {
-                m_earthqs.emplace_back(it->first);
+                m_earthqs.emplace_back(it->first, psd_model::pwl);
             }
         }
         ngpt::datetime<T> t0 {modified_julian_day{0}, T{0}};
@@ -333,7 +294,8 @@ public:
 
             // Set up jumps ...
             for (auto j = m_jumps.cbegin(); j != m_jumps.cend(); ++j) {
-                if ( t >= j->start() ) value += j->value();
+                if ( t >= j->start() )
+                    value += j->value();
             }
 
             // Set up velocity changes ...
@@ -348,12 +310,16 @@ public:
             // Set up earthquake PSD corrections
             for (auto j = m_earthqs.cbegin(); j != m_earthqs.cend(); ++j) {
                 if ( t >= j->start() ) {
+                    /*
                     auto   dti = ngpt::delta_date(t, j->start());
                     double dtj = dti.as_mjd()/365.25e0;
                     double t1  = (dtj)/j->tau_log();
                     double t2  = (dtj)/j->tau_exp();
                     value += j->mag_log() * std::log(1e0+t1);
                     value += j->mag_exp() * (1e0-std::exp(-t2));
+                    */
+                    value += j->value_at(t);
+/*
 #ifdef DEBUG
                     if ( std::fetestexcept(FE_ALL_EXCEPT & ~FE_INEXACT) ) {
                         std::cerr<<"\n\nFloating Point Exception at \"make_model()\"";
@@ -377,6 +343,7 @@ public:
                         std::exit(1);
                     }
 #endif
+*/
                 }
             }
 
@@ -476,11 +443,9 @@ public:
         for (auto j = m_vel_changes.begin(); j != m_vel_changes.end(); ++j) {
             j->value() = x_estim(idx); ++idx;
         }
+        // in the linear case, PSDs are only one-parameter models
         for (auto j = m_earthqs.begin(); j != m_earthqs.end(); ++j) {
-            j->mag_log() = x_estim(idx); ++idx;
-            j->tau_log() = x_estim(idx); ++idx;
-            j->mag_exp() = x_estim(idx); ++idx;
-            j->tau_exp() = x_estim(idx); ++idx;
+            j->a1() = x_estim(idx); ++idx;
         }
         return;
     }
@@ -524,11 +489,19 @@ public:
             os << " To: "  << (j->stop()==datetime<T>::max()?"end":strftime_ymd_hms<T>(j->stop()) );
         }
         
-        // write velocity changes (if any)
+        // write earthquakes (if any)
         if ( m_earthqs.size() ) os << "\nPSD (Earthquake Post Deformation):";
         for (auto j = m_earthqs.begin(); j != m_earthqs.end(); ++j) {
-            os << "\n\tLogarithmic Mag: "<<j->mag_log()<<", Tau: "<<j->tau_log();
-            os << "\n\tExponential Mag: "<<j->mag_exp()<<", Tau: "<<j->tau_exp();
+            std::size_t p = j->parameters();
+            if ( p == 1 ) {
+                os << "\n\tOffset: "<< j->a1();
+            } 
+            if ( p > 1 ) {
+                os << "\n\tMagnitude: "<<j->a1()<<", Tau: "<<j->t1();
+            }
+            if ( p > 3 ) {
+                os << "\n\tMagnitude: "<<j->a2()<<", Tau: "<<j->t2();
+            }
         }
 
         // all done
@@ -692,11 +665,11 @@ public:
     }
 
     void
-    add_earthquake(datetime<T> start, double a1=1e-3, double t1=1e-1,
+    add_earthquake(datetime<T> start, psd_model m, double a1=1e-3, double t1=1e-1,
         double a2=1e-3, double t2=1e-1)
     noexcept
     {
-        m_earthqs.emplace_back(start, a1, t1, a2, t2);
+        m_earthqs.emplace_back(start, m, a1, t1, a2, t2);
     }
 
     /// Return the total number of parameters of this instance.
@@ -704,11 +677,16 @@ public:
     /// harmonic + 1 for each jump + 4 for each PSD/earthquake)
     std::size_t
     parameters() const noexcept
-    { return  2                        // 2 params for linear terms
+    {   
+        int psd = 0;
+        for (auto j = m_earthqs.cbegin(); j != m_earthqs.cend(); ++j)
+            psd += j->parameters();
+
+        return  2                        // 2 params for linear terms
             + m_jumps.size()           // 1 param per jump
             + m_vel_changes.size()     // 1 param per vel. change
             + 2*m_harmonics.size()     // 2 params per harmonic
-            + 4*m_earthqs.size();      // 4 params per PSD
+            + psd;
     }
 
     /// This function is usefull for filling values in A and b matrices, for
@@ -749,6 +727,7 @@ public:
         //  the observation model value based on approximate values; this is
         //+ used in the non-linear case.
         double l {0e0}; 
+        double derivs[4];
         
         // coef for constant (linear) velocity i.e. m/year
         A(row, col) = 1.0e0 * w;
@@ -799,7 +778,9 @@ public:
         
         // Set up earthquake PSD corrections
         for (auto j = m_earthqs.cbegin(); j != m_earthqs.cend(); ++j) {
+            auto idrv = j->parameters();
             if ( t >= j->start() ) {
+                /*
                 auto   dti = ngpt::delta_date(t, j->start());
                 double dtj = dti.as_mjd();
                 double t1  = (dtj/365.25)/j->tau_log();
@@ -808,8 +789,14 @@ public:
                 A(row, col+1) = w * j->mag_log() * (-t1/j->tau_log()) / (1e0+t1);
                 A(row, col+2) = w * (1e0 - std::exp(-t2));
                 A(row, col+3) = w * j->mag_exp() * std::exp(-t2) * (-t2/j->tau_exp());
-                l += j->mag_log() * std::log(1e0+t1);
-                l += j->mag_exp() * (1e0-std::exp(-t2));
+                */
+                j->diriv_at(t, derivs[0], derivs[1], derivs[2], derivs[3]);
+                for (std::size_t i = 0; i < idrv; i++) A(row, col + i) = w * derivs[i];
+                
+                // l += j->mag_log() * std::log(1e0+t1);
+                // l += j->mag_exp() * (1e0-std::exp(-t2));
+                l += j->value_at(t);
+/*
 #ifdef DEBUG
                 if ( std::fetestexcept(FE_ALL_EXCEPT & ~FE_INEXACT) ) {
                     std::cerr<<"\n\nFloating Point Exception at \"assign_row()\"";
@@ -836,15 +823,16 @@ public:
                     std::exit(1);
                 }
 #endif
+*/
             } else {
-                for (auto i = 0; i < 4; i++) A(row, col) = 0e0;
+                for (std::size_t i = 0; i < idrv; i++) A(row, col+i) = 0e0;
             }
-            col += 4;
+            col += idrv;
         }
 
         // Observation Matrix (vector b)
         b(row) = y*w;                                   // linear case
-        if ( m_earthqs.size() ) {
+        if ( !this->is_linear() ) {
             b(row) = b(row) - l*w;  // non-linear case
         }
 
@@ -914,17 +902,15 @@ private:
             j->value() += x_estim(idx); ++idx;
         }
         for (auto j = m_earthqs.begin(); j != m_earthqs.end(); ++j) {
-            j->mag_log() += x_estim(idx); ++idx;
-            j->tau_log() += x_estim(idx); ++idx;
-            j->mag_exp() += x_estim(idx); ++idx;
-            j->tau_exp() += x_estim(idx); ++idx;
-#ifdef DEBUG
-            // TODO this is incorrect here but should be implemented somehow
-            if ( 10e0/j->tau_log() + 1e0 < 0 ) {
-                std::cout<<"\n[WARNING] Need to adjust tau_log estimate!";
-                while (10e0/j->tau_log() + 1e0 <= 0) j->tau_log()+=1e-5;
+            std::size_t p = j->parameters();
+            j->a1() = x_estim(idx); ++idx;
+            if ( p > 1 ) {
+                j->t1() = x_estim(idx); ++idx;
             }
-#endif
+            if ( p > 3 ) {
+                j->a2() = x_estim(idx); ++idx;
+                j->t2() = x_estim(idx); ++idx;
+            }
         }
         return;
     }
