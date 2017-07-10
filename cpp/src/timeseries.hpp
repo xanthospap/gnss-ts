@@ -363,10 +363,11 @@ public:
             m_mean    = 0e0;
             m_skipped = 0;
             for (std::size_t i = start; i < end; ++i) {
+                assert( i < ts.m_data.size() );
+                m_data.emplace_back(ts.m_data[i]);
+                if ( ts.m_data[i].skip() ) ++m_skipped;
                 sz = i - start;
-                m_data.emplace_back(ts[i]);
                 m_mean = (ts[i].value() + sz*m_mean)/(sz+1e0);
-                if ( m_data[i].skip() ) ++m_skipped;
             }
         } else {
             m_data = ts.m_data;
@@ -593,8 +594,6 @@ public:
     
         // assign solution vector to the model.
         model.assign_solution_vector(x);
-        // model.filter_parameters();
-        // model.dump(std::cout);
 
         // Cast residuals to time-series and compute a-posteriori std. dev
         // The resulting residual ts will have the same size as the original ts,
@@ -617,12 +616,10 @@ public:
         }
         post_std_dev = std::sqrt(post_std_dev)
             /(double)(idx-parameters);
-        // std::cout<<"\nA-posteriori std. deviation: " << post_std_dev << "(m).";
 
         // apply outlier detection algorithm and mark them
         // datetime_interval<T> window {modified_julian_day{90}, T{0}};
         // nikolaidis(res, *this, window);
-
         return res;
     }
 

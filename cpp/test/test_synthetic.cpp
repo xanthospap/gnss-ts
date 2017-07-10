@@ -27,7 +27,7 @@ main(int argc, char* argv[])
     fin.close();
 
     int ITERS = 10;
-    psd_model psd_type = psd_model::log;
+    psd_model psd_type = psd_model::exp;
     if ( psd_type == psd_model::pwl ) ITERS = 1;
 
     // Do not touch from here ----
@@ -50,7 +50,7 @@ main(int argc, char* argv[])
     ngpt::ts_model<milliseconds> ref_model;
     ref_model.mean_epoch() = mean;
     ref_model.x0()         = 0e0;  // constant coef.
-    ref_model.vx()         = 5e-3;  // velocity
+    ref_model.vx()         = 1e-3;  // velocity
     // add a jump at 1/1/2009
     // datetime<milliseconds> event {modified_julian_day{54832}, milliseconds{0}};
     // ref_model.add_jump(event, 1.235); // add a jump
@@ -69,9 +69,9 @@ main(int argc, char* argv[])
     //  make a synthetic time-series based on the epochs and ref_model we already
     //+ constructed
     /* timeseries<milliseconds,pt_marker> */
-    auto ts = synthetic_ts<milliseconds,pt_marker>(epochs, ref_model, 0, 1e-3);
+    auto ts = synthetic_ts<milliseconds,pt_marker>(epochs, ref_model, 0, 1e-4);
     // --just to see that this is working --
-    /*auto*/timeseries<milliseconds,pt_marker> ts2 {ts,100,150};
+    timeseries<milliseconds,pt_marker> ts2 {ts,100,150};
     assert( ts2[0]  == ts[100] );
     assert( ts2[49] == ts[149] );
 
@@ -90,7 +90,7 @@ main(int argc, char* argv[])
     std::cout<<"\n------------------------------------------------------------\n";
     estim_mdl.dump(std::cout);
     double post_std_dev;
-    ITERS  = 10;
+    ITERS  = 5;
     for (int i = 0; i < ITERS; i++) {
         ts.qr_ls_solve(estim_mdl, post_std_dev);
         std::cout<<"\n\nEstimated Model, iteration: "<<i;
@@ -98,13 +98,18 @@ main(int argc, char* argv[])
         estim_mdl.dump(std::cout);
     }
 
-    // This needs fixing; it doesn't work!
-    // std::size_t idx;
-    // ts.upper_bound(event, idx);
-    // std::cout<<"\nIdx="<<idx<<"/"<<ts.epochs();
-    // timeseries<milliseconds,pt_marker> ts_earth {ts, idx};
-    // ts_earth.qr_ls_solve(estim_mdl, post_std_dev);
-
+    /*
+    std::size_t idx;
+    ts.upper_bound(event, idx);
+    std::cout<<"\nIdx="<<idx<<"/"<<ts.epochs();
+    std::vector<datetime<milliseconds>> eph_vec2 (epochs.begin()+idx, epochs.end());
+    timeseries<milliseconds,pt_marker> ts_earth {ts, idx};
+    std::cout<<"\nSize of epochs="<<eph_vec2.size();
+    ts_earth.epoch_ptr() = &eph_vec2;
+    ts_earth.qr_ls_solve(estim_mdl, post_std_dev);
+    estim_mdl.dump(std::cout);
+    */
+    
     // write time-series to "foo.ts"
     std::cout<<"\n> TimeSeries written to \"foo.ts\"";
     std::ofstream ts_fout {"foo.ts"};
