@@ -89,6 +89,7 @@ public:
             case psd_model::log:
                 te1 = dtq/m_t1;
                 d   = m_a1 * std::log(1e0+te1);
+                // std::cout<<"\n## dtq="<<dtq<<", te1="<<te1<<", d="<<d;
                 break;
             case psd_model::exp:
                 te1 = dtq/m_t1;

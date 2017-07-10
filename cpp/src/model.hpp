@@ -493,6 +493,7 @@ public:
         if ( m_earthqs.size() ) os << "\nPSD (Earthquake Post Deformation):";
         for (auto j = m_earthqs.begin(); j != m_earthqs.end(); ++j) {
             std::size_t p = j->parameters();
+            os << "\nTime of earthquake: "<<strftime_ymd_hms<T>(j->start())<<" (MJD "<<j->start().as_mjd()<<")";
             if ( p == 1 ) {
                 os << "\n\tOffset: "<< j->a1();
             } 
@@ -831,10 +832,12 @@ public:
         }
 
         // Observation Matrix (vector b)
-        b(row) = y*w;                                   // linear case
+        b(row) = y;                                   // linear case
         if ( !this->is_linear() ) {
-            b(row) = b(row) - l*w;  // non-linear case
+            b(row) = b(row) - l;  // non-linear case
+            // std::cout<<"\n"<< t.as_mjd() << " " << dt << " " << b(row) << " " << l;
         }
+        b(row) *= w;
 
         // All done
         return;

@@ -90,7 +90,7 @@ main(int argc, char* argv[])
     std::cout<<"\n------------------------------------------------------------\n";
     estim_mdl.dump(std::cout);
     double post_std_dev;
-    ITERS  = 0;
+    ITERS  = 10;
     for (int i = 0; i < ITERS; i++) {
         ts.qr_ls_solve(estim_mdl, post_std_dev);
         std::cout<<"\n\nEstimated Model, iteration: "<<i;
@@ -98,11 +98,12 @@ main(int argc, char* argv[])
         estim_mdl.dump(std::cout);
     }
 
-    std::size_t idx;
-    ts.upper_bound(event, idx);
-    std::cout<<"\nIdx="<<idx<<"/"<<ts.epochs();
-    timeseries<milliseconds,pt_marker> ts_earth {ts, idx};
-    ts_earth.qr_ls_solve(estim_mdl, post_std_dev);
+    // This needs fixing; it doesn't work!
+    // std::size_t idx;
+    // ts.upper_bound(event, idx);
+    // std::cout<<"\nIdx="<<idx<<"/"<<ts.epochs();
+    // timeseries<milliseconds,pt_marker> ts_earth {ts, idx};
+    // ts_earth.qr_ls_solve(estim_mdl, post_std_dev);
 
     // write time-series to "foo.ts"
     std::cout<<"\n> TimeSeries written to \"foo.ts\"";
