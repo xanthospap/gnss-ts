@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 start = 53005e0
 stop  = 55562e0
 event = 54693e0
+# event = start
 t0    = start + (stop-start)/2e0
 
 ## Model is: y = x0 + Vx*(t - t0) A * log(1 + (t - t_eq) / tau)
@@ -21,10 +22,13 @@ def value_at(tmjd, x0, vx, a1, t1):
     d    = x0 + vx * ( (tmjd - t0)/365.25e0 )
     D    = d
     dtq1 = (tmjd - event) / 365.25e0
-    dtq  = np.where(dtq1 > 0)[0]
+    dtq  = dtq1[np.where(dtq1 >= 0)[0]]
+    arg  = dtq / t1
+    d[tmjd.size-arg.size :] = d[tmjd.size-arg.size :] + (a1 * np.log(1.0e0 + arg))
+    # d    = np.zeros(tmjd.size)
+    # dtq  = (tmjd - event) / 365.25e0
     # arg  = dtq / t1
-    arg = dtq * t1
-    d[tmjd.size-arg.size :] = d[tmjd.size-arg.size :] + (a1 * np.log(arg))
+    # d    = a1 * np.log(1e0 + arg)
     return d
 
 ## Model is: y = x0 + Vx*(t - t0) A * log(1 + (t - t_eq) / tau
@@ -36,21 +40,23 @@ def value_at(tmjd, x0, vx, a1, t1):
 ## ...
 def partials_at(tmjd, a1, t1):
     A      = np.zeros( (tmjd.size, 4) )
+    A[:,0] = A[:,0] + 1e0
     A[:,1] = (tmjd - t0) / 365.25e0
     dtq1   = (tmjd - event) / 365.25e0
-    dtq    = np.where(dtq1 > 0)[0]
-    #arg    = dtq / t1
-    arg = dtq*t1
+    dtq    = dtq1[np.where(dtq1 >= 0)[0]]
+    arg    = dtq / t1
     A[tmjd.size-arg.size :, 2] = np.log(1e0 + arg)
-    #A[tmjd.size-arg.size :, 3] = a1*(-arg/t1)/(1e0+arg)
-    A[tmjd.size-arg.size :, 3] = a1*dtq
+    A[tmjd.size-arg.size :, 3] = a1*(-arg/t1)/(1e0+arg)
+    arg2   = dtq1 / t1
+    for i in range(0, tmjd.size):
+        print '\n\tdtq={}, arg={}, da={}, a1={}, t1={} log(1e0+arg)={}'.format(dtq1[i], arg2[i], A[i,2], a1, t1, np.log(1e0+arg2[i]))
     return A
 
 ## Model coefficients
 x0 = 0e0;    x0_aprx = 0e0;
 vx = 5e-4;   vx_aprx = 0e0;
-a1 = 1e-3;   a1_aprx = 1e-3;
-t1 = 0.3e0;  t1_aprx = 1.2e0;
+a1 = 1e-3;   a1_aprx = 0e0;
+t1 = 1.3e0;  t1_aprx = .5e0;
 
 ## observation times
 t = np.arange(start, stop, 1e0)
@@ -65,7 +71,15 @@ A = partials_at(t, a1_aprx, t1_aprx)
 ## plot the data
 plt.plot(t, l, 'b-', label='data')
 
-max_iters = 6
+# print matrices
+np.set_printoptions(precision=10, threshold=1e10, linewidth=125)
+with open('design-mat.py', 'w') as fout:
+    print >> fout, A
+np.set_printoptions(precision=10, threshold=1e10, linewidth=25)
+with open('obs-mat.py', 'w') as fout:
+    print >> fout, np.transpose(b-noise)
+
+max_iters = 3
 colors = ['b--', 'r--', 'g--', 'k--', 'm--', 'y--']
 for i in range(max_iters):
     print('Iteration: {}, Model Parameters:'.format(i))

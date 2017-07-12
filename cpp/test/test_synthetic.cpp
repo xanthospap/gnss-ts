@@ -27,7 +27,7 @@ main(int argc, char* argv[])
     fin.close();
 
     int ITERS = 10;
-    psd_model psd_type = psd_model::exp;
+    psd_model psd_type = psd_model::log;
     if ( psd_type == psd_model::pwl ) ITERS = 1;
 
     // Do not touch from here ----
@@ -50,7 +50,7 @@ main(int argc, char* argv[])
     ngpt::ts_model<milliseconds> ref_model;
     ref_model.mean_epoch() = mean;
     ref_model.x0()         = 0e0;  // constant coef.
-    ref_model.vx()         = 1e-3;  // velocity
+    ref_model.vx()         = 5e-4;  // velocity
     // add a jump at 1/1/2009
     // datetime<milliseconds> event {modified_julian_day{54832}, milliseconds{0}};
     // ref_model.add_jump(event, 1.235); // add a jump
@@ -70,10 +70,6 @@ main(int argc, char* argv[])
     //+ constructed
     /* timeseries<milliseconds,pt_marker> */
     auto ts = synthetic_ts<milliseconds,pt_marker>(epochs, ref_model, 0, 1e-4);
-    // --just to see that this is working --
-    timeseries<milliseconds,pt_marker> ts2 {ts,100,150};
-    assert( ts2[0]  == ts[100] );
-    assert( ts2[49] == ts[149] );
 
     // let's dare an estimate
     ngpt::ts_model<milliseconds> estim_mdl;
@@ -90,7 +86,7 @@ main(int argc, char* argv[])
     std::cout<<"\n------------------------------------------------------------\n";
     estim_mdl.dump(std::cout);
     double post_std_dev;
-    ITERS  = 5;
+    ITERS  = 1;
     for (int i = 0; i < ITERS; i++) {
         ts.qr_ls_solve(estim_mdl, post_std_dev);
         std::cout<<"\n\nEstimated Model, iteration: "<<i;

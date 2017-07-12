@@ -21,7 +21,7 @@ def ts_plot(ts, y_erbar=False):
         axs[0].plot_date( x=mdates_series, y=ts.x_array, fmt="-" )
     else:
         axs[0].errorbar(x=mdates_series, y=ts.x_array, xerr=None, fmt='-', 
-                        yerr=ts.sx_array, ecolor='0.1')
+                        yerr=ts.sx_array, marker='o', mfc='red', ecolor='0.1')
     axs[0].set_title( 'Station %s'%ts.station )
     axs[0].set_ylabel( 'DNorth (m)' )
     #axs[0].plot_date( x=mdates_out, y=outliers_ts.x_array, fmt="ro", markersize=4 )
@@ -31,7 +31,7 @@ def ts_plot(ts, y_erbar=False):
        axs[1].plot_date( x=mdates_series, y=ts.y_array, fmt="-" )
     else:
         axs[1].errorbar(x=mdates_series, y=ts.y_array, xerr=None, fmt='-', 
-                        yerr=ts.sy_array, ecolor='0.1')
+                        yerr=ts.sy_array, marker='o', mfc='red', ecolor='0.1')
     axs[1].set_ylabel( 'DEast (m)' )
     #axs[1].plot_date( x=mdates_out, y=outliers_ts.y_array, fmt="ro", markersize=4)
     #axs[1].set_ylim([np.amin(outliers_ts.y_array), np.amax(outliers_ts.y_array)])
@@ -40,7 +40,7 @@ def ts_plot(ts, y_erbar=False):
         axs[2].plot_date( x=mdates_series, y=ts.z_array, fmt="-" )
     else:
         axs[2].errorbar(x=mdates_series, y=ts.z_array, xerr=None, fmt='-', 
-                        yerr=ts.sz_array, ecolor='0.1')
+                        yerr=ts.sz_array, marker='o', mfc='red', ecolor='0.1')
     axs[2].set_ylabel( 'DUp (m)' )
     #axs[2].plot_date( x=mdates_out, y=outliers_ts.z_array, fmt="ro", markersize=4 )
     #axs[2].set_ylim([np.amin(outliers_ts.z_array), np.amax(outliers_ts.z_array)])

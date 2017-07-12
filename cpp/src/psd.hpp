@@ -29,8 +29,8 @@ template<class T,
 {
 public:
     explicit
-    md_earthquake(ngpt::datetime<T> t, psd_model md, double a1=1e-3, double t1=1e-1,
-        double a2=1e-3, double t2=1e-1)
+    md_earthquake(ngpt::datetime<T> t, psd_model md, double a1=0e0, double t1=1.0e0,
+        double a2=0e0, double t2=1.0e0)
     noexcept
     : m_model{md},
       m_start{t},
@@ -66,9 +66,9 @@ public:
     parameters() const noexcept
     {
         switch (m_model) {
-            case psd_model::pwl: return 1;
-            case psd_model::log: return 2;
-            case psd_model::exp: return 2;
+            case psd_model::pwl:    return 1;
+            case psd_model::log:    return 2;
+            case psd_model::exp:    return 2;
             case psd_model::logexp: return 4;
             case psd_model::expexp: return 4;
         }
@@ -80,6 +80,10 @@ public:
     {
         auto   dt_intvr = ngpt::delta_date(t, start());
         double dtq      = dt_intvr.as_mjd() / 365.25e0;
+#ifdef DEBUG
+        double dtq_conf = (t.as_mjd() - start().as_mjd())/365.25e0;
+        assert( std::abs(dtq - dtq_conf) < 1e-10 );
+#endif
         double d{0e0}, te1, te2;
 
         switch (m_model) {
@@ -89,7 +93,7 @@ public:
             case psd_model::log:
                 te1 = dtq/m_t1;
                 d   = m_a1 * std::log(1e0+te1);
-                // std::cout<<"\n## dtq="<<dtq<<", te1="<<te1<<", d="<<d;
+                //std::cout<<"\n\tdtq="<<dtq<<", arg="<<te1<<", d="<<d<<", a1="<<m_a1<<", t1="<<m_t1;
                 break;
             case psd_model::exp:
                 te1 = dtq/m_t1;
@@ -165,6 +169,10 @@ public:
     {
         auto   dt_intvr = ngpt::delta_date(t, start());
         double dtq      = dt_intvr.as_mjd() / 365.25e0;
+#ifdef DEBUG
+        double dtq_conf = (t.as_mjd() - start().as_mjd())/365.25e0;
+        assert( std::abs(dtq - dtq_conf) < 1e-10 );
+#endif
         double te1,
                te2;
 
@@ -175,7 +183,8 @@ public:
             case psd_model::log:
                 te1 = dtq/m_t1;
                 da1 = std::log(1e0+te1);
-                dt1 = m_a1 * (-te1) / ((1e0+te1)*m_t1);
+                dt1 = m_a1*(-te1/m_t1)/(1e0+te1);
+                std::cout<<"\n\tdtq="<<dtq<<", arg="<<te1<<", da="<<da1<<", a1="<<m_a1<<", t1="<<m_t1;
                 break;
             case psd_model::exp:
                 te1 = dtq/m_t1;

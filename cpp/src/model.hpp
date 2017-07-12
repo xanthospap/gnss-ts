@@ -781,50 +781,9 @@ public:
         for (auto j = m_earthqs.cbegin(); j != m_earthqs.cend(); ++j) {
             auto idrv = j->parameters();
             if ( t >= j->start() ) {
-                /*
-                auto   dti = ngpt::delta_date(t, j->start());
-                double dtj = dti.as_mjd();
-                double t1  = (dtj/365.25)/j->tau_log();
-                double t2  = (dtj/365.25)/j->tau_exp();
-                A(row, col)   = w * std::log(1e0 + t1);
-                A(row, col+1) = w * j->mag_log() * (-t1/j->tau_log()) / (1e0+t1);
-                A(row, col+2) = w * (1e0 - std::exp(-t2));
-                A(row, col+3) = w * j->mag_exp() * std::exp(-t2) * (-t2/j->tau_exp());
-                */
                 j->diriv_at(t, derivs[0], derivs[1], derivs[2], derivs[3]);
                 for (std::size_t i = 0; i < idrv; i++) A(row, col + i) = w * derivs[i];
-                
-                // l += j->mag_log() * std::log(1e0+t1);
-                // l += j->mag_exp() * (1e0-std::exp(-t2));
                 l += j->value_at(t);
-/*
-#ifdef DEBUG
-                if ( std::fetestexcept(FE_ALL_EXCEPT & ~FE_INEXACT) ) {
-                    std::cerr<<"\n\nFloating Point Exception at \"assign_row()\"";
-                    std::cerr<<"\nHere are the variables:";
-                    std::cerr<<"\n\tdtj         ="<<dtj;
-                    std::cerr<<"\n\ttau_log     ="<<j->tau_log();
-                    std::cerr<<"\n\ttau_exp     ="<<j->tau_exp();
-                    std::cerr<<"\n\tdtj         ="<<dtj;
-                    std::cerr<<"\n\tt1          ="<<t1;
-                    std::cerr<<"\n\tt2          ="<<t2;
-                    std::cerr<<"\n\tmag_log     ="<<j->mag_log();
-                    std::cerr<<"\n\tmag_exp     ="<<j->mag_exp();
-                    std::cerr<<"\n\tt.as_mjd()  ="<<t.as_mjd();
-                    std::cerr<<"\n\tindex       ="<<row;
-                    std::cerr<<"\nCommon Errors:";
-                    std::cerr<<"\n\t(1+t1) < 0                       -> 1+t1 = "<<1e0+t1;
-                    std::cerr<<"\n\t-t2 not in range [-708.4, 709.8] -> -t2 = "<<-t2;
-                    std::cerr<<"\nFP Exceptions Set:";
-                    std::cerr<<"\n\tFE_DIVBYZERO: "<<std::fetestexcept(FE_DIVBYZERO);
-                    std::cerr<<"\n\tFE_INEXACT  : "<<std::fetestexcept(FE_INEXACT);
-                    std::cerr<<"\n\tFE_INVALID  : "<<std::fetestexcept(FE_INVALID);
-                    std::cerr<<"\n\tFE_OVERFLOW : "<<std::fetestexcept(FE_OVERFLOW);
-                    std::cerr<<"\n\tFE_UNDERFLOW: "<<std::fetestexcept(FE_UNDERFLOW);
-                    std::exit(1);
-                }
-#endif
-*/
             } else {
                 for (std::size_t i = 0; i < idrv; i++) A(row, col+i) = 0e0;
             }

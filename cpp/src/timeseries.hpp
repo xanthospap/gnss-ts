@@ -578,6 +578,11 @@ public:
         }
         assert( counter == data_pts() );
 
+        Eigen::IOFormat egnio (10);
+        std::ofstream fou1 {"design-mat.cc"};
+        fou1 << A.format( egnio );
+        fou1.close();
+
         // Solve via QR
         x = A.colPivHouseholderQr().solve(b);
 
