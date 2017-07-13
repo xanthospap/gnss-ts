@@ -14,6 +14,7 @@
 // Eigen headers
 #include "eigen3/Eigen/Core"
 #include "eigen3/Eigen/QR"
+#include "eigen3/Eigen/Dense"
 
 // ggdatetime headers
 #include "ggdatetime/dtcalendar.hpp"
@@ -577,14 +578,18 @@ public:
             ++counter;
         }
         assert( counter == data_pts() );
-
+        /*
         Eigen::IOFormat egnio (10);
         std::ofstream fou1 {"design-mat.cc"};
-        fou1 << A.format( egnio );
+        fou1 << b.format( egnio );
         fou1.close();
+        */
 
         // Solve via QR
-        x = A.colPivHouseholderQr().solve(b);
+        // x = A.colPivHouseholderQr().solve(b);
+        x = A.jacobiSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(b);
+        // std::cout<<"\nSolution Vector:\n";
+        // std::cout<<x;
 
         // residual vector u = A*x - b; note that the residual vector may not
         // have the same size as the (original) time-series. Instead, it has

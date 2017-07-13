@@ -27,7 +27,7 @@ main(int argc, char* argv[])
     fin.close();
 
     int ITERS = 10;
-    psd_model psd_type = psd_model::log;
+    psd_model psd_type = psd_model::logexp;
     if ( psd_type == psd_model::pwl ) ITERS = 1;
 
     // Do not touch from here ----
@@ -86,12 +86,13 @@ main(int argc, char* argv[])
     std::cout<<"\n------------------------------------------------------------\n";
     estim_mdl.dump(std::cout);
     double post_std_dev;
-    ITERS  = 1;
+    ITERS  = 8;
     for (int i = 0; i < ITERS; i++) {
         ts.qr_ls_solve(estim_mdl, post_std_dev);
         std::cout<<"\n\nEstimated Model, iteration: "<<i;
         std::cout<<"\n------------------------------------------------------------\n";
         estim_mdl.dump(std::cout);
+        std::cout<<"\nA-Posteriori std. = "<<post_std_dev;
     }
 
     /*

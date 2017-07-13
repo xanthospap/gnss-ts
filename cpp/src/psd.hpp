@@ -184,7 +184,6 @@ public:
                 te1 = dtq/m_t1;
                 da1 = std::log(1e0+te1);
                 dt1 = m_a1*(-te1/m_t1)/(1e0+te1);
-                std::cout<<"\n\tdtq="<<dtq<<", arg="<<te1<<", da="<<da1<<", a1="<<m_a1<<", t1="<<m_t1;
                 break;
             case psd_model::exp:
                 te1 = dtq/m_t1;
@@ -195,7 +194,7 @@ public:
                 te1 = dtq/m_t1;
                 te2 = dtq/m_t2;
                 da1 = std::log(1e0+te1);
-                dt1 = m_a1 * (-te1) / ((1e0+te1)*m_t1);
+                dt1 = m_a1*(-te1/m_t1)/(1e0+te1);
                 da2 = 1e0 - std::exp(-te2);
                 dt2 = m_a2*std::exp(-te2)*(-te2)/m_t2;
                 break;

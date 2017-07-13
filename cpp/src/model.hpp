@@ -851,7 +851,9 @@ private:
                 && (int)x_estim.size() == (int)this->parameters() );
 
         std::size_t idx = 0;
+        // std::cout<<"\n\t -- x0 = "<<m_x0<<" + "<<x_estim(idx);
         m_x0 += x_estim(idx); ++idx;
+        // std::cout<<"\n\t -- Vx = "<<m_vx<<" + "<<x_estim(idx);
         m_vx += x_estim(idx); ++idx;
         for (auto j = m_harmonics.begin(); j != m_harmonics.end(); ++j) {
             j->in_phase()     += x_estim(idx); ++idx;
@@ -865,13 +867,15 @@ private:
         }
         for (auto j = m_earthqs.begin(); j != m_earthqs.end(); ++j) {
             std::size_t p = j->parameters();
-            j->a1() = x_estim(idx); ++idx;
+            // std::cout<<"\n\t -- a1 = "<<j->a1()<<" + "<<x_estim(idx);
+            j->a1() += x_estim(idx); ++idx;
             if ( p > 1 ) {
-                j->t1() = x_estim(idx); ++idx;
+                // std::cout<<"\n\t -- t1 = "<<j->t1()<<" + "<<x_estim(idx);
+                j->t1() += x_estim(idx); ++idx;
             }
             if ( p > 3 ) {
-                j->a2() = x_estim(idx); ++idx;
-                j->t2() = x_estim(idx); ++idx;
+                j->a2() += x_estim(idx); ++idx;
+                j->t2() += x_estim(idx); ++idx;
             }
         }
         return;

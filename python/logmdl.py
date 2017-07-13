@@ -25,10 +25,6 @@ def value_at(tmjd, x0, vx, a1, t1):
     dtq  = dtq1[np.where(dtq1 >= 0)[0]]
     arg  = dtq / t1
     d[tmjd.size-arg.size :] = d[tmjd.size-arg.size :] + (a1 * np.log(1.0e0 + arg))
-    # d    = np.zeros(tmjd.size)
-    # dtq  = (tmjd - event) / 365.25e0
-    # arg  = dtq / t1
-    # d    = a1 * np.log(1e0 + arg)
     return d
 
 ## Model is: y = x0 + Vx*(t - t0) A * log(1 + (t - t_eq) / tau
@@ -48,8 +44,6 @@ def partials_at(tmjd, a1, t1):
     A[tmjd.size-arg.size :, 2] = np.log(1e0 + arg)
     A[tmjd.size-arg.size :, 3] = a1*(-arg/t1)/(1e0+arg)
     arg2   = dtq1 / t1
-    for i in range(0, tmjd.size):
-        print '\n\tdtq={}, arg={}, da={}, a1={}, t1={} log(1e0+arg)={}'.format(dtq1[i], arg2[i], A[i,2], a1, t1, np.log(1e0+arg2[i]))
     return A
 
 ## Model coefficients
@@ -70,6 +64,8 @@ b = l - value_at(t, x0_aprx, vx_aprx, a1_aprx, t1_aprx)
 A = partials_at(t, a1_aprx, t1_aprx)
 ## plot the data
 plt.plot(t, l, 'b-', label='data')
+A=A/1000e0
+b=b/1000e0
 
 # print matrices
 np.set_printoptions(precision=10, threshold=1e10, linewidth=125)
