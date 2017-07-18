@@ -27,7 +27,7 @@ main(int argc, char* argv[])
     fin.close();
 
     int ITERS = 10;
-    psd_model psd_type = psd_model::logexp;
+    psd_model psd_type = psd_model::expexp;
     if ( psd_type == psd_model::pwl ) ITERS = 1;
 
     // Do not touch from here ----

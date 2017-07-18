@@ -20,7 +20,6 @@
 #include "ggdatetime/dtcalendar.hpp"
 
 // gtms headers
-// #include "genflags.hpp"
 #include "tsflag.hpp"
 #include "model.hpp"
 
@@ -578,18 +577,10 @@ public:
             ++counter;
         }
         assert( counter == data_pts() );
-        /*
-        Eigen::IOFormat egnio (10);
-        std::ofstream fou1 {"design-mat.cc"};
-        fou1 << b.format( egnio );
-        fou1.close();
-        */
 
         // Solve via QR
         // x = A.colPivHouseholderQr().solve(b);
         x = A.jacobiSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(b);
-        // std::cout<<"\nSolution Vector:\n";
-        // std::cout<<x;
 
         // residual vector u = A*x - b; note that the residual vector may not
         // have the same size as the (original) time-series. Instead, it has
@@ -693,11 +684,50 @@ public:
         return it;
     }
 
+    /// Return an iterator pointing to the first element in the time-series 
+    /// with a time-stamp that is greater than the given value, or last if no 
+    /// such element is found. 
+    /// @param[in] t    The input time-stamp; we are searching for the first
+    ///                 time-series element with time-stamp > t.
+    /// @param[out] idx The index of the time-series element with time-stamp > t,
+    ///                 If no such element is found, idx is set equal to the
+    ///                 total number of epochs.
+    /// @return         A timeseries_const_iterator pointing to the the first
+    ///                 element in the time-series with a time-stamp > t; if not
+    ///                 found, a const iterator to end.
     timeseries_const_iterator<T, F>
     upper_bound(const datetime<T>& t, std::size_t& idx)
     const noexcept
     {
         auto it = std::upper_bound(std::cbegin(*m_epochs),
+                                   std::cend(*m_epochs),
+                                   t);
+        if ( it == m_epochs->cend() ) {
+            idx = m_epochs->size();
+            return this->cend();
+        } else {
+            idx = std::distance(std::cbegin(*m_epochs), it);
+            timeseries_const_iterator<T,F> itt (*this);
+            return ( itt+idx );
+        }
+    }
+    
+    /// Return an iterator pointing to the first element in the time-series 
+    /// with a time-stamp that is not less than the given value, or last if no 
+    /// such element is found. 
+    /// @param[in] t    The input time-stamp; we are searching for the first
+    ///                 time-series element with time-stamp >= t.
+    /// @param[out] idx The index of the time-series element with time-stamp >= t,
+    ///                 If no such element is found, idx is set equal to the
+    ///                 total number of epochs.
+    /// @return         A timeseries_const_iterator pointing to the the first
+    ///                 element in the time-series with a time-stamp >= t; if not
+    ///                 found, a const iterator to end.
+    timeseries_const_iterator<T, F>
+    lower_bound(const datetime<T>& t, std::size_t& idx)
+    const noexcept
+    {
+        auto it = std::lower_bound(std::cbegin(*m_epochs),
                                    std::cend(*m_epochs),
                                    t);
         if ( it == m_epochs->cend() ) {
