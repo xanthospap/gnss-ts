@@ -2,12 +2,12 @@
 #define __TIMESERIES_FLAGS_HPP__
 
 ///
-/// @file  tsflag.hpp
+/// \file  tsflag.hpp
 ///
-/// @brief This file defines the (strongly-typed) enumeration types, to be used
+/// \brief This file defines the (strongly-typed) enumeration types, to be used
 ///        for the timeseries<...> and crdts<...> classes.
 ///
-/// @todo Add an example (somewhere) of how a user can adapt the enums, or make
+/// \todo Add an example (somewhere) of how a user can adapt the enums, or make
 ///       new ones to use for a time-series.
 
 #include <iostream>

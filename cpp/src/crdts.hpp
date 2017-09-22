@@ -67,11 +67,6 @@ public:
 
     explicit
     crdts(timeseries<T, pt_marker> t1, timeseries<T, pt_marker> t2, timeseries<T, pt_marker> t3)
-    /*: m_epochs{nullptr}
-      m_x{std::move(t1)},
-      m_y{std::move(t2)},
-      m_z{std::move(t3)}
-    */
     {
         m_x = std::move(t1);
         m_y = std::move(t2);
