@@ -175,19 +175,19 @@ var margin = {top: 20, right: 80, bottom: 30, left: 50},
     height = 500 - margin.top - margin.bottom;
 
 // store here the min and max values of the x-axis as mjd values.
-var g_min_mjd = Number.MAX_VALUE,
-    g_max_mjd = Number.MIN_VALUE;
+var g_min_mjd     = Number.MAX_VALUE,
+    g_max_mjd     = Number.MIN_VALUE;
 var g_ts_filename = "mtho.json",
     g_ev_filename = "events.json",
     g_md_filename = "mtho-model.json";
-var g_xlabel   = "Date",
-    g_yn_label = "North",
-    g_ye_label = "East",
-    g_yu_label = "Up";
+var g_xlabel      = "Date",
+    g_yn_label    = "North",
+    g_ye_label    = "East",
+    g_yu_label    = "Up";
 
 // axis setup functions/variables
 var dateFormat = d3.time.format("%Y-%m-%d %H:%M:%S");
-var x = d3.scaleLinear().range([0, width]); // v4.x
+var x      = d3.scaleLinear().range([0, width]); // v4.x
 var xAxis  = d3.axisBottom(x);
 var yN     = d3.scaleLinear().range([height, 0]);
 var yE     = d3.scaleLinear().range([height, 0]);

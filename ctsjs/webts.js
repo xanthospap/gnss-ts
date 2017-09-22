@@ -175,9 +175,12 @@ function plot_raw()
     //  Load data from file
     d3.json(g_ts_filename, function(error, data) {
         if ( error ) {
-            window.alert("Failed to parse JSON file \""+ g_ts_filename + "\"");
+            window.alert("Failed to parse file \""+ g_ts_filename + "\"");
+            console.warn("Failed to parse file \""+ g_ts_filename + "\"");
             console.warn(error);
             throw error;
+        } else {
+            console.warn("Parsed file \""+ g_ts_filename + "\"");
         }
         
         //  The actual data to plot is:
@@ -1038,6 +1041,7 @@ function files_changed()
     g_ts_filename = document.getElementById("ts-file-selector").value;
     g_md_filename = document.getElementById("md-file-selector").value;
     g_ev_filename = document.getElementById("ev-file-selector").value;
+    g_ts_filename = "ftp://147.102.106.136/pub/gnss/time-series/tuc2.json"
 
     remove_events();
     remove_models();

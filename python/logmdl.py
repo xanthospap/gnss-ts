@@ -68,8 +68,8 @@ x0 = 0e0;    x0_aprx = 0e0;
 vx = 5e-4;   vx_aprx = 0e0;
 a1 = 1e-3;   a1_aprx = 0e0;
 t1 = 1.3e0;  t1_aprx = .5e0;
-a2 = 1e-3;   a2_aprx = 0e0;
-t2 = 1.3e0;  t2_aprx = .5e0;
+a2 = 5e-3;   a2_aprx = 0e0;
+t2 = 0.7e0;  t2_aprx = .5e0;
 
 ## observation times
 t = np.arange(start, stop, 1e0)
@@ -85,24 +85,24 @@ A = partials_at(t, a1_aprx, t1_aprx, a2_aprx, t2_aprx)
 plt.plot(t, l, 'b-', label='data')
 
 # print matrices
+"""
 np.set_printoptions(precision=10, threshold=1e10, linewidth=125)
 with open('design-mat.py', 'w') as fout:
     print >> fout, A
 np.set_printoptions(precision=10, threshold=1e10, linewidth=25)
 with open('obs-mat.py', 'w') as fout:
     print >> fout, np.transpose(b-noise)
+"""
 
 #initial guess
 p0 = np.asarray([x0_aprx, vx_aprx, a1_aprx, t1_aprx, a2_aprx, t2_aprx])
 x_best = np.asarray([x0, vx, a1, t1, a2, t2])
-min_vals = np.asarray([-np.inf, -np.inf, -np.inf, 5e0/365.25, -np.inf, 5e0/365.25])
-max_vals = np.asarray([+np.inf, +np.inf, +np.inf, 5e0, +np.inf, 5e0])
+min_vals = np.asarray([-np.inf, -np.inf, -1e3, 5e0/365.25, -1e3, 5e0/365.25])
+max_vals = np.asarray([+np.inf, +np.inf, +1e3, 5e0, +1e3, 5e0])
 popt, pcov = curve_fit(value_at, t, b, p0, jac=jacobian, bounds=(min_vals, max_vals))
 print popt
-print x_best
 
-"""
-max_iters = 6
+max_iters = 5
 colors = ['b--', 'r--', 'g--', 'k--', 'm--', 'y--']
 for i in range(max_iters):
     print('Iteration: {}, Model Parameters:'.format(i))
@@ -122,6 +122,6 @@ for i in range(max_iters):
     t2_aprx += x[5]
     b = l - value_at(t, x0_aprx, vx_aprx, a1_aprx, t1_aprx, a2_aprx, t2_aprx)
     A = partials_at(t, a1_aprx, t1_aprx, a2_aprx, t2_aprx)
-"""
+
 plt.legend()
 plt.show()
