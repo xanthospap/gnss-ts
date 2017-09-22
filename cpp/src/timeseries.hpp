@@ -580,6 +580,7 @@ public:
 
         // Solve via QR
         // x = A.colPivHouseholderQr().solve(b);
+        // Solve via SVD
         x = A.jacobiSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(b);
 
         // residual vector u = A*x - b; note that the residual vector may not
