@@ -99,6 +99,20 @@ def sorted_appender(epoch_array, rest_array, time_stamps, new_epoch, new_record,
             return
 
 def read_cts(cts_file, comment=None):
+    ''' Read a raw .cts file.
+        Lines starting with '#' are considered comment lines and are ignored.
+        If the input parameter 'comment' is used, then only lines ending with
+        this string are considered (i.e. lines for which line(196:) == comment).
+        If 'comment' is not used, then all lines are considered.
+        Valid lines should have at least 16 fields.
+
+        Prameters:
+        ----------
+        cts_file : string
+                   The filename of the .cts file to be read
+        comment  : string
+
+    '''
     with open(cts_file, 'r') as fin:
         epochs_array = []
         rest_array   = []

@@ -1,8 +1,9 @@
 import numpy    as np
-import datetime as dt
-from datetime import timedelta
+import datetime
+#from datetime import timedelta
 from functools import partial
 from bisect import bisect_right
+import copy
 
 import geodesy  as geo
 import tsflags
@@ -10,6 +11,118 @@ import gpstime
 
 ## for debuging
 ## from scipy import stats
+
+def angular_frequency(period): return 2.0e0*np.pi / period;
+
+class Model:
+
+    def __init__(self):
+        self.__t0__      = None
+        self.__x0__      = 0e0; self.__vx__          = 0e0
+        self.__periods__ = [];  self.__period_vals__ = [];
+        self.__offsets__ = [];  self.__offset_vals__ = [];
+
+    def set_central_epoch(self, t0):
+        assert isinstance(t0, datetime.datetime)
+        self.__t0__ = t0
+
+    def add_periods(self, *args):
+        """ Add one or more periods to the model.
+            Parameters:
+            -----------
+            *args : any number of numeric (i.e. int or float) values. These
+                    shall represent period in days.
+        """
+        for period in args:
+            assert float(period)
+            self.__periods__.append(period)
+
+    def periods(self):
+        return self.__periods__
+
+    def add_offsets(self, *args):
+        """ Add one or more offsets to the model.
+            Parameters:
+            -----------
+            *args: any number of datetime.datetime instances to represent the
+                   epochs the offsets occured.
+        """
+        for offset in args:
+            assert isinstance(offset, datetime.datetime)
+            self.__offsets__.append(offset)
+    
+    def offsets(self):
+        return self.__offsets__
+
+    def parameters(self):
+        return 2 + 2*len(self.__periods__) + len(self.__offsets__)
+
+    def make_model(self, start, stop, dt_in_days=1):
+        """ Construct an 'artificial' time-series, using the model. The timeseries
+            will span the interval [start,stop) with a step of dt_in_days days.
+        """
+        t = start
+        dt_in_days = datetime.timedelta(days=dt_in_days)
+        vals   = []
+        epochs = []
+        while t < stop:
+            dt  = (t-self.__t0__).days / 365.25e0
+            dtd = float( (t-self.__t0__).days )
+            y = self.__x0__ + self.__vx__*dt
+            for idx, fst in enumerate(self.__offsets__):
+                if t >= fst:
+                    y += self.__offset_vals__[idx]
+            for idx, per in enumerate(self.__periods__):
+                y += self.__period_vals__[idx*2] *np.cos(angular_frequency(per)*dtd)
+                y += self.__period_vals__[idx*2+1]*np.sin(angular_frequency(per)*dtd)
+            vals.append(y)
+            epochs.append(t)
+            t += dt_in_days
+        return epochs, vals
+
+    def assign(self, xestim):
+        assert self.parameters() == xestim.shape[0]
+        self.__x0__ = xestim[0]
+        self.__vx__ = xestim[1]
+        idx = 2
+        if len(self.__offset_vals__): self.__offset_vals__ = []
+        for fst in self.__offsets__:
+            self.__offset_vals__.append(xestim[idx])
+            idx += 1
+        if len(self.__period_vals__): self.__period_vals__ = []
+        for per in self.__periods__:
+            self.__period_vals__.append(xestim[idx])
+            idx += 1
+            self.__period_vals__.append(xestim[idx])
+            idx += 1
+        return
+
+    def assign_design_mat_row(self, t, y, w=1e0):
+        t0     = self.__t0__
+        dt     = (t-t0).days / 365.25e0
+        dtd    = float( (t-t0).days )
+        row    = [0]*self.parameters()
+        row[0] = w*1.0e0
+        row[1] = w*dt
+        idx    = 2;
+        for fst in self.offsets():
+            row[idx] = 1e0*w if fst >= t else 0e0
+            idx += 1
+        for prd in self.periods():
+            row[idx]   = w*np.cos(angular_frequency(prd)*dtd)
+            row[idx+1] = w*np.sin(angular_frequency(prd)*dtd)
+            idx += 2
+        return row
+
+    def print_model_info(self):
+        print "Central Epoch: ", self.__t0__
+        print "X0           : ", self.__x0__
+        print "Velocity     : ", self.__vx__,"m/yr"
+        for idx, ofs in enumerate(self.__offsets__):
+            print "Offset at :", ofs," displacement: ", self.__offset_vals__[idx], "m"
+        for idx, prd in enumerate(self.__periods__):
+            print "Period of:", prd, "days", "out-of-phase: ", self.__period_vals__[idx*2], "in-phase: ",self.__period_vals__[idx*2+1], "m"
+        return
 
 ##  dummy Enumeration type for holding coordinate types
 def enum(**enums):
@@ -83,11 +196,39 @@ class TimeSeries:
     def max_epoch(self):
         return self.epoch_array[-1] if self.epoch_array is not None else None
 
+    def time_span(self):
+        """" Return the timespan of the time-series as a 'datetime.timedelta'
+             instance, from min_epoch to max_epoch.
+        """
+        if self.epoch_array is None:
+            return datetime.timedelta(0)
+        return self.max_epoch() - self.min_epoch()
+
     def array_w_index(self, idx):
         if   idx == 0: return self.x_array, self.sx_array
         elif idx == 1: return self.y_array, self.sy_array
         elif idx == 2: return self.z_array, self.sz_array
         else         : raise RuntimeError
+
+    def fit_model(self, cmp, mdl):
+        """ cmp is [0,2]
+        """
+        model = copy.deepcopy(mdl)
+        if not model.__t0__:
+            model.set_central_epoch(self.average_epoch())
+        x_array, sx_array = self.array_w_index(cmp)
+        yls = np.zeros([self.size(), 1])
+        Als = np.zeros([self.size(), model.parameters()])
+        for i in range(0, self.size()):
+            if not self.flags[i].check(tsflags.TsFlagOption.outlier):
+                yls[i,0] = x_array[i]
+                Als[i,:] = model.assign_design_mat_row(self.epoch_array[i], x_array[i])
+        x, sos, rank, s = np.linalg.lstsq(Als, yls)
+        rmse = np.asscalar(np.sqrt(sos / yls.size))
+        residuals = yls - Als.dot(x)
+        model.assign(x)
+        model.print_model_info()
+        return model, rmse, residuals
 
     def dummy_lin_fit(self, perform_outlier_filtering=False):
         new_outlier = True
@@ -174,6 +315,20 @@ class TimeSeries:
             return None.
             The transformation function returned, should be of type:
             x_new, y_new, z_new = function(x_old, y_old, z_old)
+
+            Parameter:
+            ----------
+            crd_enum : string
+                       Can be any of:
+                            * 'Cartesian'
+                            * 'Ellipsoidal'
+                            * 'Topocentric'
+
+            Returns:
+            --------
+            A (pointer to a) function. This function (lets call it fun), should
+            be called like: x_new, y_new, z_new = fun(x_old, y_old, z_old)
+
         """
         if self.crd_type == crd_enum:
             return None
@@ -202,6 +357,19 @@ class TimeSeries:
             TODO: Fix point 2. above.
             Warning. This function will **NOT** affect the self instance; a
             new, transformed TimeSeries will be returned.
+            
+            Parameter:
+            ----------
+            crd_enum : string
+                       Can be any of:
+                            * 'Cartesian'
+                            * 'Ellipsoidal'
+                            * 'Topocentric'
+            Returns:
+            --------
+            A TimeSeries instance. This will be a copy of the calling instance
+                                   with its [x,y,z] coordinates transformed to
+                                   crd_enum type.
         """
         ##  get the transformation function; this should be of type:
         ##  x_new, y_new, z_new = function(x_old, y_old, z_old)
@@ -247,6 +415,7 @@ class TimeSeries:
                     sx_array    = np.array(list(zip(*ra)[3] )),
                     sy_array    = np.array(list(zip(*ra)[4] )),
                     sz_array    = np.array(list(zip(*ra)[5] )) )
+
     def toJson(self):
         jlst = []
         for i in range(0, self.size()):
