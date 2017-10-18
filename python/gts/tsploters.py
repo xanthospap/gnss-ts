@@ -4,7 +4,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 
-def ts_plot(ts, y_erbar=False, modelx=None, modely=None, modelz=None):
+def ts_plot(ts, y_erbar=False, remove_outliers=False, modelx=None, modely=None, modelz=None):
+    
+    if remove_outliers: ts = ts.remove_outliers()
+    
     ##  this is nice for large time-series
     mdates_series = mdates.date2num( ts.epoch_array )
     min_mdt = mdates.date2num( ts.epoch_array[0]  - datetime.timedelta( days=1.0 ) )
@@ -60,7 +63,7 @@ def ts_plot(ts, y_erbar=False, modelx=None, modely=None, modelz=None):
     #axs[0].xaxis.set_minor_formatter( mdates.DateFormatter('%b') )
 
     fig.autofmt_xdate()
-    plt.savefig( '%s.eps'%ts.station )
+    #plt.savefig( '%s.eps'%ts.station )
     plt.show()
 
     return

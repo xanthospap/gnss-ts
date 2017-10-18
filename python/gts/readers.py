@@ -2,6 +2,7 @@ import numpy      as np
 import datetime   as dt
 import timeseries as ts
 import bisect
+import os.path
 
 JAN11901 = 15385
 month_day = [
@@ -132,7 +133,7 @@ def read_cts(cts_file, comment=None):
                     print '## [DEBUG] Skipping record with description: \"{:}\"'.format(line_cmnt)
         assert len(epochs_array) == len(rest_array) and len(epochs_array) == len(time_stamps)
         print 'Time-Series from {:} to {:}'.format(epochs_array[0], epochs_array[len(epochs_array)-1])
-        return ts.TimeSeries(name=cts_file[0:4], type=ts.CoordinateType.Cartesian,
+        return ts.TimeSeries(name=os.path.basename(cts_file)[0:4], type=ts.CoordinateType.Cartesian,
                     # following won't work. Why ?? Use classic datetime instead
                     # epoch_array=np.array([x.strftime('%Y-%m-%d:%H:%M:%S') for x in sorted_lst[0]], dtype='datetime64'))
                     # epoch_array = sorted_lst[0], ## the epochs list (NOT ARRAY)

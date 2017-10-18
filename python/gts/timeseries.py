@@ -129,6 +129,35 @@ def enum(**enums):
     return type('Enum', (), enums)
 CoordinateType = enum(Cartesian=1, Ellipsoidal=2, Topocentric=3, Unknown=4)
 
+def outlier_detection(residuals, epochs, flags, window):
+    assert len(residuals) == len(epochs) and len(epochs) == len(flags)
+    starting_points = len( [ x for x in flags if not x.check(tsflags.TsFlagOption.outlier) ] )
+    #print '#\tStarting points',starting_points
+    marked_points   = 0
+    w = window / 2.0e0
+    assert w > 5
+    for i,v in enumerate(residuals):
+        t = epochs[i]
+        start_idx = stop_idx = i
+        while start_idx >= 0 and (t - epochs[start_idx]).days < w:
+            start_idx -= 1
+        if start_idx < 0: start_idx = 0
+        while stop_idx <= len(epochs)-1 and (epochs[stop_idx]-t).days < w:
+            stop_idx += 1
+        #assert start_idx >= 0
+        #assert stop_idx <= len(epochs)
+        #assert stop_idx - start_idx > 0
+        winres = [ x for j,x in enumerate(residuals[start_idx:stop_idx+1]) if not flags[start_idx+j].check(tsflags.TsFlagOption.outlier) ]
+        median = np.median(winres)
+        q25, q75 = np.percentile(winres, [25,75])
+        iqr = q75 - q25
+        if np.absolute(v-median) > 3e0*iqr:
+            flags[i].set(tsflags.TsFlagOption.outlier)
+            marked_points += 1
+            #print '#\tMarking point #',i,'(residual=',v,'at',epochs[i],')'
+        #print 'Points in window', len(winres), 'median', median, 'average', np.average(winres), '#', i, '/', len(residuals)
+    print '#\tMarked',marked_points,'/',starting_points, 'or', marked_points*100e0/starting_points,'%'
+
 class TimeSeries:
     ##  A simple TimeSeries class
     ##  All arrays are NumPy arrays except from epoch_array which a a list of
@@ -139,7 +168,7 @@ class TimeSeries:
         for i in ['name',   'type',     'epoch_array',
                 'x_array',  'y_array',  'z_array',
                 'sx_array', 'sy_array', 'sz_array',
-                'time_stamp', 'comment']:
+                'time_stamp', 'comment', 'flags']:
             try:
                 kwargs[i]
             except:
@@ -161,10 +190,45 @@ class TimeSeries:
         self.sz_array    = kwargs['sz_array']
         if self.sz_array is not None: self.sz_array = self.sz_array.astype(float)
         ## the flag array, one flag per epoch
-        self.flags       = [ tsflags.TsFlag() for i in range(0, len(self.epoch_array)) ]
+        self.flags = kwargs['flags']
+        if not self.flags and self.epoch_array:
+            self.flags = [ tsflags.TsFlag() for i in range(0, len(self.epoch_array)) ]
         self.time_stamps = kwargs['time_stamp']
         self.comments    = kwargs['comment']
         assert self.check_sizes()
+
+    def remove_outliers(self):
+        cleants = TimeSeries()
+        cleants.station  = self.station
+        cleants.crd_type = self.crd_type
+        pts_to_skip      = [ idx for idx,val in enumerate(self.flags) if val.check(tsflags.TsFlagOption.outlier) ]
+        """
+        cleants.x_array  = [ x for i,x in enumerate(self.x_array) if i not in pts_to_skip ]
+        cleants.y_array  = [ x for i,x in enumerate(self.y_array) if i not in pts_to_skip ]
+        cleants.z_array  = [ x for i,x in enumerate(self.z_array) if i not in pts_to_skip ]
+        cleants.sx_array = [ x for i,x in enumerate(self.sx_array) if i not in pts_to_skip ]
+        cleants.sy_array = [ x for i,x in enumerate(self.sy_array) if i not in pts_to_skip ]
+        cleants.sz_array = [ x for i,x in enumerate(self.sz_array) if i not in pts_to_skip ]
+        """
+        cleants.flags       = [ x for i,x in enumerate(self.flags) if i not in pts_to_skip ]
+        cleants.epoch_array = [ x for i,x in enumerate(self.epoch_array) if i not in pts_to_skip ]
+        if self.time_stamps is not None:
+            cleants.time_stamps = [ x for i,x in enumerate(self.time_stamps) if i not in pts_to_skip ]
+        if self.comments is not None:
+            cleants.comments = [ x for i,x in enumerate(self.comments) if i not in pts_to_skip ]
+        cleants.x_array  = list(np.delete(self.x_array, pts_to_skip))
+        cleants.y_array  = list(np.delete(self.y_array, pts_to_skip))
+        cleants.z_array  = list(np.delete(self.z_array, pts_to_skip))
+        cleants.sx_array = list(np.delete(self.sx_array, pts_to_skip))
+        cleants.sy_array = list(np.delete(self.sy_array, pts_to_skip))
+        cleants.sz_array = list(np.delete(self.sz_array, pts_to_skip))
+        """
+        cleants.flags    = list(np.delete(pts_to_skip, self.flags))
+        cleants.time_stamps = list(np.delete(pts_to_skip, self.time_stamps))
+        cleants.comments = list(np.delete(pts_to_skip, self.comments))
+        """
+        assert cleants.check_sizes()
+        return cleants
 
     def average_epoch(self):
         return self.epoch_array[0] + (self.epoch_array[self.size()-1] - self.epoch_array[0]) / 2
@@ -210,12 +274,14 @@ class TimeSeries:
         elif idx == 2: return self.z_array, self.sz_array
         else         : raise RuntimeError
 
-    def fit_model(self, cmp, mdl):
+    def fit_model(self, cmp, mdl, perform_outlier_detection=False, window_in_days=120):
         """ cmp is [0,2]
         """
         model = copy.deepcopy(mdl)
         if not model.__t0__:
             model.set_central_epoch(self.average_epoch())
+        #starting_points1 = len( [ x for x in self.flags if not x.check(tsflags.TsFlagOption.outlier) ] )
+        #print '# Starting points:', starting_points1
         x_array, sx_array = self.array_w_index(cmp)
         yls = np.zeros([self.size(), 1])
         Als = np.zeros([self.size(), model.parameters()])
@@ -228,36 +294,12 @@ class TimeSeries:
         residuals = yls - Als.dot(x)
         model.assign(x)
         model.print_model_info()
+        if perform_outlier_detection:
+            outlier_detection(residuals, self.epoch_array, self.flags, window_in_days)
+        #starting_points2 = len( [ x for x in self.flags if not x.check(tsflags.TsFlagOption.outlier) ] )
+        #print '# Non-marked points:', starting_points2
+        #print '# Residuals marked:',starting_points1-starting_points2
         return model, rmse, residuals
-
-    def dummy_lin_fit(self, perform_outlier_filtering=False):
-        new_outlier = True
-        iteration   = 0
-        while new_outlier and iteration <= 5:
-            print 'Iteration {:2d}'.format(iteration)
-            new_outlier = False
-            for cmp in self.x_array, self.y_array, self.z_array:
-                yls = []
-                Als = []
-                t0  = self.average_epoch()
-                rel_pos = [] ## original index of each element in the system
-                for i in range(0, self.size()):
-                    if not self.flags[i].check(tsflags.TsFlagOption.outlier):
-                        yls.append(cmp[i])
-                        Als.append([1.0, (self.epoch_array[i] - t0).days/365.25])
-                        rel_pos.append(i)
-                y = np.array(yls) #.astype(float)
-                A = np.array(Als) #.astype(float)
-                x, sos, rank, s = np.linalg.lstsq(A, y)
-                rmse = np.asscalar(np.sqrt(sos / y.size))
-                print '\tV  = {:7.2f} +- {:7.2f} mm/y # of points {:4d} from {:} to {:}'.format(x[1]*1000.0, rmse*1000.0, y.size, min(self.epoch_array).date(), max(self.epoch_array).date())
-                residuals = y - A.dot(x)
-                for i,r in enumerate(residuals):
-                    if abs(r) >= 3.0 * rmse:
-                        self.flags[rel_pos[i]].set(tsflags.TsFlagOption.outlier)
-                        print '\t\tOutlier at epoch {:} residual = {:+8.5f}mm 3*sigma = {:8.4f}'.format(self.epoch_array[rel_pos[i]], r, 3.0 * rmse)
-                        new_outlier = True
-            iteration += 1
 
     def split(self, epoch):
         """ Split the TimeSeries into two seperate TimeSeries at point epoch
