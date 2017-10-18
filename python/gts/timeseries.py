@@ -106,7 +106,7 @@ class Model:
         row[1] = w*dt
         idx    = 2;
         for fst in self.offsets():
-            row[idx] = 1e0*w if fst >= t else 0e0
+            row[idx] = 1e0*w if t>=fst else 0e0
             idx += 1
         for prd in self.periods():
             row[idx]   = w*np.cos(angular_frequency(prd)*dtd)
@@ -157,6 +157,49 @@ def outlier_detection(residuals, epochs, flags, window):
             #print '#\tMarking point #',i,'(residual=',v,'at',epochs[i],')'
         #print 'Points in window', len(winres), 'median', median, 'average', np.average(winres), '#', i, '/', len(residuals)
     print '#\tMarked',marked_points,'/',starting_points, 'or', marked_points*100e0/starting_points,'%'
+
+def find_possible_outliers(residuals, epochs, flags, window, rms_start):
+    assert len(residuals) == len(epochs) and len(epochs) == len(flags)
+    start_idx = 60 # days
+    stop_idx  = start_idx + window
+    t0 = epochs[start_idx]
+    #x = [ float((e-t0).days) for i,e in enumerate(epochs[start_idx:stop_idx]) if not flags[start_idx+i].check(tsflags.TsFlagOption.outlier) ]
+    #y = [ k for i,k in enumerate(residuals[start_idx:stop_idx]) if not flags[start_idx+i].check(tsflags.TsFlagOption.outlier) ]
+    #p, u, _, _, _ = np.polyfit(x, y, 1, rcond=None, full=True)
+    #rms_old = np.linalg.norm(u) / len(x)
+    rms_old = rms_start
+    while start_idx < len(epochs) - window:
+        start_idx += 15
+        stop_idx   = start_idx + window
+        t0 = epochs[start_idx]
+        x = [ float((e-t0).days) for i,e in enumerate(epochs[start_idx:stop_idx])    if not flags[start_idx+i].check(tsflags.TsFlagOption.outlier) ]
+        y = [ k for i,k in enumerate(residuals[start_idx:stop_idx]) if not flags[start_idx+i].check(tsflags.TsFlagOption.outlier) ]
+        p, u, _, _, _ = np.polyfit(x, y, 1, rcond=None, full=True)
+        rms_new = np.linalg.norm(u) / len(x)
+        if np.absolute(rms_new-rms_old) > rms_old:
+            print '#\tPossible offset somewhere between',epochs[start_idx], 'and', epochs[stop_idx]
+            print '#\tRms old vs new',rms_old, rms_new
+            i = 0
+            j = len(x)
+            n = (j-i) / 2
+            while n >= 5:
+                #print '#\t\ti,j,n,len(x1), len(x2), len(y1), len(y2)=',i,j,n,len(x[i:i+n]), len(x[i+n:j]), len(y[i:i+n]), len(y[i+n:j])
+                #print '#\t\tindexes: i:i+n=',i,':',i+n,'i+n:j=',i+n,':',j
+                p1, u1, _, _, _ = np.polyfit(x[i:i+n], y[i:i+n], 1, rcond=None, full=True)
+                p2, u2, _, _, _ = np.polyfit(x[i+n:j], y[i+n:j], 1, rcond=None, full=True)
+                rms1 = np.linalg.norm(u1) / len(x[i:i+n])
+                rms2 = np.linalg.norm(u2) / len(x[i+n:j])
+                if rms1 > rms2:
+                    i = i 
+                    j = i+n
+                else:
+                    i = i+n
+                    j = j
+                n = (j - i) / 2
+            print '#\tNarrowed it down to interval:',epochs[start_idx+i], 'and', epochs[start_idx+j]
+            rms_old = rms_start
+        else:
+            rms_old = rms_new
 
 class TimeSeries:
     ##  A simple TimeSeries class
@@ -280,8 +323,6 @@ class TimeSeries:
         model = copy.deepcopy(mdl)
         if not model.__t0__:
             model.set_central_epoch(self.average_epoch())
-        #starting_points1 = len( [ x for x in self.flags if not x.check(tsflags.TsFlagOption.outlier) ] )
-        #print '# Starting points:', starting_points1
         x_array, sx_array = self.array_w_index(cmp)
         yls = np.zeros([self.size(), 1])
         Als = np.zeros([self.size(), model.parameters()])
@@ -290,15 +331,17 @@ class TimeSeries:
                 yls[i,0] = x_array[i]
                 Als[i,:] = model.assign_design_mat_row(self.epoch_array[i], x_array[i])
         x, sos, rank, s = np.linalg.lstsq(Als, yls)
+        #np.set_printoptions(precision=4, threshold=1e9)
+        #print Als
+        #print x
         rmse = np.asscalar(np.sqrt(sos / yls.size))
         residuals = yls - Als.dot(x)
         model.assign(x)
         model.print_model_info()
         if perform_outlier_detection:
             outlier_detection(residuals, self.epoch_array, self.flags, window_in_days)
-        #starting_points2 = len( [ x for x in self.flags if not x.check(tsflags.TsFlagOption.outlier) ] )
-        #print '# Non-marked points:', starting_points2
-        #print '# Residuals marked:',starting_points1-starting_points2
+        print 'Post-fit rms:', rmse, 'm'
+        find_possible_outliers(residuals, self.epoch_array, self.flags, 30, rmse)
         return model, rmse, residuals
 
     def split(self, epoch):

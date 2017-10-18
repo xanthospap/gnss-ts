@@ -1,5 +1,6 @@
 #! /usr/bin/python
 
+import datetime
 import argparse
 import gts.readers
 import gts.timeseries as ts
@@ -47,6 +48,8 @@ if time_span_in_years >= 1.5e0:
     model.add_periods(365.25/2e0)
 if time_span_in_years >= 2.0e0:
     model.add_periods(365.25)
+#model.add_offsets(datetime.datetime(2015, 7, 28))
+#model.add_offsets(datetime.datetime(2014, 12, 18))
 
 ##  Fit the model to the data (per component)
 xmdl, _, _ = ots.fit_model(0, model, True)
