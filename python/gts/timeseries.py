@@ -129,10 +129,22 @@ def enum(**enums):
     return type('Enum', (), enums)
 CoordinateType = enum(Cartesian=1, Ellipsoidal=2, Topocentric=3, Unknown=4)
 
+def __ls__(x, y, sy, model):
+    assert len(x) == len(y)
+    rows = len(y)
+    cols = model.parameters()
+    yls = np.zeros([rows, 1])
+    Als = np.zeros([rows, cols])
+    for i in range(rows):
+        yls[i,0] = y[i]
+        Als[i,:] = model.assign_design_mat_row(x[i], y[i])
+    x, sos, rank, s = np.linalg.lstsq(Als, yls)
+    rmse = np.asscalar(np.sqrt(sos / yls.size))
+    residuals = yls - Als.dot(x)
+    return x, residuals, rmse
+
 def outlier_detection(residuals, epochs, flags, window):
     assert len(residuals) == len(epochs) and len(epochs) == len(flags)
-    starting_points = len( [ x for x in flags if not x.check(tsflags.TsFlagOption.outlier) ] )
-    #print '#\tStarting points',starting_points
     marked_points   = 0
     w = window / 2.0e0
     assert w > 5
@@ -144,29 +156,20 @@ def outlier_detection(residuals, epochs, flags, window):
         if start_idx < 0: start_idx = 0
         while stop_idx <= len(epochs)-1 and (epochs[stop_idx]-t).days < w:
             stop_idx += 1
-        #assert start_idx >= 0
-        #assert stop_idx <= len(epochs)
-        #assert stop_idx - start_idx > 0
-        winres = [ x for j,x in enumerate(residuals[start_idx:stop_idx+1]) if not flags[start_idx+j].check(tsflags.TsFlagOption.outlier) ]
-        median = np.median(winres)
-        q25, q75 = np.percentile(winres, [25,75])
+        median   = np.median(residuals[start_idx:stop_idx+1])
+        q25, q75 = np.percentile(residuals[start_idx:stop_idx+1], [25,75])
         iqr = q75 - q25
         if np.absolute(v-median) > 3e0*iqr:
             flags[i].set(tsflags.TsFlagOption.outlier)
             marked_points += 1
-            #print '#\tMarking point #',i,'(residual=',v,'at',epochs[i],')'
-        #print 'Points in window', len(winres), 'median', median, 'average', np.average(winres), '#', i, '/', len(residuals)
-    print '#\tMarked',marked_points,'/',starting_points, 'or', marked_points*100e0/starting_points,'%'
+    print '# (outlier_detection): Marked',marked_points,'/',len(residuals), 'or', marked_points*100e0/len(residuals),'%'
 
 def find_possible_outliers(residuals, epochs, flags, window, rms_start):
     assert len(residuals) == len(epochs) and len(epochs) == len(flags)
+    offset_info = []
     start_idx = 60 # days
     stop_idx  = start_idx + window
     t0 = epochs[start_idx]
-    #x = [ float((e-t0).days) for i,e in enumerate(epochs[start_idx:stop_idx]) if not flags[start_idx+i].check(tsflags.TsFlagOption.outlier) ]
-    #y = [ k for i,k in enumerate(residuals[start_idx:stop_idx]) if not flags[start_idx+i].check(tsflags.TsFlagOption.outlier) ]
-    #p, u, _, _, _ = np.polyfit(x, y, 1, rcond=None, full=True)
-    #rms_old = np.linalg.norm(u) / len(x)
     rms_old = rms_start
     while start_idx < len(epochs) - window:
         start_idx += 15
@@ -177,14 +180,10 @@ def find_possible_outliers(residuals, epochs, flags, window, rms_start):
         p, u, _, _, _ = np.polyfit(x, y, 1, rcond=None, full=True)
         rms_new = np.linalg.norm(u) / len(x)
         if np.absolute(rms_new-rms_old) > rms_old:
-            print '#\tPossible offset somewhere between',epochs[start_idx], 'and', epochs[stop_idx]
-            print '#\tRms old vs new',rms_old, rms_new
             i = 0
             j = len(x)
             n = (j-i) / 2
             while n >= 5:
-                #print '#\t\ti,j,n,len(x1), len(x2), len(y1), len(y2)=',i,j,n,len(x[i:i+n]), len(x[i+n:j]), len(y[i:i+n]), len(y[i+n:j])
-                #print '#\t\tindexes: i:i+n=',i,':',i+n,'i+n:j=',i+n,':',j
                 p1, u1, _, _, _ = np.polyfit(x[i:i+n], y[i:i+n], 1, rcond=None, full=True)
                 p2, u2, _, _, _ = np.polyfit(x[i+n:j], y[i+n:j], 1, rcond=None, full=True)
                 rms1 = np.linalg.norm(u1) / len(x[i:i+n])
@@ -196,10 +195,16 @@ def find_possible_outliers(residuals, epochs, flags, window, rms_start):
                     i = i+n
                     j = j
                 n = (j - i) / 2
-            print '#\tNarrowed it down to interval:',epochs[start_idx+i], 'and', epochs[start_idx+j]
+            max_off = 0e0
+            for i in range(i,j-1):
+                if np.absolute(y[i]-y[i+1]) > max_off:
+                    max_off = np.absolute(y[i]-y[i+1])
+                    off_t   = epochs[start_idx+i]
+            offset_info.append([off_t, max_off])
             rms_old = rms_start
         else:
             rms_old = rms_new
+    return offset_info
 
 class TimeSeries:
     ##  A simple TimeSeries class
@@ -245,14 +250,6 @@ class TimeSeries:
         cleants.station  = self.station
         cleants.crd_type = self.crd_type
         pts_to_skip      = [ idx for idx,val in enumerate(self.flags) if val.check(tsflags.TsFlagOption.outlier) ]
-        """
-        cleants.x_array  = [ x for i,x in enumerate(self.x_array) if i not in pts_to_skip ]
-        cleants.y_array  = [ x for i,x in enumerate(self.y_array) if i not in pts_to_skip ]
-        cleants.z_array  = [ x for i,x in enumerate(self.z_array) if i not in pts_to_skip ]
-        cleants.sx_array = [ x for i,x in enumerate(self.sx_array) if i not in pts_to_skip ]
-        cleants.sy_array = [ x for i,x in enumerate(self.sy_array) if i not in pts_to_skip ]
-        cleants.sz_array = [ x for i,x in enumerate(self.sz_array) if i not in pts_to_skip ]
-        """
         cleants.flags       = [ x for i,x in enumerate(self.flags) if i not in pts_to_skip ]
         cleants.epoch_array = [ x for i,x in enumerate(self.epoch_array) if i not in pts_to_skip ]
         if self.time_stamps is not None:
@@ -265,11 +262,6 @@ class TimeSeries:
         cleants.sx_array = list(np.delete(self.sx_array, pts_to_skip))
         cleants.sy_array = list(np.delete(self.sy_array, pts_to_skip))
         cleants.sz_array = list(np.delete(self.sz_array, pts_to_skip))
-        """
-        cleants.flags    = list(np.delete(pts_to_skip, self.flags))
-        cleants.time_stamps = list(np.delete(pts_to_skip, self.time_stamps))
-        cleants.comments = list(np.delete(pts_to_skip, self.comments))
-        """
         assert cleants.check_sizes()
         return cleants
 
@@ -317,31 +309,73 @@ class TimeSeries:
         elif idx == 2: return self.z_array, self.sz_array
         else         : raise RuntimeError
 
-    def fit_model(self, cmp, mdl, perform_outlier_detection=False, window_in_days=120):
+    def __get_clean_copy_of__(self, cmp):
+        """ This function returns a copy of the instances's arrays:
+            [x||y||z]_array     (copy)
+            [sx||sy||sz]_array  (copy)
+            epoch_array         (Not a copy but a list of references)
+            flags               (Not a copy but a list of references)
+        """
+        y_vals, sy_vals = self.array_w_index(cmp)
+        pts2remove = [ idx for idx in range(len(y_vals)) if self.flags[idx].check(tsflags.TsFlagOption.outlier) ]
+        y_vals  = list(np.delete(y_vals, pts2remove))
+        sy_vals = list(np.delete(sy_vals, pts2remove))
+        epochs  = [None]*len(y_vals)
+        flags   = [None]*len(y_vals)
+        skipped = 0
+        for i in range(len(self.flags)):
+            if not self.flags[i].check(tsflags.TsFlagOption.outlier):
+                epochs[i-skipped] = self.epoch_array[i]
+                flags[i-skipped]  = self.flags[i]
+                ## these are references !!!!
+                assert id(epochs[i-skipped]) == id(self.epoch_array[i])
+                assert id(flags[i-skipped])  == id(self.flags[i])
+            else:
+                skipped += 1
+        assert len(y_vals) == len(epochs) and len(epochs) == len(sy_vals) and len(epochs) == len(flags)
+        return y_vals, sy_vals, epochs, flags, pts2remove
+
+
+    def fit_model(self, cmp, mdl, perform_outlier_detection=False, window_in_days=120, search_for_jumps=False):
         """ cmp is [0,2]
         """
         model = copy.deepcopy(mdl)
         if not model.__t0__:
             model.set_central_epoch(self.average_epoch())
-        x_array, sx_array = self.array_w_index(cmp)
-        yls = np.zeros([self.size(), 1])
-        Als = np.zeros([self.size(), model.parameters()])
-        for i in range(0, self.size()):
-            if not self.flags[i].check(tsflags.TsFlagOption.outlier):
-                yls[i,0] = x_array[i]
-                Als[i,:] = model.assign_design_mat_row(self.epoch_array[i], x_array[i])
-        x, sos, rank, s = np.linalg.lstsq(Als, yls)
-        #np.set_printoptions(precision=4, threshold=1e9)
-        #print Als
-        #print x
-        rmse = np.asscalar(np.sqrt(sos / yls.size))
-        residuals = yls - Als.dot(x)
+        ##  Get clean copies/references
+        ##  Note that t and f hold references to the self.epoch_array and
+        ##+ self.flags arrays!
+        y, sy, t, f, skipped_idx = self.__get_clean_copy_of__(cmp)
+        ##  Perform a least squares fit; note that the size of the residuals vector
+        ##+ is smaller (or equal to) the time-series size.
+        x, residuals, rmse = __ls__(t, y, sy, model)
+        ##  Assign result vector to the model.
         model.assign(x)
         model.print_model_info()
         if perform_outlier_detection:
-            outlier_detection(residuals, self.epoch_array, self.flags, window_in_days)
-        print 'Post-fit rms:', rmse, 'm'
-        find_possible_outliers(residuals, self.epoch_array, self.flags, 30, rmse)
+            ##  Perform outlier detection; this function will actually mark the
+            ##+ points in self.epoch_array and self.flags, cause t and f hold
+            ##+ elements which are references to the sel.* arrays.
+            outlier_detection(residuals, t, f, window_in_days)
+        if search_for_jumps:
+            possible_jumps = find_possible_outliers(residuals, t, f, 30, rmse)
+            possible_jumps = sorted(possible_jumps, key = lambda p: p[1])
+            jumps_applied  = 0
+            for jump in reversed(possible_jumps):
+                new_model = copy.deepcopy(model)
+                new_model.add_offsets(jump[0])
+                x_, v_, r_ = __ls__(t, y, sy, new_model)
+                new_model.assign(x_)
+                jump_val = new_model.__offset_vals__[-1]
+                if r_ < rmse and jump_val > 1e-3:
+                    jumps_applied += 1
+                    model = copy.deepcopy(new_model)
+                    #model.assign(x_)
+                    print '# (fit_model) Offset fits nicely at',jump[0],'size=',model.__offset_vals__[-1],'#',jumps_applied,'/',len(possible_jumps),'rms info',rmse,'>',r_
+                    rmse = r_
+                else:
+                    break
+        assert self.check_sizes()
         return model, rmse, residuals
 
     def split(self, epoch):

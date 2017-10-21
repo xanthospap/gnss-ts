@@ -52,9 +52,9 @@ if time_span_in_years >= 2.0e0:
 #model.add_offsets(datetime.datetime(2014, 12, 18))
 
 ##  Fit the model to the data (per component)
-xmdl, _, _ = ots.fit_model(0, model, True)
-ymdl, _, _ = ots.fit_model(1, model, True)
-zmdl, _, _ = ots.fit_model(2, model, True)
+xmdl, _, _ = ots.fit_model(0, model, True, 120, True)
+ymdl, _, _ = ots.fit_model(1, model, True, 120, True)
+zmdl, _, _ = ots.fit_model(2, model, True, 120, True)
 
 ## Plot the timeseries
 gts.tsploters.ts_plot(ots, False, True, xmdl, ymdl, zmdl)
