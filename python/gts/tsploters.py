@@ -63,7 +63,7 @@ def ts_plot(ts, y_erbar=False, remove_outliers=False, modelx=None, modely=None, 
     #axs[0].xaxis.set_minor_formatter( mdates.DateFormatter('%b') )
 
     fig.autofmt_xdate()
-    #plt.savefig( '%s.eps'%ts.station )
-    plt.show()
+    plt.savefig( '%s.eps'%ts.station )
+    #plt.show()
 
     return

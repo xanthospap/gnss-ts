@@ -1,6 +1,5 @@
 import numpy    as np
 import datetime
-#from datetime import timedelta
 from functools import partial
 from bisect import bisect_right
 import copy
@@ -357,6 +356,9 @@ class TimeSeries:
             ##+ points in self.epoch_array and self.flags, cause t and f hold
             ##+ elements which are references to the sel.* arrays.
             outlier_detection(residuals, t, f, window_in_days)
+            y, sy, t, f, skipped_idx = self.__get_clean_copy_of__(cmp)
+            x, residuals, rmse = __ls__(t, y, sy, model)
+            model.assign(x)
         if search_for_jumps:
             possible_jumps = find_possible_outliers(residuals, t, f, 30, rmse)
             possible_jumps = sorted(possible_jumps, key = lambda p: p[1])
@@ -367,7 +369,7 @@ class TimeSeries:
                 x_, v_, r_ = __ls__(t, y, sy, new_model)
                 new_model.assign(x_)
                 jump_val = new_model.__offset_vals__[-1]
-                if r_ < rmse and jump_val > 1e-3:
+                if r_ < rmse and np.absolute(jump_val) > .9e-3:
                     jumps_applied += 1
                     model = copy.deepcopy(new_model)
                     #model.assign(x_)
