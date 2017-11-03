@@ -13,11 +13,24 @@
 namespace ngpt
 {
 
+/// @brief Discrete Fourier Transform
+///
 /// Replaces data[0..2*nn-1] by its discrete Fourier transform, if isign is 
 /// input as 1; or replaces data[0..2*nn-1] by nn times its inverse discrete 
 /// Fourier transform, if isign is input as −1. data is a complex array of 
 /// length nn or, equivalently, a real array of length 2*nn. nn MUST be an 
 /// integer power of 2 (this is not checked for!).
+///
+/// @param[in,out] data  Array of size 2*nn; at input this is the data array. At
+///                      output it is overwritten by its DFT (or inverse DFT
+///                      depending on the value of sign).
+/// @param[in]     nn    (Half) the size of data array.
+/// @param[in]     sign  If +1 is given the DFT is computed; if it is -1 then
+///                      the inverse DFT is computed instead.
+///
+/// @note This function is used within realft__.
+///
+/// Reference, Numerical Recipes in C, Ch. 12.2, pg. 507
 void
 four1__(double data[], std::size_t nn, int isign)
 {
@@ -75,13 +88,20 @@ four1__(double data[], std::size_t nn, int isign)
     return;
 }
 
-/// Calculates the Fourier transform of a set of n real-valued data points. 
-/// Replaces this data (which is stored in array data[0..n-1]) by the positive 
-/// frequency half of its complex Fourier transform. The real-valued first 
+/// @brief (Real) Fast Fourier Transform.
+///
+/// Calculates the Fourier transform of a set of n real-valued data points.
+/// Replaces this data (which is stored in array data[0..n-1]) by the positive
+/// frequency half of its complex Fourier transform. The real-valued first
 /// and last components of the complex transform are returned as elements
-/// data[0] and data[1], respectively. n must be a power of 2. This routine 
-/// also calculates the inverse transform of a complex data array if it is 
+/// data[0] and data[1], respectively. n must be a power of 2. This routine
+/// also calculates the inverse transform of a complex data array if it is
 /// the transform of real data. (Result in this case must be multiplied by 2/n.)
+///
+/// @param[in,out] data  Array of size n, containing at input the data values.
+///                      At output it is overwritten by the its Fourier transform.
+/// @param[in]     n     Size of data array.
+/// @param[out]    sign  +1 for the forward transform, -1 for the inverse.
 ///
 /// Reference: Numerical Recipes in C, Ch. 12.3
 void

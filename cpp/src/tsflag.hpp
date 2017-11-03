@@ -2,12 +2,12 @@
 #define __TIMESERIES_FLAGS_HPP__
 
 ///
-/// \file  tsflag.hpp
+/// @file  tsflag.hpp
 ///
-/// \brief This file defines the (strongly-typed) enumeration types, to be used
+/// @brief This file defines the (strongly-typed) enumeration types, to be used
 ///        for the timeseries<...> and crdts<...> classes.
 ///
-/// \todo Add an example (somewhere) of how a user can adapt the enums, or make
+/// @todo Add an example (somewhere) of how a user can adapt the enums, or make
 ///       new ones to use for a time-series.
 
 #include <iostream>
@@ -30,7 +30,8 @@ bool
 __skip__(flag<pt_marker> p) noexcept;
 
 /// For any enumeration type that can be wrapped around the flag (template)
-/// class, there should be an overload for the '<<' operator.
+/// class, there should be an overload for the '<<' operator. I.e. how are
+/// we supposed to 'write' this pt_marker(s)?
 std::ostream&
 operator<<(std::ostream& os, const flag<pt_marker>& marker)
 {

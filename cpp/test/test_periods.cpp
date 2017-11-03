@@ -226,19 +226,21 @@ main(int argc, char* argv[])
         mdl2.x0()         = 0e0;  // constant coef.
         mdl2.vx()         = 0e0;  // velocity
         auto new_ts { ts };
+        double stddev (1e-3), stddev_new;
         for (std::size_t i = 0; i <= model.harmonics().size(); i++) {
             new_ts.epoch_ptr() = ts.epoch_ptr();
             lomb_scargle_fast(new_ts, ofac, hifac, px, py, nwk, nout, jmax, prob);
             std::cout<<"\n\tIteration "<<i+1<<": Dominant frequency in time-series: "<<px[jmax]<<" (at index: "<<jmax<<")"
                 <<"; this is a period of "<<1e0/px[jmax]<<" days power="<<py[jmax]<<" probability="<<prob;
             mdl2.add_period(1e0/px[jmax]);
-            double std;
-            new_ts = ts.qr_ls_solve(mdl2, std);
+            new_ts = ts.qr_ls_solve(mdl2, stddev_new, stddev);
+            std::cout << "\n\tA-posteriori std. dev:" << stddev_new;
             new_ts.epoch_ptr() = ts.epoch_ptr();
             std::ofstream lot {"lomb" + std::to_string(i) + ".out"};
             for (std::size_t k=0;k<nout;k++) lot << "\n" << px[k] << " " << py[k];
             std::ofstream tot {"foo" + std::to_string(i) + ".ts"};
             new_ts.dump(tot);
+            stddev = stddev_new;
         }
 
         delete[] px;

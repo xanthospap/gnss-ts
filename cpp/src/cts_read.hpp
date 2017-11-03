@@ -14,15 +14,21 @@
 
 // gtms headers
 #include "crdts.hpp"
-// #include "genflags.hpp"
 #include "tsflag.hpp"
 #include "crdts.hpp"
 
 namespace ngpt
 {
 
-/// Conver a c-string to a flag<pt_marker>. Leading whitespace characters are
-/// ignored, untill a non-whitespace char is encountered.
+/// @brief c-string to flag<pt_marker>
+///
+/// Convert a c-string to a flag<pt_marker>. Leading whitespace characters are
+/// ignored, untill a non-whitespace char is encountered. The conversion stops
+/// when a digit is encountered of a '-' character. stop is set the last, non-
+/// converted character.
+///
+/// @param[in] str  The string to examine.
+/// @param[in] stop The first non-converted character
 flag<pt_marker>
 str2flag(const char* str, char** stop)
 {
@@ -127,10 +133,38 @@ template<typename T,
     return ts;
 }
 
+/// @brief Read a time-series file in cts format.
+///
 /// Read a time-series in cartesian coordinates (aka crdts<T>) off from a .cts file.
 /// Note that each line (in the file) can have no more than 256 characters.
 /// Also note that the sigmas are scaled to 1000 (i.e. they are assumed meters
 /// and converted to millimeters).
+/// The function will skip any lines starting with '#'.
+///
+/// @param[in] cts_file  The filename of the 'cts' format file to read in.
+/// @param[in] ts_name   The name of the time-series
+/// @return              A time-series (aka crdts<T>) with
+///                      coordinate_type::cartesian holding all records of the
+///                      input file.
+///
+/// @warning
+///   - Records are added to the time-series 'as-they-are'; no check is made
+///     for duplicates, etc... and there is no sorting!
+///   - No line of the input files should be larger than 256 characters.
+///
+/// @note  What is the cts format? It is just a plain record of type:
+/// '2016-12-30 12:00:00  +4744543.81140   0.00028  +2119412.01362   0.00028  +3686258.72898   0.00105 2017-07-30 09:29:34 repro16'
+/// i.e. its fields are:
+/// - datetime (YYYY-MM-DD HH:MM:SS)
+/// - X coordinate (meters)
+/// - X std. dev (meters)
+/// - Y coordinate (meters)
+/// - Y std. dev (meters)
+/// - Z coordinate (meters)
+/// - Z std. dev (meters)
+/// Anything after the z_std.dev is ignored; note however that the line length
+/// should not exceed 256 characters.
+///
 template<class T,
         typename = std::enable_if_t<T::is_of_sec_type>
         >
@@ -144,7 +178,8 @@ template<class T,
     }
 
     char line[MAX_CHARS];
-    char *cptr(&line[0]), *end;
+    char *cptr(&line[0]),
+         *end;
     ngpt::datetime<T> epoch;
     double data[6];
     crdts<T> ts {ts_name};

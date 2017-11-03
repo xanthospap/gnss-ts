@@ -64,6 +64,7 @@ try:
     #model.add_offsets(datetime.datetime(2015,11,01)) #Kephalonia
     #model.add_offsets(datetime.datetime(2015,11,17)) #Lefkada
     #model.add_offsets(datetime.datetime(2014,07,1)) #mol2 and trp2
+    model.add_offsets(datetime.datetime(2008,02,14)) # methoni, pyl?
 
 ##  Fit the model to the data (per component)
     xmdl, _, _ = ots.fit_model(0, model, True, 120, False)

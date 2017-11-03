@@ -18,13 +18,13 @@
 namespace ngpt
 {
 
-/// Max line length (in chars) for an earthquake catalogue file.
 namespace earthquake_catalogue_detail
 {
+    /// Max line length (in chars) for an earthquake catalogue file.
     constexpr std::size_t MAX_CHARS_IN_LINE = 256;
 }
 
-/// A simple class to hold an earthquake event.
+/// @brief A simple class to hold an earthquake event.
 template<class T,
         typename = std::enable_if_t<T::is_of_sec_type>
         >
@@ -40,8 +40,10 @@ template<class T,
     {}
 
     /// Full-fledged constructor
-    explicit earthquake(const ngpt::datetime<T>& d, double lat, double lon,
-        double dpth, double mag) noexcept
+    explicit
+    earthquake(const ngpt::datetime<T>& d, double lat, double lon,
+        double dpth, double mag)
+    noexcept
     : m_epoch{d},
       m_lon{lon},
       m_lat{lat},
@@ -61,7 +63,7 @@ template<class T,
     double& depth() noexcept { return m_depth; }
     double depth() const noexcept { return m_depth; }
 
-    /// \brief Return the distance of a point on the ellipsoid from the epcenter.
+    /// @brief Return the distance of a point on the ellipsoid from the epcenter.
     ///
     /// The distance is computed along the geodesic that connects the two points
     /// on the ellipsoid E. The line is from the epicenter to the given point.
@@ -76,7 +78,7 @@ template<class T,
     }
 
 private:
-    /// the date it happened
+    /// The datetime it happened
     ngpt::datetime<T> m_epoch;
     /// The longtitude, latitude and depth (in radians, radians, meters)
     double m_lon, m_lat, m_depth;
