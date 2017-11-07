@@ -3,6 +3,7 @@
 
 // c++ standard headers
 #include <stdexcept>
+#include <algorithm>
 #include <cmath>
 #ifdef DEBUG
 #include <fenv.h>
@@ -34,63 +35,28 @@ namespace ngpt
 
 constexpr double __MAX_EXP_ARG__ {708.0e0};
 
-/// Given an array yy[0..n-1], extirpolate (spread) a value y into m actual
-/// array elements that best approximate the "fictional" (i.e. possibly 
-/// non-integer) array element number x. The weights used are coefficients of 
-/// the Lagrange interpolating polynomial.
-/// This function is used for the fast Lomb-Scargle algorithm (i.e. via FFT).
-///
-///  Reference: Numerical Recipes in C, Ch. 13.8
+/// @brief Extirpolation
 void
-spread__(double y, double yy[], std::size_t n, double x, int m)
-{
+spread__(double y, double yy[], std::size_t n, double x, int m);
 
-#ifdef DEBUG
-    // enable catching of floating point exceptions in debug mode.
-    feenableexcept(FE_ALL_EXCEPT & ~FE_INEXACT);
-#endif
-
-    long        ihi,ilo,ix,j,nden;
-    static long nfac[] = {0,1,1,2,6,24,120,720,5040,40320,362880};
-    double      fac,intpart;
-
-    if (m > 10) {
-        throw std::runtime_error
-            {"spread__: factorial table too small in spread"};
-    }
-
-    ix = static_cast<long>(x);            // value x as index
-    if (std::modf(x, &intpart) == 0e0 ) { // if x is integer ....
-        yy[ix] += y;
-    } else {                              // x is not an integer ...
-        // lowest index to fill
-        ilo  = std::min( std::max(static_cast<long>(x-.5e0*m+1e0), 0L),
-                        (long)(n-m));
-        // highest index to fill
-        ihi  = ilo + m - 1;
-#ifdef DEBUG
-        assert( x   >= 0 );
-        assert( ihi <  (long)n && ihi >= 0 );
-        assert( ilo >= 0 );
-#endif
-        nden = nfac[m];
-        fac  = x-ilo;
-        for (j = ilo+1;j <= ihi; j++) {
-            fac *= (x-j);
-        }
-        yy[ihi] += y*fac/(nden*(x-ihi));
-        for (j = ihi-1;j >= ilo; j--) {
-            nden   = (nden/(j+1-ilo))*(j-ihi);
-            yy[j] += y*fac/(nden*(x-j));
-        }
-    }
-
-    // all done
-    return;
-}
-
+/// @brief Workspace needed for fast Lomb-Scargle periodogram.
+///
+/// Before using the lomb_scargle_fast function, the user should know the
+/// workspace needed; this function does exactly that! It computes the
+/// workspace that will be needed for the function to work, thus returning
+/// the (input) size of the arrays wk1 and wk2.
+///
+/// @param[in]  N        Real size of the input time-series; that is the size
+///                      ommiting data points marked unused.
+/// @param[in]  ofac     Oversampling factor; typically >= 4 
+/// @param[in]  hifac    Compute the periodogram up to hifac times the “average”
+///                      Nyquist frequency.
+/// @return              The workspace (aka the size of an array) needed to
+///                      compute a Lomb-Scarlge normalized periodogram via the
+///                      lomb_scargle_fast function.
 std::size_t
 lomb_scargle_fast_workspace(std::size_t N, double ofac, double hifac)
+noexcept
 {
     constexpr int MACC {4};
     std::size_t nfreqt = ofac*hifac*N*MACC;
@@ -99,6 +65,51 @@ lomb_scargle_fast_workspace(std::size_t N, double ofac, double hifac)
     return nfreq << 1;
 }
 
+/// @brief Fast Lomb-Scargle Periodogram (normalized).
+///
+/// Given n data points with abscissas x[0..n-1] (which need not be equally
+/// spaced) and ordinates y[0..n-1], and given a desired oversampling factor 
+/// ofac (a typical value being 4 or larger), this routine fills array 
+/// wk1[0..nwk-1] with a sequence of nout increasing frequencies (not angular
+/// frequencies) up to hifac times the “average” Nyquist frequency, and fills
+/// array wk2[0..nwk-1] with the values of the Lomb normalized periodogram at 
+/// those frequencies. The arrays x and y are not altered. nwk, the dimension
+/// of wk1 and wk2 , must be large enough for intermediate work space, or an 
+/// error results. The routine also returns jmax such that wk2[jmax] is the
+/// maximum element in wk2, and prob, an estimate of the significance of that
+/// maximum against the hypothesis of random noise. A small value of prob 
+/// indicates that a significant periodic signal is present.
+///
+/// @param[in]  ts       The time-series to produce the periodogram for.
+/// @param[in]  ofac     Oversampling factor; typically >= 4 (see also description
+///                      for nout parameter).
+/// @param[in]  hifac    Compute the periodogram up to hifac times the “average”
+///                      Nyquist frequency (see also description for nout
+///                      parameter).
+/// @param[out] wk1      At input an array large enough to hold the workspace
+///                      (see Notes). At output, a sequence of nout increasing
+///                      frequencies (**not** angular frequencies).
+/// @param[out] wk2      At input an array large enough to hold the workspace
+///                      (see Notes). At output, the periodogram values for
+///                      each frequency in wk1.
+/// @param[in]  nwk      Size of the arrays wk1 and wk2; this should be large
+///                      enough to hold intermediate workspace. See Notes for
+///                      details.
+/// @param[out] nout     Number of frequencies for which the Lomb (normalized)
+///                      periodogram is computed at. This is computed as:
+///                      \f$ nout = \frac{ofac \times hifac \times N}{2} \f$
+///                      where N is the times-series size.
+/// @param[out] jmax     The index of the frequency most dominant in the time
+///                      series; that is, wk2[jmax] is the maximum element in
+///                      wk2.
+/// @param[out] prob     prob is an estimate of the significance of the wk2[jmax]
+///                      signal; A small value of prob indicates that a 
+///                      significant periodic signal is present.
+///
+/// @note To see how large the wk1 and wk2 arrays should be, use the 
+///       lomb_scargle_fast_workspace function.
+///
+/// Reference: Numerical Recipes in C, Ch. 13.8, pg. 582
 template<class T, class F>
 void lomb_scargle_fast(const timeseries<T,F>& ts, double ofac, double hifac, 
     double wk1[], double wk2[], std::size_t nwk, std::size_t& nout, 
@@ -113,7 +124,7 @@ void lomb_scargle_fast(const timeseries<T,F>& ts, double ofac, double hifac,
     // Number of interpolation points per 1/4 cycle of highest frequency.
     constexpr int MACC {4};
 
-    // real data size (i.e. ommiting outliers & skipped data points
+    // real data size (i.e. ommiting outliers & skipped data points)
     std::size_t  N = ts.data_pts() - ts.skipped_pts();
     
     std::size_t  j,k,ndim,nfreq,nfreqt;
@@ -134,7 +145,7 @@ void lomb_scargle_fast(const timeseries<T,F>& ts, double ofac, double hifac,
         {"lomb_scargle_fast: workspaces too small ("+s_ndim+">"+s_nwk};
     }
 
-    /// allocate memory
+    /// allocate memory (translate times-series to simple data arrays)
     double* MEM;
     try {
         MEM = new double[N*2];
@@ -159,7 +170,9 @@ void lomb_scargle_fast(const timeseries<T,F>& ts, double ofac, double hifac,
     xdif = xmax - xmin;     // difference in days
     
     //  Zero the workspaces
-    for (j = 0; j< ndim; j++) { wk1[j] = wk2[j] = 0e0; }
+    // for (j = 0; j< ndim; j++) { wk1[j] = wk2[j] = 0e0; }
+    std::fill(wk1, wk1+ndim, 0e0);
+    std::fill(wk2, wk2+ndim, 0e0);
     fac   = ndim/(xdif*ofac);
     fndim = ndim;
     // Extirpolate the data into the workspaces.
@@ -209,21 +222,45 @@ void lomb_scargle_fast(const timeseries<T,F>& ts, double ofac, double hifac,
 
 }
 
-///  Given n data points with abscissas x[0..n-1] (which need not be equally 
-///  spaced) and ordinates y[0..n-1], and given a desired oversampling factor 
-///  ofac (a typical value being 4 or larger), this routine fills array 
-///  px[0..np-1] with an increasing sequence of frequencies (not angular 
-///  frequencies) up to hifac times the “average” Nyquist frequency, and fills
-///  array py[0..np-1] with the values of the Lomb normalized periodogram at 
-///  those frequencies. The arrays x and y are not altered. np, the dimension
-///  of px and py, must be large enough to contain the output, or an error 
-///  results. The routine also returns jmax such that py[jmax] is the maximum 
-///  element in py, and prob, an estimate of the significance of that maximum
-///  against the hypothesis of random noise. A small value of prob indicates
-///  that a significant periodic signal is present.
+/// @brief Lomb-Scargle Periodogram (normalized).
 ///
-///  Reference: Numerical Recipes in C, Ch. 13.8
+/// Given n data points with abscissas x[0..n-1] (which need not be equally 
+/// spaced) and ordinates y[0..n-1], and given a desired oversampling factor 
+/// ofac (a typical value being 4 or larger), this routine fills array 
+/// px[0..np-1] with an increasing sequence of frequencies (not angular 
+/// frequencies) up to hifac times the “average” Nyquist frequency, and fills
+/// array py[0..np-1] with the values of the Lomb normalized periodogram at 
+/// those frequencies. The arrays x and y are not altered. np, the dimension
+/// of px and py, must be large enough to contain the output, or an error 
+/// results. The routine also returns jmax such that py[jmax] is the maximum 
+/// element in py, and prob, an estimate of the significance of that maximum
+/// against the hypothesis of random noise. A small value of prob indicates
+/// that a significant periodic signal is present.
 ///
+/// @param[in]  ts       The time-series to produce the periodogram for.
+/// @param[in]  ofac     Oversampling factor; typically >= 4 (see also description
+///                      for nout parameter).
+/// @param[in]  hifac    Compute the periodogram up to hifac times the “average”
+///                      Nyquist frequency (see also description for nout
+///                      parameter).
+/// @param[out] px       At output, a sequence of nout increasing frequencies
+///                      (**not** angular frequencies).
+/// @param[out] py       At output, the periodogram values for each frequency
+///                      in px.
+/// @param[in]  np       Size of the arrays px and py; this should be largeer
+///                      than nout.
+/// @param[out] nout     Number of frequencies for which the Lomb (normalized)
+///                      periodogram is computed at. This is computed as:
+///                      \f$ nout = \frac{ofac \times hifac \times N}{2} \f$
+///                      where N is the times-series size.
+/// @param[out] jmax     The index of the frequency most dominant in the time
+///                      series; that is, py[jmax] is the maximum element in
+///                      py.
+/// @param[out] prob     prob is an estimate of the significance of the px[jmax]
+///                      signal; A small value of prob indicates that a 
+///                      significant periodic signal is present.
+///
+/// Reference: Numerical Recipes in C, Ch. 13.8, pg. 579
 template<class T, class F>
     void lomb_scargle_period(const timeseries<T,F>& ts, double ofac, double hifac,
     double px[], double py[], int np, int& nout, int& jmax, double& prob)
@@ -242,7 +279,7 @@ template<class T, class F>
     double arg,wtemp,*wi,*wpi,*wpr,*wr,*ts_epochs,*ts_vals;
     
     /// size of output arrays (# of frequencies to be examined)
-    nout = 0.5 * ofac * hifac * N;
+    nout = 0.5*ofac*hifac*N;
     if (nout > np) {
         throw std::out_of_range
             {"lomb_scargle_period: [ERROR] output arrays too short in period"};
@@ -337,22 +374,47 @@ template<class T, class F>
     return;
 }
 
+/// @brief Lomb-Scargle Periodogram (normalized).
 ///
-///  Given n data points with abscissas x[1..n] (which need not be equally 
-///  spaced) and ordinates y[1..n], and given a desired oversampling factor 
-///  ofac (a typical value being 4 or larger), this routine fills array 
-///  px[1..np] with an increasing sequence of frequencies (not angular 
-///  frequencies) up to hifac times the “average” Nyquist frequency, and fills
-///  array py[1..np] with the values of the Lomb normalized periodogram at 
-///  those frequencies. The arrays x and y are not altered. np, the dimension
-///  of px and py, must be large enough to contain the output, or an error 
-///  results. The routine also returns jmax such that py[jmax] is the maximum 
-///  element in py, and prob, an estimate of the significance of that maximum
-///  against the hypothesis of random noise. A small value of prob indicates
-///  that a significant periodic signal is present.
+/// Given n data points with abscissas x[0..n-1] (which need not be equally 
+/// spaced) and ordinates y[0..n-1] and given a desired frequency range, i.e
+/// minfreq, maxfreq and step dfreq, this routine fills array 
+/// px[0..np-1] with an increasing sequence of frequencies (not angular 
+/// frequencies), and fills array py[0..np-1] with the values of the Lomb 
+/// normalized periodogram at those frequencies. np, the dimension
+/// of px and py, must be large enough to contain the output, or an error 
+/// results. The routine also returns jmax such that py[jmax] is the maximum 
+/// element in py, and prob, an estimate of the significance of that maximum
+/// against the hypothesis of random noise. A small value of prob indicates
+/// that a significant periodic signal is present.
 ///
-///  Reference: Numerical Recipes in C, Ch. 13.8
+/// @param[in]  ts       The time-series to produce the periodogram for.
+/// @param[in]  minfreq  Minimum frequency to examine.
+/// @param[in]  maxfreq  Maximum frequency to examine.
+/// @param[in]  dfreq    Frequency step; that is the function will examine all
+///                      frequencies in the range [minfreq, maxfreq] with a step
+///                      size of dfreq.
+/// @param[out] px       At output, a sequence of nout increasing frequencies
+///                      (**not** angular frequencies).
+/// @param[out] py       At output, the periodogram values for each frequency
+///                      in px.
+/// @param[in]  np       Size of the arrays px and py; this should be largeer
+///                      than nout.
+/// @param[out] nout     Number of frequencies for which the Lomb (normalized)
+///                      periodogram is computed at. This is computed as:
+///                      \f$ nout = int\{\frac{maxfreq-minfreq}{dfreq}\}+1 \f$
+/// @param[out] jmax     The index of the frequency most dominant in the time
+///                      series; that is, py[jmax] is the maximum element in
+///                      py.
+/// @param[out] prob     prob is an estimate of the significance of the py[jmax]
+///                      signal; A small value of prob indicates that a 
+///                      significant periodic signal is present.
 ///
+/// @note  This algorithm is actually the same as lomb_scargle_period , only
+///        now the user can specify a frequency range for the periodogram,
+///        instead of specifying ofac and hifac.
+///
+/// Reference: Numerical Recipes in C, Ch. 13.8, pg. 579
 template<class T, class F>
     void lomb_scargle_period(const timeseries<T,F>& ts, double minfreq,
     double maxfreq, double dfreq, double px[], double py[], int np, int& nout,
@@ -372,6 +434,7 @@ template<class T, class F>
     double arg,wctmp,wstmp,*wi,*wpi,*wpr,*wr,*ts_epochs,*ts_vals;
     
     /// size of output arrays (# of frequencies to be examined)
+    assert(maxfreq > minfreq);
     nout = static_cast<int>( (maxfreq-minfreq)/dfreq )+1;
     if (nout > np) {
         throw std::out_of_range
