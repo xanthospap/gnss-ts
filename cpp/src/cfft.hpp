@@ -1,8 +1,6 @@
 #ifndef __NGPT_FFT_HPP__
 #define __NGPT_FFT_HPP__
 
-#include <stdlib.h>
-
 namespace ngpt
 {
 

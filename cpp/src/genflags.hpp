@@ -1,11 +1,12 @@
+#ifndef __GENERIC_NGPT_FLAGS__
+#define __GENERIC_NGPT_FLAGS__
+
 ///
 /// @file genflags.hpp
 ///
 /// @brief A generic wrapper class to provide flag-like functionality for a
 ///        (strongly-typed) enumeration type.
 ///
-#ifndef __GENERIC_NGPT_FLAGS__
-#define __GENERIC_NGPT_FLAGS__
 
 #include <type_traits>
 #include <vector>
@@ -18,7 +19,6 @@ namespace ngpt
 /// set, check and clear flags.
 ///
 /// @tparam FlagEnum A (strongly typed) enumeration class
-///
 template<typename FlagEnum>
     class flag
 {
@@ -31,28 +31,34 @@ private:
 
 public:
     
-    /// Default constructor
+    /// Default constructor (no FlagEnum is set).
     flag() noexcept : _f{} {}
     
     /// Constructor from a flag enumeration type (i.e. from a enumeration of the
     /// FlagEnum class).
+    /// @param[in] f  A FlagEnum instance.
     explicit flag(FlagEnum f) noexcept : _f{static_cast<ft>(f)} {}
     
     /// Constructor from multiple flags (via an std::initializer_list).
+    /// @param[in] fs  An std::initializer_list<FlagEnum> instance; all elements
+    ///                of this list will be set on on the produced instance.
     explicit flag(std::initializer_list<FlagEnum>&& fs)
     : _f{}
     { for (auto& f : fs) { _f |= static_cast<ft>(f); } }
     
     /// Set a FlagEnum on.
+    /// @param[in] f  A FlagEnum instance; this will be "switched on".
     void set(FlagEnum f) noexcept { _f |= static_cast<ft>(f); }
     
     /// Clear a FlagEnum.
+    /// @param[in] f  Clear (i.e. "switch off") this FlagEnum.
     void clear(FlagEnum f) noexcept { _f &= ~(static_cast<ft>(f)); }
     
-    /// Clear the instance from all FlagEnums.
+    /// Clear the instance from all FlagEnums. All FlagEnum are "switched off".
     void clear() noexcept { _f = static_cast<ft>(0); }
     
     /// Check if a FlagEnum is set (i.e. on).
+    /// @param[in] f  Check if this FlagEnum is "switched on".
     bool check(FlagEnum f) const noexcept { return _f & static_cast<ft>(f); }
 
     /// Check if a flag is clean (nothing is set).

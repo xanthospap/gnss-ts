@@ -1,10 +1,3 @@
-// c++ standard headers
-#include <stdexcept>
-#include <cmath>
-#ifdef DEBUG
-#include <fenv.h>
-#include <cassert>
-#endif
 #include "period.hpp"
 
 /// @brief Extirpolation
@@ -24,13 +17,13 @@
 ///
 /// Reference: Numerical Recipes in C, Ch. 13.8, pg. 583
 void
-spread__(double y, double yy[], std::size_t n, double x, int m)
+ngpt::spread__(double y, double yy[], std::size_t n, double x, int m)
 {
 
-#ifdef DEBUG
+/*#ifdef DEBUG
     // enable catching of floating point exceptions in debug mode.
     feenableexcept(FE_ALL_EXCEPT & ~FE_INEXACT);
-#endif
+#endif*/
 
     long        ihi,ilo,ix,j,nden;
     static long nfac[] = {0,1,1,2,6,24,120,720,5040,40320,362880};

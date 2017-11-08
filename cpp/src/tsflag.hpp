@@ -16,22 +16,37 @@
 namespace ngpt
 {
 
-/// A (strongly typed) enumeration type, to hold possible flags for coordinate
-/// time-series data points.
+/// An enumeration type, to hold possible flags for (coordinate) time-series 
+/// data points.
+///
+/// @warning If a new pt_marker enum is added (or removed), most of the
+///          functions in this file should change!
 enum class pt_marker
 : int
 {
-    outlier           = 1, ///< Signify an outlier
-    skip              = 2  ///< Signify a data-point that must be skipped
+    outlier = 1, ///< Signify an outlier
+    skip    = 2  ///< Signify a data-point that must be skipped
 };
 
 /// Check if a data-point with a certain flag should be ignored (i.e. skipped).
 bool
 __skip__(flag<pt_marker> p) noexcept;
 
+/// @brief Write a flag<pt_marker> instance.
+///
 /// For any enumeration type that can be wrapped around the flag (template)
 /// class, there should be an overload for the '<<' operator. I.e. how are
 /// we supposed to 'write' this pt_marker(s)?
+/// So, this is the convention:
+///   - a pt_marker::outlier is written as 'o'
+///   - a pt_marker::skip    is written as 's'
+/// A clean flag<pt_marker> (i.e. if no pt_marker is set), will write nothing!
+/// If a flag<pt_marker> is flagged both as outlier and as skip, then the
+/// string 'os' will be written.
+///
+/// @param[in] os      The stream to write the instance at.
+/// @param[in] marker  The flag<pt_marker> to write.
+/// @return            The output stream (after writting)
 std::ostream&
 operator<<(std::ostream& os, const flag<pt_marker>& marker)
 {
@@ -51,7 +66,7 @@ enum class ts_event
     velocity_change    = 4  ///< A velocity change
 };
 
-/// Convert a ts_event to its identifing character.
+/// @brief Convert a ts_event to its identifing character.
 char
 event2char(ts_event event) noexcept;
 

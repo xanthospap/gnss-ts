@@ -30,13 +30,12 @@
 #endif
 
 // gtms headers
-// #include "genflags.hpp"
-#include "tsflag.hpp"
+// #include "tsflag.hpp"
 #include "timeseries.hpp"
 #include "earthquake_cat.hpp"
 #include "event_list.hpp"
-#include "model.hpp"
-#include "period.hpp"
+// #include "model.hpp"
+// #include "period.hpp"
 
 namespace ngpt
 {

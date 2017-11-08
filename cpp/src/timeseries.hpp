@@ -625,24 +625,6 @@ public:
         return res;
     }
 
-    std::vector<double>
-    find_harmonic_signals() const
-    {
-        std::size_t N = data_pts() - skipped_pts();
-        double ofac{5},
-               hifac{1.5};
-        std::size_t nout = 0.5*ofac*hifac*N + 1;
-        std::size_t nwk  = lomb_scargle_fast_workspace(N, ofac, hifac);
-        double *px, *py, prob;
-        std::size_t jmax;
-        double days_in_year = 365.25e0;
-        try {
-            px = new double[nwk];
-            py = new double[nwk];
-        }
-        lomb_scargle_fast(ts, ofac, hifac, px, py, nwk, nout, jmax, prob);
-    }
-
     /// Return a const iterator to the first entry of the data points vector
     /// (i.e. return m_data.cbegin())
     typename std::vector<entry>::const_iterator

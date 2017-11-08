@@ -17,8 +17,7 @@ libgtms_la_CXXFLAGS = \
 	-Winline \
 	-Wdisabled-optimization \
 	-march=native \
-	-DDEBUG \
-        -DMY_FOO
+	-DDEBUG
 
 dist_include_HEADERS = \
         cfft.hpp \
@@ -36,4 +35,5 @@ dist_include_HEADERS = \
 
 dist_libgtms_la_SOURCES = \
 	tsflag.cpp \
+	period.cpp \
         cfft.cpp

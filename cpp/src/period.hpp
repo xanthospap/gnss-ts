@@ -111,9 +111,9 @@ noexcept
 ///
 /// Reference: Numerical Recipes in C, Ch. 13.8, pg. 582
 template<class T, class F>
-void lomb_scargle_fast(const timeseries<T,F>& ts, double ofac, double hifac, 
-    double wk1[], double wk2[], std::size_t nwk, std::size_t& nout, 
-    std::size_t& jmax, double& prob)
+    void lomb_scargle_fast(const timeseries<T,F>& ts, double ofac, double hifac, 
+        double wk1[], double wk2[], std::size_t nwk, std::size_t& nout, 
+        std::size_t& jmax, double& prob)
 {
 
 #ifdef DEBUG
@@ -219,7 +219,7 @@ void lomb_scargle_fast(const timeseries<T,F>& ts, double ofac, double hifac,
     if (prob > .01e0) { prob = 1e0-pow(1e0-expy,effm); }
 
     delete[] MEM;
-
+    return;
 }
 
 /// @brief Lomb-Scargle Periodogram (normalized).
@@ -263,7 +263,7 @@ void lomb_scargle_fast(const timeseries<T,F>& ts, double ofac, double hifac,
 /// Reference: Numerical Recipes in C, Ch. 13.8, pg. 579
 template<class T, class F>
     void lomb_scargle_period(const timeseries<T,F>& ts, double ofac, double hifac,
-    double px[], double py[], int np, int& nout, int& jmax, double& prob)
+        double px[], double py[], int np, int& nout, int& jmax, double& prob)
 {
 
 #ifdef DEBUG
@@ -417,8 +417,8 @@ template<class T, class F>
 /// Reference: Numerical Recipes in C, Ch. 13.8, pg. 579
 template<class T, class F>
     void lomb_scargle_period(const timeseries<T,F>& ts, double minfreq,
-    double maxfreq, double dfreq, double px[], double py[], int np, int& nout,
-    int& jmax, double& prob)
+        double maxfreq, double dfreq, double px[], double py[], int np, int& nout,
+        int& jmax, double& prob)
 {
 
 #ifdef DEBUG
@@ -588,7 +588,8 @@ template<class T, class F>
 // see https://arxiv.org/pdf/0901.2573.pdf
 template<class T, class F>
     void lomb_scargle_period2(const timeseries<T,F>& ts, double minfreq,
-    double maxfreq, double dfreq, double px[], double py[], int np, int& nout, int& jmax)
+        double maxfreq, double dfreq, double px[], double py[], int np,
+        int& nout, int& jmax)
 {
 
 #ifdef DEBUG
@@ -702,7 +703,6 @@ template<class T, class F>
 
     return;
 }
-
 
 }// namespace ngpt
 
