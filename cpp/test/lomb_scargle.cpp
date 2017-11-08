@@ -1,5 +1,6 @@
 #include <iostream>
 #include <fstream>
+#include "period.hpp"
 #include "cts_read.hpp"
 
 void help()

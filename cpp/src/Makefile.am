@@ -35,5 +35,4 @@ dist_include_HEADERS = \
 
 dist_libgtms_la_SOURCES = \
 	tsflag.cpp \
-	period.cpp \
         cfft.cpp

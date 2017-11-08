@@ -1,6 +1,7 @@
 #include <iostream>
 #include <fstream>
 #include "artificial.hpp"
+#include "period.hpp"
 #ifdef DEBUG
 #include <fenv.h>
 #endif

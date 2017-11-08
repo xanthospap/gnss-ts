@@ -1,5 +1,16 @@
 #include "period.hpp"
 
+std::size_t
+ngpt::lomb_scargle_fast_workspace(std::size_t N, double ofac, double hifac)
+noexcept
+{
+    constexpr int MACC {4};
+    std::size_t nfreqt = ofac*hifac*N*MACC;
+    std::size_t nfreq  = 64;
+    while (nfreq < nfreqt) { nfreq <<= 1; }
+    return nfreq << 1;
+}
+
 /// @brief Extirpolation
 ///
 /// Given an array yy[0..n-1], extirpolate (spread) a value y into m actual

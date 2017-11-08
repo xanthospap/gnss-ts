@@ -1,6 +1,12 @@
 #ifndef __NGPT_PERIOD_HPP__
 #define __NGPT_PERIOD_HPP__
 
+///
+/// @brief Lomb-Scargle Periodogram algorithms.
+///
+/// @todo Definitions should be placed in a .cpp file!
+///
+
 // c++ standard headers
 #include <stdexcept>
 #include <algorithm>
@@ -37,7 +43,49 @@ constexpr double __MAX_EXP_ARG__ {708.0e0};
 
 /// @brief Extirpolation
 void
-spread__(double y, double yy[], std::size_t n, double x, int m);
+spread__(double y, double yy[], std::size_t n, double x, int m)
+{
+/*#ifdef DEBUG
+    // enable catching of floating point exceptions in debug mode.
+    feenableexcept(FE_ALL_EXCEPT & ~FE_INEXACT);
+#endif*/
+
+    long        ihi,ilo,ix,j,nden;
+    static long nfac[] = {0,1,1,2,6,24,120,720,5040,40320,362880};
+    double      fac,intpart;
+
+    if (m > 10) {
+        throw std::runtime_error
+            {"spread__: factorial table too small in spread"};
+    }
+
+    ix = static_cast<long>(x);            // value x as index
+    if (std::modf(x, &intpart) == 0e0 ) { // if x is integer ....
+        yy[ix] += y;
+    } else {                              // x is not an integer ...
+        // lowest index to fill
+        ilo  = std::min(std::max(static_cast<long>(x-.5e0*m+1e0), 0L),
+                        (long)(n-m));
+        // highest index to fill
+        ihi  = ilo + m - 1;
+#ifdef DEBUG
+        assert( x   >= 0 );
+        assert( ihi <  (long)n && ihi >= 0 );
+        assert( ilo >= 0 );
+#endif
+        nden = nfac[m];
+        fac  = x-ilo;
+        for (j = ilo+1; j <= ihi; j++) fac *= (x-j);
+        yy[ihi] += y*fac/(nden*(x-ihi));
+        for (j = ihi-1; j >= ilo; j--) {
+            nden   = (nden/(j+1-ilo))*(j-ihi);
+            yy[j] += y*fac/(nden*(x-j));
+        }
+    }
+
+    // all done
+    return;
+}
 
 /// @brief Workspace needed for fast Lomb-Scargle periodogram.
 ///
