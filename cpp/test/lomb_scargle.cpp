@@ -36,7 +36,18 @@ main(int argc, char* argv[])
     std::cout<<"\nAnalysis output written to file: "<< (sname + ".prd");
     std::string ofile = sname + ".prd";
      
-    ngpt::crdts<ngpt::milliseconds> ts = ngpt::readin<ngpt::milliseconds>(ctsf, sname);
+    // Read in the time-series from the cts file.
+    ngpt::crdts<ngpt::milliseconds> ts = ngpt::cts_read<ngpt::milliseconds>(ctsf, sname);
+    // Transform to topocentric rf
+    ts.cartesian2topocentric();
+    // Print a short report
+    std::cout<<"\nShort report on time-series:";
+    std::cout<<"\n\tTime interval (span) from "<<ngpt::strftime_ymd_hms(ts.first_epoch())<<" to "<<ngpt::strftime_ymd_hms(ts.last_epoch());
+    std::cout<<"\n\tNumber of epochs in time-series: "<<ts.size();
+    // Must remove linear trend before searching for harmonic signals.
+    auto res_ts = ts.detrend();
+    ts = res_ts;
+    // ts = std::move(res_ts);
 
     std::vector<ngpt::timeseries<ngpt::milliseconds, ngpt::pt_marker>*> components;
     components.push_back(&ts.x_component());
@@ -50,20 +61,20 @@ main(int argc, char* argv[])
     auto   tdif = ts.last_epoch().delta_date( ts.first_epoch() );
     double ddif = tdif.days().as_underlying_type() / 365.25;
     double div  = 1e0/ddif;
-    std::cout<<"\nDiv = " << div;
 
     auto it  = components.begin();
     auto cit = cmp_names.cbegin();
     for (; it != components.end(); ++it) {
         std::size_t N = (*it)->data_pts() - (*it)->skipped_pts();
-        double          ofac{4}, hifac{div};
+        double          ofac{4}, hifac{div/div};
         int             nout = 0.5*ofac*hifac*N + 1;
-        double          *px, *py, prob;
+        double          *px, *py, prob, *mempool;
         int             jmax;
         double          days_in_year = 365.25e0;
 
-        px = new double[nout];
-        py = new double[nout];
+        mempool = new double[2*nout];
+        px      = mempool;
+        py      = mempool + nout;
         ngpt::lomb_scargle_period( **it, ofac, hifac, px, py, nout, nout, jmax, prob );
         fout << "\n#New Component : " << *cit;
         for (int i=0;i<nout;i++) {
@@ -79,8 +90,7 @@ main(int argc, char* argv[])
             <<", i.e. a period of "<<1e0/px[nout-1]<<" days\n";
 
         ++cit;
-        delete[] px;
-        delete[] py;
+        delete[] mempool;
     }
 
     fout.close();

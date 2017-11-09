@@ -41,7 +41,7 @@ str2flag(const char* str, char** stop)
         if ( std::isdigit(*c) || *c == '-' ) return f;
         if (*c == 's') f.set(pt_marker::skip);
         else if (*c == 'o') f.set(pt_marker::outlier);
-        else throw 1;// not very informative .... TODO
+        else throw 1; //std::invalid_argument("str2flag: Failed to convert flag.");
         ++c;
     }
     *stop = (char*)c; // fuck it, just cast to non-const
@@ -51,6 +51,7 @@ str2flag(const char* str, char** stop)
 /// Read a time-series file, as fromated by the function:
 /// crdts<T>.dump(...)
 ///
+/// @note This function uses function str2flag which could throw.
 template<typename T,
          typename = std::enable_if_t<T::is_of_sec_type>
          >

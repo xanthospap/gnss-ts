@@ -498,6 +498,92 @@ public:
         return start_epoch;
     }
 
+    /// @todo this should be const, but there is a problem in line 564
+    auto
+    detrend(double& x0, double& vx, double sigma0=1e-3) 
+    {
+        // Construct a linear model
+        ngpt::ts_model<T> model;
+        std::size_t parameters = model.parameters();
+        std::size_t observations = m_data.size() - m_skipped;
+
+        // Set up the matrices; the model is: A * x = b
+        // since we have uncorrelated variance matric though, we will actually
+        // setup: sqrt(P)*A * x = sqrt(P)*b, where sqrt(Pii) = sigma0/sigma(ii)
+        Eigen::MatrixXd A = Eigen::MatrixXd(observations, parameters);
+        Eigen::VectorXd b = Eigen::VectorXd(observations);
+        Eigen::VectorXd x = Eigen::VectorXd(parameters);
+        
+        // Compute the mean epoch as mjd; all deltatimes are computed as differences
+        // from this (mean) epoch.
+        model.mean_epoch() = this->central_epoch();
+    
+        double dt, weight;
+        std::size_t idx{0},       // index (i.e. row of A and b matrices)
+                    counter{0};   // index of the current data point (m_data)
+        datetime<T> current_epoch;// the current epoch
+        timeseries_const_iterator<T, F> it = cbegin(),
+                                    it_end = cend();
+        data_point<F> entry;
+
+        for (; it != it_end; ++it) {
+            entry         = it.data();
+            current_epoch = it.epoch();
+            // only include data that are not marked as 'skip'
+            if ( !entry.skip() ) {
+                dt = current_epoch.as_mjd() - model.mean_epoch().as_mjd();
+                weight = sigma0 / entry.sigma();
+                model.assign_row(A, b, current_epoch, weight, dt, entry.value(), idx);
+                ++idx;
+            }
+            ++counter;
+        }
+        assert( counter == data_pts() );
+
+        // Solve via QR
+        x = A.colPivHouseholderQr().solve(b);
+
+        // residual vector u = A*x - b; note that the residual vector may not
+        // have the same size as the (original) time-series. Instead, it has
+        // a size of: original_ts.size() - original_ts.skipped_pts().
+        //
+        // IMPORTANT
+        // ---------------------------
+        // Note that at this point the residuals are scaled according to each
+        // data points weight! (We actualy solved not Ax=b but QAx=Qb)
+        Eigen::VectorXd u = Eigen::VectorXd(observations);
+        u = A * x - b;
+    
+        // assign solution vector to the model.
+        model.assign_solution_vector(x);
+
+        // Cast residuals to time-series and compute a-posteriori std. dev
+        // The resulting residual ts will have the same size as the original ts,
+        // where data points marked as 'skipped' will have their original value.
+        double post_std_dev {0e0};
+        timeseries<T, F> res {*this};
+        res.epoch_ptr() = this->epoch_ptr();
+        idx = counter = 0;
+        double residual;
+        for (std::size_t i = 0; i < epochs(); i++) {
+            if ( !m_data[i].skip() ) {
+                residual = u(idx)/(sigma0/m_data[i].sigma()); /* is this correct, or should it be u(idx)/(sigma0^2/m_data[i].sigma()^2) */
+                data_point<F> dp { residual, m_data[i].sigma(),  m_data[i].flag() };
+                post_std_dev += residual*residual;
+                res[i] = dp;
+                ++idx;
+            } else {
+                res[i] = m_data[i];
+            }
+        }
+        post_std_dev = std::sqrt(post_std_dev)
+            /(double)(idx-parameters);
+
+        x0 = model.x0();
+        vx = model.vx();
+        return res;
+    }
+
     /// Given a model, ...., he... well solve for it!
     /// @todo document a little, just a bit, better.
     /// @param[in] model           An instance of type md_model; the parameter

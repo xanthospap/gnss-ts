@@ -263,7 +263,7 @@ public:
         return eq_applied;
     }
     
-    /// \brief Convert from cartesian to topocentric.
+    /// @brief Convert from cartesian to topocentric.
     ///
     /// Usin the mean value as reference point, all points in the time-series
     /// are transformed to topocentric (i.e. vectors from the reference point in
@@ -321,6 +321,16 @@ public:
         m_events.apply_event_list_file(evn_file, first_epoch(), last_epoch());
     }
 
+    auto
+    detrend()
+    {
+        double x0, vx;
+        auto mx = m_x.detrend(x0, vx);
+        auto my = m_y.detrend(x0, vx);
+        auto mz = m_z.detrend(x0, vx);
+        return crdts<T>{std::move(mx), std::move(my), std::move(mz)};
+    }
+
     ///
     auto
     qr_fit(ngpt::ts_model<T>& xmodel, ngpt::ts_model<T>& ymodel, ngpt::ts_model<T>& zmodel)
@@ -336,7 +346,7 @@ public:
         auto mz = m_z.qr_ls_solve(zmodel, y_stddev, 1e-3);
 
         /*crdts<T> residuals {std::move(mx), std::move(my), std::move(mz)};*/
-        return crdts<T>{std::move(mx), std::move(my), std::move(mz)};;
+        return crdts<T>{std::move(mx), std::move(my), std::move(mz)};
     }
 
     // \todo entr is shit just for debuging
