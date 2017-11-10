@@ -164,10 +164,10 @@ template<class T, class F>
         std::size_t& jmax, double& prob)
 {
 
-#ifdef DEBUG
+/*#ifdef DEBUG
     // enable catching of floating point exceptions in debug mode.
     feenableexcept(FE_ALL_EXCEPT & ~FE_INEXACT);
-#endif
+#endif*/
 
     // Number of interpolation points per 1/4 cycle of highest frequency.
     constexpr int MACC {4};
@@ -314,10 +314,10 @@ template<class T, class F>
         double px[], double py[], int np, int& nout, int& jmax, double& prob)
 {
 
-#ifdef DEBUG
+/*#ifdef DEBUG
     // enable catching of floating point exceptions in debug mode.
     feenableexcept(FE_ALL_EXCEPT & ~FE_INEXACT);
-#endif
+#endif*/
 
     /// real data size (i.e. ommiting outliers & skipped data points
     std::size_t N = ts.data_pts() - ts.skipped_pts();
@@ -468,11 +468,10 @@ template<class T, class F>
         double maxfreq, double dfreq, double px[], double py[], int np, int& nout,
         int& jmax, double& prob)
 {
-
-#ifdef DEBUG
+/*#ifdef DEBUG
     // enable catching of floating point exceptions in debug mode.
     feenableexcept(FE_ALL_EXCEPT & ~FE_INEXACT);
-#endif
+#endif*/
 
     /// real data size (i.e. ommiting outliers & skipped data points
     std::size_t N = ts.data_pts() - ts.skipped_pts();

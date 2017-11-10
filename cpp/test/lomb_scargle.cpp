@@ -34,7 +34,6 @@ main(int argc, char* argv[])
     std::string ctsf  = std::string(argv[1]);
     std::string sname = split_path(ctsf);
     std::cout<<"\nAnalysis output written to file: "<< (sname + ".prd");
-    std::string ofile = sname + ".prd";
      
     // Read in the time-series from the cts file.
     ngpt::crdts<ngpt::milliseconds> ts = ngpt::cts_read<ngpt::milliseconds>(ctsf, sname);
@@ -44,10 +43,15 @@ main(int argc, char* argv[])
     std::cout<<"\nShort report on time-series:";
     std::cout<<"\n\tTime interval (span) from "<<ngpt::strftime_ymd_hms(ts.first_epoch())<<" to "<<ngpt::strftime_ymd_hms(ts.last_epoch());
     std::cout<<"\n\tNumber of epochs in time-series: "<<ts.size();
+    std::ofstream f1 {"original.ts"};
+    ts.dump(f1);
+    f1.close();
     // Must remove linear trend before searching for harmonic signals.
-    auto res_ts = ts.detrend();
-    ts = res_ts;
-    // ts = std::move(res_ts);
+    auto res_ts = ts.detrend(true);
+    ts = std::move(res_ts);
+    std::ofstream f2 {"clear.ts"};
+    ts.dump(f2);
+    f2.close();
 
     std::vector<ngpt::timeseries<ngpt::milliseconds, ngpt::pt_marker>*> components;
     components.push_back(&ts.x_component());
@@ -56,7 +60,6 @@ main(int argc, char* argv[])
 
     std::vector<std::string> cmp_names = {std::string("North"), std::string("East"), std::string("Up")};
 
-    std::ofstream fout {ofile.c_str()};
 
     auto   tdif = ts.last_epoch().delta_date( ts.first_epoch() );
     double ddif = tdif.days().as_underlying_type() / 365.25;
@@ -65,6 +68,9 @@ main(int argc, char* argv[])
     auto it  = components.begin();
     auto cit = cmp_names.cbegin();
     for (; it != components.end(); ++it) {
+        std::string ofile = sname + (*cit) + ".prd";
+        std::ofstream fout {ofile.c_str()};
+        
         std::size_t N = (*it)->data_pts() - (*it)->skipped_pts();
         double          ofac{4}, hifac{div/div};
         int             nout = 0.5*ofac*hifac*N + 1;
@@ -76,7 +82,7 @@ main(int argc, char* argv[])
         px      = mempool;
         py      = mempool + nout;
         ngpt::lomb_scargle_period( **it, ofac, hifac, px, py, nout, nout, jmax, prob );
-        fout << "\n#New Component : " << *cit;
+        // fout << "\n#New Component : " << *cit;
         for (int i=0;i<nout;i++) {
             fout << "\n" << px[i] << " " << py[i] << " " << 1e0/px[i];
         }
@@ -91,6 +97,7 @@ main(int argc, char* argv[])
 
         ++cit;
         delete[] mempool;
+        ofile.close();
     }
 
     fout.close();

@@ -322,12 +322,12 @@ public:
     }
 
     auto
-    detrend()
+    detrend(bool mark_outliers=false)
     {
         double x0, vx;
-        auto mx = m_x.detrend(x0, vx);
-        auto my = m_y.detrend(x0, vx);
-        auto mz = m_z.detrend(x0, vx);
+        auto mx = m_x.detrend(x0, vx, mark_outliers);
+        auto my = m_y.detrend(x0, vx, mark_outliers);
+        auto mz = m_z.detrend(x0, vx, mark_outliers);
         return crdts<T>{std::move(mx), std::move(my), std::move(mz)};
     }
 

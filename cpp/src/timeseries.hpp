@@ -500,7 +500,7 @@ public:
 
     /// @todo this should be const, but there is a problem in line 564
     auto
-    detrend(double& x0, double& vx, double sigma0=1e-3) 
+    detrend(double& x0, double& vx, bool mark_outliers=false, double sigma0=1e-3) 
     {
         // Construct a linear model
         ngpt::ts_model<T> model;
@@ -581,6 +581,11 @@ public:
 
         x0 = model.x0();
         vx = model.vx();
+        std::cout<<"\n[DEBUG] De-trended component, with velocity: "<<vx;
+        if (mark_outliers) {
+            datetime_interval<T> window {modified_julian_day{90}, T{0}};
+            nikolaidis(res, *this, window);
+        }
         return res;
     }
 
