@@ -97,10 +97,8 @@ main(int argc, char* argv[])
 
         ++cit;
         delete[] mempool;
-        ofile.close();
+        fout.close();
     }
-
-    fout.close();
 
     return 0;
 }

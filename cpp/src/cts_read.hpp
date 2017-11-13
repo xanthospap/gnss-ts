@@ -181,12 +181,11 @@ template<class T,
     char line[MAX_CHARS];
     char *cptr(&line[0]),
          *end;
-    ngpt::datetime<T> epoch;
+    ngpt::datetime<T> epoch,
+                      prev_epoch = ngpt::datetime<T>::min();
     double data[6];
     crdts<T> ts {ts_name};
-#ifdef DEBUG
     std::size_t line_counter = 0;
-#endif
 
     while ( ifs.getline(line, MAX_CHARS) ) {
         if ( *line != '#' ) {
@@ -198,15 +197,18 @@ template<class T,
                     errno = 0;
                     ifs.close();
                     throw std::invalid_argument
-                        ("Invalid record line: \""+std::string(line)+"\" (argument #"+std::to_string(i)+")");
+                        ("cts_read: Invalid record line: \""+std::string(line)+"\" (argument #"+std::to_string(i)+")");
                 }
                 cptr = end;
             }
+            if (epoch <= prev_epoch) {
+                ifs.close();
+                throw std::invalid_argument
+                    ("cts_read: Dates are not sorted! Line #"+std::to_string(line_counter));
+            }
             ts.add(epoch, data[0], data[2], data[4], data[1]*1000.0,
                 data[3]*1000.0, data[5]*1000.0);
-#ifdef DEBUG
             ++line_counter;
-#endif
         }
     }
 
