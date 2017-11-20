@@ -23,11 +23,16 @@ split_path(std::string s)
     return s.substr(pos+1, 4);
 }
 
+double minfreq = 0e0;
+double maxfreq = 0e0;
+double dfreq   = 0e0;
+
 int
 main(int argc, char* argv[])
 {
     if (argc != 2) {
         help();
+        std::cout<<"\n";
         return 1;
     }
 
@@ -46,6 +51,7 @@ main(int argc, char* argv[])
     std::ofstream f1 {"original.ts"};
     ts.dump(f1);
     f1.close();
+
     // Must remove linear trend before searching for harmonic signals.
     auto res_ts = ts.detrend(true);
     ts = std::move(res_ts);
@@ -77,11 +83,21 @@ main(int argc, char* argv[])
         double          *px, *py, prob, *mempool;
         int             jmax;
         double          days_in_year = 365.25e0;
+        if (dfreq) {
+            std::cout<<"\n[DEBUG] Total number of days: "<<ddif * 365.25e0;
+            minfreq = 1e0 / (ddif * 365.25e0); // 
+            maxfreq = 1e0 / 0.5e0;             // 0.5 days frequency
+            dfreq   = 1e-3;
+            nout    = static_cast<int>((maxfreq-minfreq)/dfreq )+1;
+        }
 
         mempool = new double[2*nout];
         px      = mempool;
         py      = mempool + nout;
-        ngpt::lomb_scargle_period( **it, ofac, hifac, px, py, nout, nout, jmax, prob );
+        if (!dfreq)
+            ngpt::lomb_scargle_period( **it, ofac, hifac, px, py, nout, nout, jmax, prob );
+        else
+            ngpt::lomb_scargle_period( **it, minfreq, maxfreq, dfreq, px, py, nout, nout, jmax, prob );
         // fout << "\n#New Component : " << *cit;
         for (int i=0;i<nout;i++) {
             fout << "\n" << px[i] << " " << py[i] << " " << 1e0/px[i];

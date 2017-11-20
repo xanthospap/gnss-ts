@@ -4,7 +4,8 @@ noinst_PROGRAMS = \
 		readcat \
 		period \
 		lomb_scargle \
-                synthetic
+                synthetic \
+		stalogrd
 
 MCXXFLAGS = \
 	-std=c++17 \
@@ -49,3 +50,7 @@ readcat_LDADD     = $(top_srcdir)/src/libgtms.la
 synthetic_SOURCES   = test_synthetic.cpp
 synthetic_CXXFLAGS  = $(MCXXFLAGS) -I$(top_srcdir)/src -L$(top_srcdir)/src
 synthetic_LDADD     = $(top_srcdir)/src/libgtms.la
+
+stalogrd_SOURCES   = test_stalogrd.cpp
+stalogrd_CXXFLAGS  = $(MCXXFLAGS) -I$(top_srcdir)/src -L$(top_srcdir)/src
+stalogrd_LDADD     = $(top_srcdir)/src/libgtms.la

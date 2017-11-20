@@ -31,7 +31,8 @@ dist_include_HEADERS = \
 	psd.hpp \
 	model.hpp \
 	crdts.hpp \
-	artificial.hpp
+	artificial.hpp \
+	stalogrd.hpp
 
 dist_libgtms_la_SOURCES = \
 	tsflag.cpp \
