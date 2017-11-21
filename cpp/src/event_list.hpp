@@ -15,6 +15,7 @@
 // #include "genflags.hpp"
 #include "tsflag.hpp"
 #include "earthquake_cat.hpp"
+#include "stalogrd.hpp"
 
 namespace ngpt
 {
@@ -109,6 +110,21 @@ public:
                 sorted_insert(f, t);
                 return;
         }
+        return;
+    }
+
+    /// Given an IGS station log file, read through the receiver and antenna
+    /// changes blocks, and apply all subsequent changes.
+    ///
+    /// @param[in] logfl The name of the logfile.
+    void
+    apply_stalog_file(const char* igsfl)
+    {
+        ngpt::igs_log log { std::string(igsfl) };
+        auto rec_changes = log.receiver_changes<T>();
+        auto ant_changes = log.antenna_changes<T>();
+        for (auto& t : rec_changes) apply(ts_event::jump, t);
+        for (auto& t : ant_changes) apply(ts_event::jump, t);
         return;
     }
     

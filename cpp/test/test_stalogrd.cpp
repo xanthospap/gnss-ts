@@ -11,7 +11,13 @@ int main(int argc, char *argv[])
     }
 
     ngpt::igs_log log { std::string(argv[1]) };
+
+    std::cout<<"\nReceiver Changes:";
     log.receiver_changes<seconds>();
 
+    std::cout<<"\n\nAntenna Changes:";
+    log.antenna_changes<seconds>();
+
+    std::cout<<"\n";
     return 0;
 }
