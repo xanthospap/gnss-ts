@@ -321,6 +321,13 @@ public:
         m_events.apply_event_list_file(evn_file, first_epoch(), last_epoch());
     }
 
+    void
+    apply_stalog_file(const char* log_file)
+    {
+        m_events.apply_stalog_file(log_file, first_epoch(), last_epoch());
+    }
+
+    /*
     auto
     detrend(bool mark_outliers=false)
     {
@@ -330,6 +337,7 @@ public:
         auto mz = m_z.detrend(x0, vx, mark_outliers);
         return crdts<T>{std::move(mx), std::move(my), std::move(mz)};
     }
+    */
 
     ///
     auto

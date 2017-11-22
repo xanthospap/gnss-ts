@@ -499,6 +499,7 @@ public:
     }
 
     /// @todo this should be const, but there is a problem in line 564
+    /*
     auto
     detrend(double& x0, double& vx, bool mark_outliers=false, double sigma0=1e-3) 
     {
@@ -543,6 +544,12 @@ public:
         // Solve via QR
         x = A.colPivHouseholderQr().solve(b);
 
+        // Variance-Covariance Matrix
+        int N = (A.transpose()*A).rows();
+        auto Q = (A.transpose() * A).fullPivLu().solve(Eigen::MatrixXd::Identity(N,N));
+        std::cout<<"\n\tVar-Covar Info:";
+        std::cout<<"\n\tQ is of type:"<<Q.rows()<<"x"<<Q.cols();
+
         // residual vector u = A*x - b; note that the residual vector may not
         // have the same size as the (original) time-series. Instead, it has
         // a size of: original_ts.size() - original_ts.skipped_pts().
@@ -567,7 +574,7 @@ public:
         double residual;
         for (std::size_t i = 0; i < epochs(); i++) {
             if ( !m_data[i].skip() ) {
-                residual = u(idx)/(sigma0/m_data[i].sigma()); /* is this correct, or should it be u(idx)/(sigma0^2/m_data[i].sigma()^2) */
+                residual = u(idx)/(sigma0/m_data[i].sigma());
                 data_point<F> dp { residual, m_data[i].sigma(),  m_data[i].flag() };
                 post_std_dev += residual*residual;
                 res[i] = dp;
@@ -587,7 +594,7 @@ public:
             nikolaidis(res, *this, window);
         }
         return res;
-    }
+    }*/
 
     /// Given a model, ...., he... well solve for it!
     /// @todo document a little, just a bit, better.
@@ -620,7 +627,8 @@ public:
         ngpt::ts_model<T>&    model,
         double&               post_std_dev,
         double sigma0         = 1e-03,
-        bool   set_model_epoch= false /* set or not the mean epoch for the (input) model */
+        bool   set_model_epoch= false, /* set or not the mean epoch for the (input) model */
+        bool   mark_outliers  = true
     )
     {
         // Number of parameters to be estimated:
@@ -673,6 +681,17 @@ public:
         // x = A.colPivHouseholderQr().solve(b);
         // Solve via SVD
         x = A.jacobiSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(b);
+        // Variance-Covariance Matrix
+        // see https://forum.kde.org/viewtopic.php?f=74&t=139476
+        int N = (A.transpose()*A).rows();
+        Eigen::MatrixXd Q = Eigen::MatrixXd(parameters, parameters);
+        // Q = (A.transpose() * A).fullPivLu().solve(Eigen::MatrixXd::Identity(N,N));
+        Q = (A.transpose() * A).ldlt().solve(Eigen::MatrixXd::Identity(N,N));
+        std::cout<<"\n\tVar-Covar Info:";
+        std::cout<<"\n\tQ is of type:"<<Q.rows()<<"x"<<Q.cols()<<" (N="<<N<<")";
+        for (int i=0; i<N; i++) {
+            std::cout<<"\n\t"<<x(i)<<" +/- "<<sigma0*std::sqrt( Q(i,i) );
+        }
 
         // residual vector u = A*x - b; note that the residual vector may not
         // have the same size as the (original) time-series. Instead, it has
@@ -711,8 +730,10 @@ public:
             /(double)(idx-parameters);
 
         // apply outlier detection algorithm and mark them
-        // datetime_interval<T> window {modified_julian_day{90}, T{0}};
-        // nikolaidis(res, *this, window);
+        if (mark_outliers) {
+            datetime_interval<T> window {modified_julian_day{90}, T{0}};
+            nikolaidis(res, *this, window);
+        }
         return res;
     }
 

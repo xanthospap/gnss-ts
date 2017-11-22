@@ -30,30 +30,79 @@ double dfreq   = 0e0;
 int
 main(int argc, char* argv[])
 {
-    if (argc != 2) {
+    if (argc < 2) {
         help();
         std::cout<<"\n";
         return 1;
     }
+    
+    std::string ctsf;
+    const char *log_file=nullptr,
+               *event_file=nullptr;
+    bool ctsf_found       = false,
+         log_file_found   = false,
+         event_file_found = false;
+    for (int i = 1; i < argc; i++) {
+        if (!strcmp(argv[i], "-i")) {
+            assert( argc >= i+1 );
+            ++i;
+            ctsf = argv[i];
+            ctsf_found = true;
+        } else if (!strcmp(argv[i], "-l")) {
+            assert( argc >= i+1 );
+            ++i;
+            log_file = argv[i];
+            log_file_found = true;
+        } else if (!strcmp(argv[i], "-e")) {
+            assert( argc >= i+1 );
+            ++i;
+            event_file = argv[i];
+            event_file_found = true;
+        } else {
+            std::cerr<<"\nFuck is that? The switch "<<argv[i]<<" is unrelevant.";
+        }
+    }
+    if (!ctsf_found) {
+        std::cerr<<"\nCannot do anything without a time-series file.";
+        return 1;
+    }
 
-    std::string ctsf  = std::string(argv[1]);
     std::string sname = split_path(ctsf);
     std::cout<<"\nAnalysis output written to file: "<< (sname + ".prd");
      
     // Read in the time-series from the cts file.
     ngpt::crdts<ngpt::milliseconds> ts = ngpt::cts_read<ngpt::milliseconds>(ctsf, sname);
+    
     // Transform to topocentric rf
     ts.cartesian2topocentric();
+    
     // Print a short report
     std::cout<<"\nShort report on time-series:";
     std::cout<<"\n\tTime interval (span) from "<<ngpt::strftime_ymd_hms(ts.first_epoch())<<" to "<<ngpt::strftime_ymd_hms(ts.last_epoch());
     std::cout<<"\n\tNumber of epochs in time-series: "<<ts.size();
+
+    // Apply any external inf (event/log file)
+    if (event_file_found) {
+        std::cout<<"\nApplying event-list file: "<<event_file<<".";
+        ts.apply_event_list_file(event_file);
+    }
+    if (log_file_found) {
+        std::cout<<"\nApplying (igs) log file: "<<log_file<<".";
+        ts.apply_stalog_file(log_file);
+    }
+    std::cout<<"\n\tEvents: ";
+    ts.events().dump_event_list(std::cout);
     std::ofstream f1 {"original.ts"};
     ts.dump(f1);
     f1.close();
 
-    // Must remove linear trend before searching for harmonic signals.
-    auto res_ts = ts.detrend(true);
+    // Must remove linear trend before searching for harmonic signals. Include
+    // any (external info on) jumps.
+    ngpt::ts_model<ngpt::milliseconds> xmodel { ts.events() };
+    xmodel.mean_epoch() = ts.mean_epoch();
+    auto ymodel {xmodel},
+         zmodel {xmodel};
+    auto res_ts = ts.qr_fit( xmodel, ymodel, zmodel );
     ts = std::move(res_ts);
     std::ofstream f2 {"clear.ts"};
     ts.dump(f2);

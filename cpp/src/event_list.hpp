@@ -118,13 +118,21 @@ public:
     ///
     /// @param[in] logfl The name of the logfile.
     void
-    apply_stalog_file(const char* igsfl)
+    apply_stalog_file(const char* igsfl, epoch start, epoch stop)
     {
         ngpt::igs_log log { std::string(igsfl) };
         auto rec_changes = log.receiver_changes<T>();
         auto ant_changes = log.antenna_changes<T>();
-        for (auto& t : rec_changes) apply(ts_event::jump, t);
-        for (auto& t : ant_changes) apply(ts_event::jump, t);
+        for (auto& t : rec_changes) {
+            if (t >= start && t <= stop) {
+                apply(ts_event::jump, t);
+            } 
+        }
+        for (auto& t : ant_changes) {
+            if (t >= start && t <= stop) {
+                apply(ts_event::jump, t);
+            }
+        }
         return;
     }
     

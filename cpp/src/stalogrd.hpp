@@ -136,9 +136,12 @@ public:
         while ( !(answer = this->read_receiver_block(rectype, from, to)) ) {
             assert(to > from && from >= prev_to);
             prev_to = to;
-            std::cout<<"\n[DEBUG] Read new block:";
-            std::cout<<"\nfrom "<<ngpt::strftime_ymd_hmfs(from)<<" to "<< ngpt::strftime_ymd_hmfs(to)<<", rec: "<<rectype;
-            if (to != ngpt::datetime<T>::max() ) vdt.push_back(to);
+            // std::cout<<"\n[DEBUG] Read new block:";
+            // std::cout<<"\nfrom "<<ngpt::strftime_ymd_hmfs(from)<<" to "<< ngpt::strftime_ymd_hmfs(to)<<", rec: "<<rectype;
+            if (to != ngpt::datetime<T>::max() ) {
+                // std::cout<<"\n\tPushing back event at: "<<ngpt::strftime_ymd_hmfs(to);
+                vdt.push_back(to);
+            }
         }
         // hopefully no error encountered while resolving blocks
         if (answer < 0 ) {
@@ -185,9 +188,12 @@ public:
         while ( !(answer = this->read_antenna_block(anttype, from, to)) ) {
             assert(to > from && from >= prev_to);
             prev_to = to;
-            std::cout<<"\n[DEBUG] Read new block:";
-            std::cout<<"\nfrom "<<ngpt::strftime_ymd_hmfs(from)<<" to "<< ngpt::strftime_ymd_hmfs(to)<<", rec: "<<anttype;
-            if (to != ngpt::datetime<T>::max() ) vdt.push_back(to);
+            // std::cout<<"\n[DEBUG] Read new block:";
+            // std::cout<<"\nfrom "<<ngpt::strftime_ymd_hmfs(from)<<" to "<< ngpt::strftime_ymd_hmfs(to)<<", rec: "<<anttype;
+            if (to != ngpt::datetime<T>::max() ) {
+                // std::cout<<"\n\tPushing back event at: "<<ngpt::strftime_ymd_hmfs(to);
+                vdt.push_back(to);
+            }
         }
         // hopefully no error encountered while resolving blocks
         if (answer < 0 ) {
