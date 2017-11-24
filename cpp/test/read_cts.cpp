@@ -93,9 +93,9 @@ main(int argc, char* argv[])
     
     // --JSON--
     // print time-seres and residuals as json
-    filename = cts_name + std::string(".json");
-    std::ofstream fout_ts_json (filename);
-    ts.dump_json(fout_ts_json, residual_ts);
+    // filename = cts_name + std::string(".json");
+    // std::ofstream fout_ts_json (filename);
+    // ts.dump_json(fout_ts_json, residual_ts);
     // print the modelin json format
     std::ofstream fout_mod_json ("model.json");
     models_to_json(fout_mod_json, xmodel, ymodel, zmodel);

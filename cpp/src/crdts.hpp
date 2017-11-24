@@ -327,18 +327,6 @@ public:
         m_events.apply_stalog_file(log_file, first_epoch(), last_epoch());
     }
 
-    /*
-    auto
-    detrend(bool mark_outliers=false)
-    {
-        double x0, vx;
-        auto mx = m_x.detrend(x0, vx, mark_outliers);
-        auto my = m_y.detrend(x0, vx, mark_outliers);
-        auto mz = m_z.detrend(x0, vx, mark_outliers);
-        return crdts<T>{std::move(mx), std::move(my), std::move(mz)};
-    }
-    */
-
     ///
     auto
     qr_fit(ngpt::ts_model<T>& xmodel, ngpt::ts_model<T>& ymodel, ngpt::ts_model<T>& zmodel)
@@ -446,82 +434,59 @@ public:
     }
 #endif
 
-    // TODO this should be const!
     std::ostream&
-        dump(std::ostream& os)
+    dump(std::ostream& os, bool use_csv_format=false, bool dates_as_ymd=false)
     const
     {
+        char delim ( (use_csv_format) ? ',' : ' ' );
+
         auto x_iter = m_x.cbegin(),
              y_iter = m_y.cbegin(),
              z_iter = m_z.cbegin();
 
-        for (; x_iter != m_x.cend(); ++x_iter, ++y_iter, ++z_iter) {
-            os << x_iter.epoch().as_mjd() << " "
-                << x_iter.data().value() << " " 
-                << x_iter.data().sigma() << " " 
-                << x_iter.data().flag()  << " "
-                << y_iter.data().value() << " " 
-                << y_iter.data().sigma() << " " 
-                << y_iter.data().flag()  << " "
-                << z_iter.data().value() << " " 
-                << z_iter.data().sigma() << " " 
-                << z_iter.data().flag()  << "\n";
+        os  << "epoch" << delim
+            << "north" << delim << "sigma_north"<< delim << "flag_north" << delim
+            << "east"  << delim << "sigma_east" << delim << "flag_east"  << delim
+            << "up"    << delim << "sigma_up"   << delim << "flag_up"    << "\n";
+
+        if (!dates_as_ymd) {
+            for (; x_iter != m_x.cend(); ++x_iter, ++y_iter, ++z_iter) {
+                os << x_iter.epoch().as_mjd() << delim
+                    << x_iter.data().value() << delim
+                    << x_iter.data().sigma() << delim
+                    << x_iter.data().flag()  << delim
+                    << y_iter.data().value() << delim
+                    << y_iter.data().sigma() << delim
+                    << y_iter.data().flag()  << delim
+                    << z_iter.data().value() << delim
+                    << z_iter.data().sigma() << delim
+                    << z_iter.data().flag()  << "\n";
+            }
+        } else {
+            std::vector<std::string> ds(m_epochs.size(), "yyyy-mm-dd hh:mm:ss");
+            std::transform(m_epochs.cbegin(), m_epochs.cend(), ds.begin(),
+                [](const ngpt::datetime<T>& t)-> std::string {return ngpt::strftime_ymd_hms(t);});
+            std::size_t i = 0;
+            for (; x_iter != m_x.cend(); ++x_iter, ++y_iter, ++z_iter, ++i) {
+                os  << ds[i] << delim
+                    << x_iter.data().value() << delim 
+                    << x_iter.data().sigma() << delim 
+                    << x_iter.data().flag()  << delim
+                    << y_iter.data().value() << delim 
+                    << y_iter.data().sigma() << delim 
+                    << y_iter.data().flag()  << delim
+                    << z_iter.data().value() << delim 
+                    << z_iter.data().sigma() << delim 
+                    << z_iter.data().flag()  << "\n";
+            }
         }
-        return os;
-    }
-
-    std::ostream&
-        dump_json(std::ostream& os, crdts<T>& res)
-    const
-    {
-        assert( this->size() == res.size() );
-
-        auto x_iter     = m_x.cbegin(),
-             y_iter     = m_y.cbegin(),
-             z_iter     = m_z.cbegin(),
-             x_iter_end = m_x.cend() - 1;
-        std::size_t index = 0;
-
-        os << "{ \"data\": [";
-        for (; x_iter != x_iter_end; ++x_iter, ++y_iter, ++z_iter) {
-            os << "{\n"
-                << "\"epoch\": " << /*strftime_ymd_hms(x_iter.epoch())*/x_iter.epoch().as_mjd() << ",\n"
-                << "\"north\": "        << x_iter.data().value() << ",\n" 
-                << "\"sigma_north\": "  << x_iter.data().sigma() << ",\n" 
-                << "\"flag_north\": \"" << x_iter.data().flag()  << "\",\n"
-                << "\"res_north\": "    << (res.x_component())[index].value() << ",\n"
-                << "\"east\": "         << y_iter.data().value() << ",\n" 
-                << "\"sigma_east\": "   << y_iter.data().sigma() << ",\n" 
-                << "\"flag_east\": \""  << y_iter.data().flag()  << "\",\n"
-                << "\"res_east\": "     << (res.y_component())[index].value() << ",\n"
-                << "\"up\": "           << z_iter.data().value() << ",\n" 
-                << "\"sigma_up\": "     << z_iter.data().sigma() << ",\n" 
-                << "\"flag_up\": \""    << z_iter.data().flag()  << "\",\n"
-                << "\"res_up\": "       << (res.z_component())[index].value() << "},\n";
-            ++index;
-        }
-        /* TODO something is very wrong here !! */
-        os << "{\n"
-            << "\"epoch\": " << /*strftime_ymd_hms(x_iter.epoch())*/x_iter.epoch().as_mjd() << ",\n"
-            << "\"north\": "        << x_iter.data().value() << ",\n" 
-            << "\"sigma_north\": "  << x_iter.data().sigma() << ",\n" 
-            << "\"flag_north\": \"" << x_iter.data().flag()  << "\",\n"
-            << "\"res_north\": "    << (res.x_component())[index].value() << ",\n"
-            << "\"east\": "         << y_iter.data().value() << ",\n" 
-            << "\"sigma_east\": "   << y_iter.data().sigma() << ",\n" 
-            << "\"flag_east\": \""  << y_iter.data().flag()  << "\",\n"
-            << "\"res_east\": "     << (res.y_component())[index].value() << ",\n"
-            << "\"up\": "           << z_iter.data().value() << ",\n" 
-            << "\"sigma_up\": "     << z_iter.data().sigma() << ",\n" 
-            << "\"flag_up\": \""    << z_iter.data().flag()  << "\",\n"
-            << "\"res_up\": "       << (res.z_component())[index].value() << "}\n";
-        os << "]\n}";
         return os;
     }
 
     std::ostream&
     dump_model_line(std::ostream& os, const ts_model<T>& modelx,
-        const ts_model<T>& modely, const ts_model<T>& modelz)
+        const ts_model<T>& modely, const ts_model<T>& modelz, bool use_csv_format=false,
+        bool dates_as_ymd=false)
     const
     {
         datetime_interval<T> dt {ngpt::modified_julian_day{1}, T{0}};
@@ -531,9 +496,20 @@ public:
         auto v2 = modely.make_model(tvec);
         auto v3 = modelz.make_model(tvec);
 
-        for (std::size_t i = 0; i < tvec.size(); ++i) {
-            os << "\n" << tvec[i].as_mjd() << " " << v1[i] << " "
-                << v2[i] << " " << v3[i];
+        char delim ( (use_csv_format) ? ',' : ' ' );
+
+        if (!dates_as_ymd) {
+            for (std::size_t i = 0; i < tvec.size(); ++i) {
+                os << tvec[i].as_mjd() << delim << v1[i] << delim
+                    << v2[i] << delim << v3[i] <<"\n";
+            }
+        } else {
+            std::vector<std::string> ds(tvec.size(), "yyyy-mm-dd hh:mm:ss");
+            std::transform(tvec.cbegin(), tvec.cend(), ds.begin(),
+                [](const ngpt::datetime<T>& t)-> std::string {return ngpt::strftime_ymd_hms(t);});
+            for (std::size_t i = 0; i < tvec.size(); ++i) {
+                os << ds[i] << delim << v1[i] << delim << v2[i] << delim << v3[i] <<"\n";
+            }
         }
         return os;
     }

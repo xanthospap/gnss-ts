@@ -105,8 +105,12 @@ main(int argc, char* argv[])
     auto res_ts = ts.qr_fit( xmodel, ymodel, zmodel );
     ts = std::move(res_ts);
     std::ofstream f2 {"clear.ts"};
-    ts.dump(f2);
+    ts.dump(f2, true, false);
     f2.close();
+    std::ofstream f3 {"model.ts"};
+    // ts.dump_model_line(f3, xmodel, ymodel, zmodel, true, false);
+    models_to_json(f3, xmodel, ymodel, zmodel);
+    f3.close();
 
     std::vector<ngpt::timeseries<ngpt::milliseconds, ngpt::pt_marker>*> components;
     components.push_back(&ts.x_component());
