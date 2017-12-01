@@ -44,16 +44,19 @@ main(int argc, char* argv[])
          event_file_found = false;
     for (int i = 1; i < argc; i++) {
         if (!strcmp(argv[i], "-i")) {
+            // input cts file
             assert( argc >= i+1 );
             ++i;
             ctsf = argv[i];
             ctsf_found = true;
         } else if (!strcmp(argv[i], "-l")) {
+            // station log file
             assert( argc >= i+1 );
             ++i;
             log_file = argv[i];
             log_file_found = true;
         } else if (!strcmp(argv[i], "-e")) {
+            // event file
             assert( argc >= i+1 );
             ++i;
             event_file = argv[i];
@@ -70,10 +73,12 @@ main(int argc, char* argv[])
     std::string sname = split_path(ctsf);
     std::cout<<"\nAnalysis output written to file: "<< (sname + ".prd");
      
-    // Read in the time-series from the cts file.
-    ngpt::crdts<ngpt::milliseconds> ts = ngpt::cts_read<ngpt::milliseconds>(ctsf, sname);
+    // Read in the time-series from the cts file; time-resolution is 
+    // milliseconds.
+    ngpt::crdts<ngpt::milliseconds> ts = 
+        ngpt::cts_read<ngpt::milliseconds>(ctsf, sname);
     
-    // Transform to topocentric rf
+    // Transform to topocentric rf (asumming input ts was geocentric cartesian).
     ts.cartesian2topocentric();
     
     // Print a short report
@@ -81,7 +86,7 @@ main(int argc, char* argv[])
     std::cout<<"\n\tTime interval (span) from "<<ngpt::strftime_ymd_hms(ts.first_epoch())<<" to "<<ngpt::strftime_ymd_hms(ts.last_epoch());
     std::cout<<"\n\tNumber of epochs in time-series: "<<ts.size();
 
-    // Apply any external inf (event/log file)
+    // Apply any external jump information (event/log file).
     if (event_file_found) {
         std::cout<<"\nApplying event-list file: "<<event_file<<".";
         ts.apply_event_list_file(event_file);
