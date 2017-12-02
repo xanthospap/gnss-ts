@@ -1,5 +1,6 @@
 #! /usr/bin/python
 
+from __future__ import print_function
 import datetime
 import argparse
 
@@ -24,12 +25,12 @@ def mjd2pydt(mjd):
     i, d = divmod(jd, 1)
     mjd  = int(i) ## just to be sure !
     fmjd = float(d)
-
+    
     days_fr_jan1_1901 = mjd - JAN11901
-    num_four_yrs      = int(days_fr_jan1_1901/1461)
+    num_four_yrs      = int(days_fr_jan1_1901//1461)
     years_so_far      = 1901 + 4*num_four_yrs
     days_left         = days_fr_jan1_1901 - 1461*num_four_yrs
-    delta_yrs         = int(days_left/365 - days_left/1460)
+    delta_yrs         = int(days_left//365 - days_left//1460)
 
     year   = years_so_far + delta_yrs
     yday   = days_left - 365*delta_yrs + 1
@@ -98,12 +99,12 @@ args = parser.parse_args()
 ##  Quick exit
 if not args.mjd and not args.data_file: exit(0)
 if args.mjd and args.data_file:
-    print '[ERROR] Cannot provide both an input file and a date!'
+    print('[ERROR] Cannot provide both an input file and a date!')
     exit(1)
 
 ##  One mjd given at input
 if args.mjd:
-    print '{:}'.format(pydt2gmt(mjd2pydt(args.mjd)))
+    print('{:}'.format(pydt2gmt(mjd2pydt(args.mjd))))
     exit(0)
 
 ##  Input file given
@@ -112,9 +113,9 @@ if args.data_file:
         if args.skip_rows > 0:
             for i in range(args.skip_rows):
                 line = fin.readline()
-                print line.rstrip("\n")
+                print(line.rstrip("\n"))
         for line in fin.readlines():
             l      = line.split(args.col_seperator)
             gmt_dt = pydt2gmt(mjd2pydt(l[args.date_col]))
-            print line.replace(l[args.date_col], gmt_dt).rstrip("\n")
+            print(line.replace(l[args.date_col], gmt_dt).rstrip("\n"))
     exit(0)
