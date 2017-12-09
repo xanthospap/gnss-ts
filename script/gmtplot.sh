@@ -40,7 +40,8 @@ done
 ##  TODO check that cts file exists
 
 ## tmps file name
-tmpf=".${cts_file}.${pid}"
+cts_np=$(basename $cts_file)
+tmpf=".${cts_np}.${pid}"
 cat ${cts_file} > ${tmpf}
 cts_file=${tmpf}
 
@@ -89,8 +90,14 @@ tcks1=$(./annotevery.py ${xmin} ${xmax} ${Y_TICKS_NR})
 tcks2=$(./annotevery.py ${ymin} ${ymax} ${Y_TICKS_NR})
 tcks3=$(./annotevery.py ${zmin} ${zmax} ${Y_TICKS_NR})
 YAI=("${tcks1}" "${tcks2}" "${tcks3}")
-# x annotation ticks
+# x/y annotation ticks on axis
 XAT=("WseN" "Wsen" "WSen")
+
+if test "${USE_YMD_FORMAT}" -eq 1
+then
+    # x annotation interval (annotate every _ month)
+    osw=$(./annotevery.py ${wesn[0]} ${wesn[1]} --time)
+fi
 
 gmt set FONT_ANNOT_PRIMARY +8p
 gmt set PS_CHAR_ENCODING ISOLatin1+
@@ -111,7 +118,7 @@ do
     if test "${USE_YMD_FORMAT}" -eq 1
     then
         gmt psbasemap "${R[$it]}" -JX10i/2i -K ${Osw} \
-            -Bsx1Y -Bpxa6Of1o \
+            -Bsx1Y -Bpxa${osw}Of1o \
             -Bpy"${YAI[$it]}"+l${comp} -B"${XAT[$it]}"+t"Time Series"+glightgreen \
             ${Ysh} >> $ps
     else

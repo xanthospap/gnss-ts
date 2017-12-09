@@ -41,7 +41,7 @@ main(int argc, char* argv[])
     datetime<milliseconds> mean
         { modified_julian_day{mean_mjd}, milliseconds{0} }; // mean date
 
-    // create a vector of epochs (from start to step every step)
+    // create a vector of epochs (from start to stop every step)
     std::vector<datetime<milliseconds>> epochs;
     for (auto t = start; t < stop; t+=step) epochs.emplace_back(t);
     // -- to here

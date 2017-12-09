@@ -681,17 +681,6 @@ public:
         // x = A.colPivHouseholderQr().solve(b);
         // Solve via SVD
         x = A.jacobiSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(b);
-        // Variance-Covariance Matrix
-        // see https://forum.kde.org/viewtopic.php?f=74&t=139476
-        int N = (A.transpose()*A).rows();
-        Eigen::MatrixXd Q = Eigen::MatrixXd(parameters, parameters);
-        // Q = (A.transpose() * A).fullPivLu().solve(Eigen::MatrixXd::Identity(N,N));
-        Q = (A.transpose() * A).ldlt().solve(Eigen::MatrixXd::Identity(N,N));
-        std::cout<<"\n\tVar-Covar Info:";
-        std::cout<<"\n\tQ is of type:"<<Q.rows()<<"x"<<Q.cols()<<" (N="<<N<<")";
-        for (int i=0; i<N; i++) {
-            std::cout<<"\n\t"<<x(i)<<" +/- "<<sigma0*std::sqrt( Q(i,i) );
-        }
 
         // residual vector u = A*x - b; note that the residual vector may not
         // have the same size as the (original) time-series. Instead, it has
@@ -728,6 +717,20 @@ public:
         }
         post_std_dev = std::sqrt(post_std_dev)
             /(double)(idx-parameters);
+        
+        // --------------------------------------------------------------------
+        // Variance-Covariance Matrix
+        // see https://forum.kde.org/viewtopic.php?f=74&t=139476
+        // --------------------------------------------------------------------
+        int N = (A.transpose()*A).rows();
+        Eigen::MatrixXd Q = Eigen::MatrixXd(parameters, parameters);
+        // Q = (A.transpose() * A).fullPivLu().solve(Eigen::MatrixXd::Identity(N,N));
+        Q = (A.transpose() * A).ldlt().solve(Eigen::MatrixXd::Identity(N,N));
+        std::cout<<"\n\tVar-Covar Info:";
+        // std::cout<<"\n\tQ is of type:"<<Q.rows()<<"x"<<Q.cols()<<" (N="<<N<<")";
+        for (int i=0; i<N; i++) {
+            std::cout<<"\n\t"<<x(i)<<" +/- "<<post_std_dev*std::sqrt( Q(i,i) ) << " ratio: "<<x(i) / (post_std_dev*std::sqrt( Q(i,i) ));
+        }
 
         // apply outlier detection algorithm and mark them
         if (mark_outliers) {

@@ -37,9 +37,10 @@ public:
     /// @param[in] start  The epoch the jump happened.
     /// @param[in] offset The value of the offset (default is 0).
     explicit
-    md_jump(ngpt::datetime<T> start, double offset=0e0) noexcept
+    md_jump(ngpt::datetime<T> start, double offset=0e0, double stdd=0e0) noexcept
     : m_start {start},
-      m_offset{offset}
+      m_offset{offset},
+      m_stddev{stdd}
     {};
 
     /// Get the epoch the jump happened at (const).
@@ -53,10 +54,19 @@ public:
     /// Get the value of the offset (non-const).
     double&
     value() noexcept { return m_offset; }
+    
+    /// Get the std. deviation value of the offset (const).
+    double
+    stddev() const noexcept { return m_stddev; }
+    
+    /// Get the value of the offset (non-const).
+    double&
+    stddev() noexcept { return m_stddev; }
 
 private:
     ngpt::datetime<T> m_start;  ///< When the "jump" occured.
     double            m_offset; ///< Value (i.e. offset amplitude).
+    double            m_stddev; ///< Std. deviation of the estimated value.
 
 }; // md_jump
 
@@ -87,12 +97,15 @@ public:
     md_harmonics(double period,
         ngpt::datetime<T> start=ngpt::datetime<T>::min(),
         ngpt::datetime<T> stop = ngpt::datetime<T>::max(),
-        double in_phase=0e0, double out_phase=0e0) noexcept
+        double in_phase=0e0, double out_phase=0e0,
+        double in_phase_stddev=0e0, double out_phase_stddev=0e0) noexcept
     : m_start    {start},
       m_stop     {stop},
       m_afreq    {D2PI/period},
       m_in_phase {in_phase},
-      m_out_phase{out_phase}
+      m_in_stddev{in_phase_stddev},
+      m_out_phase{out_phase},
+      m_out_stddev{out_phase_stddev}
     {};
 
     /// Get the starting epoch (of the validity interval).
@@ -126,6 +139,22 @@ public:
     /// Get the out-of-phase component amplitude (non-const version).
     double&
     out_of_phase() noexcept { return m_out_phase; }
+    
+    /// Get the in-phase component std. deviation (const version).
+    double
+    in_phase_stddev() const noexcept { return m_in_stddev; }
+    
+    /// Get the out-of-phase component std. deviation (const version).
+    double
+    out_phase_stddev() const noexcept { return m_out_stddev; }
+    
+    /// Get the in-phase component std. deviation (non-const version).
+    double&
+    in_phase_stddev() noexcept { return m_in_stddev; }
+    
+    /// Get the out-of-phase component std. deviation (non-const version).
+    double&
+    out_phase_stddev() noexcept { return m_out_stddev; }
 
     /// Get the amplitude of the harmonic signal, i.e. if the harmonic is:
     /// A*sin(ωt) + B*cos(ωt), then its aplitude is sqrt(A^2 + B^2).
@@ -138,7 +167,9 @@ private:
                       m_stop;       ///< Ending epoch of the harmonic
     double            m_afreq,      ///< Angular frequency (i.e. ω)
                       m_in_phase,   ///< In-Phase component (amplitude)
-                      m_out_phase;  ///< Out-Of-Phase component (amplitude)
+                      m_in_stddev,  ///< Std. deviation of In-Phase component
+                      m_out_phase,  ///< Out-Of-Phase component (amplitude)
+                      m_out_stddev; ///< Std. deviation of Out-Of-Phase component
 
 }; // harmonic_coef
 
@@ -165,10 +196,11 @@ public:
     explicit
     md_velocity_change(ngpt::datetime<T> start,
         ngpt::datetime<T> stop = ngpt::datetime<T>::max(),
-        double new_vel=0e0) noexcept
+        double new_vel=0e0, double new_vel_stddev=0e0) noexcept
     : m_start {start},
       m_stop  {stop},
-      m_newvel{new_vel}
+      m_newvel{new_vel},
+      m_newvel_stddev{new_vel_stddev}
     {};
 
     /// Get the start date (start of validity interval), const version.
@@ -186,11 +218,20 @@ public:
     /// Get the velocity change magnitude (non-const version).
     double&
     value() noexcept { return m_newvel; }
+    
+    /// Get the velocity change std. deviation (const version).
+    double
+    stddev() const noexcept { return m_newvel_stddev; }
+    
+    /// Get the velocity change std. deviation (non-const version).
+    double&
+    stddev() noexcept { return m_newvel_stddev; }
 private:
 
     ngpt::datetime<T> m_start,  ///< Start of validity niterval.
                       m_stop;   ///< End of validity interval.
-    double            m_newvel; ///< Magnitude of velocity change.
+    double            m_newvel, ///< Magnitude of velocity change.
+                      m_newvel_stddev; ///< Velocity change std. deviation.
 
 }; // md_velocity_change
 
@@ -421,7 +462,7 @@ public:
     ///       solution vector) are going to be added to the model parameters
     ///       (not assigned).
     void
-    assign_solution_vector(const Eigen::VectorXd& x_estim)
+    assign_solution_vector(const Eigen::VectorXd& x_estim, const Eigen::MatrixXd*Q = nullptr)
     {
         if ( !this->is_linear() ) {
             return this->add_solution_vector(x_estim);
@@ -447,6 +488,28 @@ public:
         for (auto j = m_earthqs.begin(); j != m_earthqs.end(); ++j) {
             j->a1() = x_estim(idx); ++idx;
         }
+
+        if ( Q ) {
+            assert( Q->rows() == Q->cols() && Q->rows() == (int)this->parameters() );
+            idx = 0;
+            m_x0_stddev = (*Q)(idx, idx); ++idx;
+            m_vx_stddev = (*Q)(idx, idx); ++idx;
+            for (auto j = m_harmonics.begin(); j != m_harmonics.end(); ++j) {
+                j->in_phase_stddev()  = (*Q)(idx, idx); ++idx;
+                j->out_phase_stddev() = (*Q)(idx, idx); ++idx;
+            }
+            for (auto j = m_jumps.begin(); j != m_jumps.end(); ++j) {
+                j->stddev() = (*Q)(idx, idx); ++idx;
+            }
+            for (auto j = m_vel_changes.begin(); j != m_vel_changes.end(); ++j) {
+                j->stddev() = (*Q)(idx, idx); ++idx;
+            }
+            // in the linear case, PSDs are only one-parameter models
+            for (auto j = m_earthqs.begin(); j != m_earthqs.end(); ++j) {
+                j->a1() = x_estim(idx); ++idx;
+            }
+        }
+
         return;
     }
 
@@ -605,7 +668,7 @@ public:
 
         return;
     }
-
+    
     /// This function adds new md_harmonics instances to this (model)
     /// instance. The new md_harmonics added, are constructed using only
     /// their period (i.e. all other parametrs are default-constructed).
@@ -837,7 +900,9 @@ public:
 
 private:
     double                             m_x0,          ///< const linear term.
-                                       m_vx;          ///< linear velocity
+                                       m_vx,          ///< linear velocity
+                                       m_x0_stddev,
+                                       m_vx_stddev;
     std::vector<md_jump<T>>            m_jumps;       ///< vector of jumps
     std::vector<md_harmonics<T>>       m_harmonics;   ///< vector of harmonics
     std::vector<md_velocity_change<T>> m_vel_changes; ///< vector of velocity changes

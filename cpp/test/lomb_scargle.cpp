@@ -23,6 +23,7 @@ split_path(std::string s)
     return s.substr(pos+1, 4);
 }
 
+double MIN_ERTHQ_MAG = 5.0e0;
 double minfreq = 0e0;
 double maxfreq = 0e0;
 double dfreq   = 0e0;
@@ -38,10 +39,12 @@ main(int argc, char* argv[])
     
     std::string ctsf;
     const char *log_file=nullptr,
-               *event_file=nullptr;
+               *event_file=nullptr,
+               *erthq_file=nullptr;
     bool ctsf_found       = false,
          log_file_found   = false,
-         event_file_found = false;
+         event_file_found = false,
+         erthq_file_found = false;
     for (int i = 1; i < argc; i++) {
         if (!strcmp(argv[i], "-i")) {
             // input cts file
@@ -61,6 +64,12 @@ main(int argc, char* argv[])
             ++i;
             event_file = argv[i];
             event_file_found = true;
+        } else if (!strcmp(argv[i], "-q")) {
+            // earthquake catalogue file
+            assert( argc >= i+1 );
+            ++i;
+            erthq_file = argv[i];
+            erthq_file_found = true;
         } else {
             std::cerr<<"\nFuck is that? The switch "<<argv[i]<<" is unrelevant.";
         }
@@ -95,11 +104,17 @@ main(int argc, char* argv[])
         std::cout<<"\nApplying (igs) log file: "<<log_file<<".";
         ts.apply_stalog_file(log_file);
     }
+    
+    // If earthquake catalogue file provided, read and apply the interesting
+    // earthquakes
+    if (erthq_file_found) {
+        std::cout<<"\nApplying earthquake catalogue file: "<<erthq_file<<".";
+        ngpt::earthquake_catalogue<ngpt::milliseconds> eq_cat {erthq_file};
+        ts.apply_earthquake_catalogue(eq_cat, MIN_ERTHQ_MAG);
+    }
+
     std::cout<<"\n\tEvents: ";
     ts.events().dump_event_list(std::cout);
-    std::ofstream f1 {"original.ts"};
-    ts.dump(f1);
-    f1.close();
 
     // Must remove linear trend before searching for harmonic signals. Include
     // any (external info on) jumps.
@@ -108,6 +123,9 @@ main(int argc, char* argv[])
     auto ymodel {xmodel},
          zmodel {xmodel};
     auto res_ts = ts.qr_fit( xmodel, ymodel, zmodel );
+    std::ofstream f1 {"original.ts"};
+    ts.dump(f1, true, false);
+    f1.close();
     ts = std::move(res_ts);
     std::ofstream f2 {"clear.ts"};
     ts.dump(f2, true, false);

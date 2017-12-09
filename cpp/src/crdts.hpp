@@ -223,9 +223,10 @@ public:
     /// To 'apply the earthquakes' means that the instance's events records are
     /// augmented to hold the earthquakes of interest.
     ///
+    ///
     /// \todo Should i also mark the ts records??
     std::size_t
-    apply_earthquake_catalogue(earthquake_catalogue<T>& catalogue)
+    apply_earthquake_catalogue(earthquake_catalogue<T>& catalogue, double min_mag=0e0)
     {
         catalogue.rewind();
         datetime<T> start {this->first_epoch()},
@@ -248,7 +249,7 @@ public:
 #endif
             if (eq.epoch() >= start) {
                 distance = eq.epicenter_distance(slat, slon, faz, baz);
-                if ( eq.magnitude() >= -5.6 + 2.17 * std::log10(distance) ) {
+                if ( eq.magnitude() >= min_mag && (eq.magnitude() >= -5.6 + 2.17 * std::log10(distance)) ) {
                     m_events.apply(ts_event::earthquake, eq.epoch());
                     ++eq_applied;
 #ifdef DEBUG

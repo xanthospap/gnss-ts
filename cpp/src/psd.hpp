@@ -42,23 +42,31 @@ public:
 
     double&
     a1() noexcept { return m_a1; }
+    
     double&
     a2() noexcept { return m_a2; }
+    
     double&
     t1() noexcept { return m_t1; }
+    
     double&
     t2() noexcept { return m_t2; }
+    
     ngpt::datetime<T>&
     start() noexcept { return m_start; }
 
     double
     a1() const noexcept { return m_a1; }
+    
     double
     a2() const noexcept { return m_a2; }
+    
     double
     t1() const noexcept { return m_t1; }
+    
     double
     t2() const noexcept { return m_t2; }
+    
     ngpt::datetime<T>
     start() const noexcept { return m_start; }
 

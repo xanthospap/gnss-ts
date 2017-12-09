@@ -52,7 +52,7 @@ template<typename T>
         if (errno == ERANGE) {
             errno = 0;
             throw std::invalid_argument
-                ("Invalid date format: \""+std::string(str)+"\" (argument #" + std::to_string(i+1) + ").");
+                ("igs_log_details::strptime_log: Invalid date format: \""+std::string(str)+"\" (argument #" + std::to_string(i+1) + ").");
         }
         start = end+1;
     }
@@ -111,8 +111,8 @@ public:
 
         char line[MAX_CHARS];
         ngpt::datetime<T> from,
-                          to,
-                          prev_to = ngpt::datetime<T>::min();
+                          to/*,
+                          prev_from = ngpt::datetime<T>::max()*/;
         std::string rectype;
         std::vector<datetime<T>> vdt;
 
@@ -134,18 +134,15 @@ public:
         // keep on reading receiver blocks ...
         int answer;
         while ( !(answer = this->read_receiver_block(rectype, from, to)) ) {
-            assert(to > from && from >= prev_to);
-            prev_to = to;
-            // std::cout<<"\n[DEBUG] Read new block:";
-            // std::cout<<"\nfrom "<<ngpt::strftime_ymd_hmfs(from)<<" to "<< ngpt::strftime_ymd_hmfs(to)<<", rec: "<<rectype;
+            assert(to > from /*&& to <= prev_from*/);
+            // prev_from = from;
             if (to != ngpt::datetime<T>::max() ) {
-                // std::cout<<"\n\tPushing back event at: "<<ngpt::strftime_ymd_hmfs(to);
                 vdt.push_back(to);
             }
         }
         // hopefully no error encountered while resolving blocks
-        if (answer < 0 ) {
-            std::cout<<"\n[ERROR] Got back "<< answer;
+        if (answer < 0) {
+            std::cerr<<"\n[ERROR] Got back "<< answer;
         }
 
         // all done
@@ -163,8 +160,8 @@ public:
 
         char line[MAX_CHARS];
         ngpt::datetime<T> from,
-                          to,
-                          prev_to = ngpt::datetime<T>::min();
+                          to/*,
+                          prev_from = ngpt::datetime<T>::max()*/;
         std::string anttype;
         std::vector<datetime<T>> vdt;
 
@@ -186,18 +183,15 @@ public:
         // keep on reading antenna blocks ...
         int answer;
         while ( !(answer = this->read_antenna_block(anttype, from, to)) ) {
-            assert(to > from && from >= prev_to);
-            prev_to = to;
-            // std::cout<<"\n[DEBUG] Read new block:";
-            // std::cout<<"\nfrom "<<ngpt::strftime_ymd_hmfs(from)<<" to "<< ngpt::strftime_ymd_hmfs(to)<<", rec: "<<anttype;
+            assert(to > from /*&& to <= prev_from*/);
+            //prev_from = from;
             if (to != ngpt::datetime<T>::max() ) {
-                // std::cout<<"\n\tPushing back event at: "<<ngpt::strftime_ymd_hmfs(to);
                 vdt.push_back(to);
             }
         }
         // hopefully no error encountered while resolving blocks
-        if (answer < 0 ) {
-            std::cout<<"\n[ERROR] Got back "<< answer;
+        if (answer < 0) {
+            std::cerr<<"\n[ERROR] Got back "<< answer;
         }
 
         // all done
