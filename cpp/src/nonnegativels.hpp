@@ -3,80 +3,6 @@
 #include "eigen3/Eigen/Core"
 // see https://en.wikipedia.org/wiki/Non-negative_least_squares
 // https://github.com/scipy/scipy/blob/master/scipy/optimize/nnls/nnls.f
-/*
-void
-nnls(Eigen::MatrixXd& A, Eigen::VectorXd& y, double epsilon, int m, int n)
-{
-    Eigen::VectorXd x = Eigen::VectorXd(n);
-    for (auto i = 0; i < n; i++) x(i) = 0e0;
-
-    std::vector<> P;
-    
-    std::vector<int> R;
-    R.reserve(n);
-    for (auto i = 0 ; i < n; i++) R.push_back(i+1);
-
-    // w = A^T(y-Ax)
-    auto w = A.transpose()*(y-A*x);
-
-    // main loop
-    int j,l;
-    double d;
-    while (R.size() > 0 && w.maxCoeff() > epsilon) {
-        // Let j in R be the index of max(w) in w
-        d = w.maxCoeff(&j);
-        // Add j to P
-        P.push_back(j);
-        std::sort(P.begin(), P.end());
-        // Remove j from R
-        std::remove(R.begin(), R.end(), j);
-        // Let AP be A restricted to the variables included in P
-        // int k = P.size();
-        Eigen::MatrixXd AP = Eigen::MatrixXd(m,P.size());
-        l = 0;
-        for (auto i : P) {
-            AP.col(l) = A.col(i);
-            ++l;
-        }
-        // Let s be vector of same length as x. Let sP denote the sub-vector 
-        // with indexes from P, and let sR denote the sub-vector with indexes
-        // from R.
-        Eigen::VectorXd sP = Eigen::VectorXd(P.size());
-        Eigen::VectorXd sR = Eigen::VectorXd(R.size());
-        // Set sP = ((AP)ᵀ AP)−1 (AP)ᵀy
-        sP = ((AP.transpose()*AP).ldlt().solve(Eigen::MatrixXd::Identity(k,k))) * (AP.transpose()*y);
-        // Set sR to zero
-        for (int i = 0; i < (int)R.size(); i++) sR(i) = 0e0;
-        Eigen::VectorXd s = Eigen::VectorXd(n);
-        int cinp=0, cinr=0
-        for (int i = 0; i < n; i++) {
-            if ( std::find(P.begin(), P.end(), i) != P.end() ) {
-                s(i) = sP(i-cinp);
-                ++cinp;
-            } else {
-                s(i) = sR(i-cinr);
-                ++cinr;
-            }
-        }
-        // While min(sP) ≤ 0:
-        while( sP.minCoeff() <= 0e0 ) {
-            // Let α = min(xi/xi - si) for i in P where si ≤ 0
-            double a = std::numeric_limits<double>::max();
-            for (auto i : P) {
-                if (s(i) <= 0e0 && x(i)/(x(i)-s(i)) < a) a = x(i)/(x(i)-s(i));
-            }
-            // Set x to x + α(s - x)
-            x = x + a*(s-x);
-            // Move to R all indices j in P such that xj = 0
-            for (auto i : P) {
-                if (x(i) == 0e0) {
-                    R.push_back(i);
-                }
-            }
-        }
-    }
-}
-*/
 
 void
 h12(int mode, int lpivot, int l1, int m, double* u, int iue, double updouble* c, int ice, int icv, int ncv)
@@ -121,6 +47,18 @@ C     ------------------------------------------------------------------
 {
     if ((0 >= lpivot || lpivot >= l1) || l1 > m) return;
     double cl = std::abs(umat(0,lpivot));
+
+    if (mode != 2) {
+        // CONSTRUCT THE TRANSFORMATION.
+        for (int j = l1; j < m; j++) {
+            cl = std::max(std::abs(umat(0,j)), cl);
+            if (cl <= 0e0) {
+                return;
+            } else {
+                double clinv = 1e0 / cl;
+                double sm = (umat(0,lpivot)*clinv)*(umat(0,lpivot)*clinv);
+                for (
+            }
 }
 
 // GIVEN AN M BY N MATRIX, A, AND AN M-VECTOR, B,  COMPUTE AN
