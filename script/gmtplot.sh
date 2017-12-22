@@ -62,6 +62,7 @@ then
     if ! ./mjd2ymdhms.py -f ${cts_file} -s 1 -d ',' > ${cts_file}.tmp
     then
         echoerr "[ERROR] Failed to transform dates in input file."
+        rm ${cts_file} 2>/dev/null
         exit 1
     fi
     mv ${cts_file}.tmp ${cts_file}
@@ -117,6 +118,7 @@ do
     fi
     if test "${USE_YMD_FORMAT}" -eq 1
     then
+        echo "R option=${R[$it]}"
         gmt psbasemap "${R[$it]}" -JX10i/2i -K ${Osw} \
             -Bsx1Y -Bpxa${osw}Of1o \
             -Bpy"${YAI[$it]}"+l${comp} -B"${XAT[$it]}"+t"Time Series"+glightgreen \
@@ -136,3 +138,6 @@ do
 
     let it=it-1
 done
+
+rm ${cts_file} 2>/dev/null
+exit 0
