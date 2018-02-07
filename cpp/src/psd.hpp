@@ -86,13 +86,17 @@ public:
     double
     value_at(const ngpt::datetime<T>& t) const
     {
+        if (t <= this->start() ) return 0e0;
+
         auto   dt_intvr = ngpt::delta_date(t, start());
         double dtq      = dt_intvr.as_mjd() / 365.25e0;
 #ifdef DEBUG
         double dtq_conf = (t.as_mjd() - start().as_mjd())/365.25e0;
         assert( std::abs(dtq - dtq_conf) < 1e-10 );
 #endif
-        double d{0e0}, te1, te2;
+        double d{0e0},
+               te1,
+               te2;
 
         switch (m_model) {
             case psd_model::pwl:
@@ -101,7 +105,6 @@ public:
             case psd_model::log:
                 te1 = dtq/m_t1;
                 d   = m_a1 * std::log(1e0+te1);
-                //std::cout<<"\n\tdtq="<<dtq<<", arg="<<te1<<", d="<<d<<", a1="<<m_a1<<", t1="<<m_t1;
                 break;
             case psd_model::exp:
                 te1 = dtq/m_t1;
@@ -175,9 +178,10 @@ public:
     diriv_at(const ngpt::datetime<T>& t, double& da1, double& dt1, double& da2, double& dt2)
     const
     {
-        auto   dt_intvr = ngpt::delta_date(t, start());
+        auto   dt_intvr = ngpt::delta_date(t, this->start());
         double dtq      = dt_intvr.as_mjd() / 365.25e0;
 #ifdef DEBUG
+        assert( dtq >= 0e0 );
         double dtq_conf = (t.as_mjd() - start().as_mjd())/365.25e0;
         assert( std::abs(dtq - dtq_conf) < 1e-10 );
 #endif
@@ -191,7 +195,7 @@ public:
             case psd_model::log:
                 te1 = dtq/m_t1;
                 da1 = std::log(1e0+te1);
-                dt1 = m_a1*(-te1/m_t1)/(1e0+te1);
+                dt1 = -(m_a1*dtq)/(m_t1*m_t1*(1e0+te1));
                 break;
             case psd_model::exp:
                 te1 = dtq/m_t1;
@@ -218,6 +222,7 @@ public:
         if ( std::fetestexcept(FE_ALL_EXCEPT & ~FE_INEXACT) ) {
             std::cerr<<"\n\nFloating Point Exception at \"diriv_at()\"";
             std::cerr<<"\nHere are the variables:";
+            std::cerr<<"\ndtq = "<<dtq;
             switch (m_model) {
                 case psd_model::log:
                     std::cerr<<"\n\t t1      = "<<m_t1;
