@@ -104,11 +104,12 @@ public:
                 break;
             case psd_model::log:
                 te1 = dtq/m_t1;
-                d   = m_a1 * std::log(1e0+te1);
+                d   = m_a1 * std::log10(1e0+te1);
                 break;
             case psd_model::exp:
                 te1 = dtq/m_t1;
-                d   = m_a1*(1e0-std::exp(-te1));
+                // d   = m_a1*(1e0-std::exp(-te1));
+                d = -m_a1*std::expm1(-te1);
                 break;
             case psd_model::logexp:
                 te1 = dtq/m_t1;
@@ -122,6 +123,7 @@ public:
                 d   = m_a1*(1e0-std::exp(-te1))+
                       m_a2*(1e0-std::exp(-te2));
         }
+        /*
 #ifdef DEBUG
         if ( std::fetestexcept(FE_ALL_EXCEPT & ~FE_INEXACT) ) {
             std::cerr<<"\n\nFloating Point Exception at \"value_at()\"";
@@ -171,6 +173,7 @@ public:
             std::exit(1);
         }
 #endif
+        */
         return d;
     }
 
@@ -194,13 +197,14 @@ public:
                 break;
             case psd_model::log:
                 te1 = dtq/m_t1;
-                da1 = std::log(1e0+te1);
+                da1 = std::log10(1e0+te1);
                 dt1 = -(m_a1*dtq)/(m_t1*m_t1*(1e0+te1));
                 break;
             case psd_model::exp:
                 te1 = dtq/m_t1;
-                da1 = 1e0 - std::exp(-te1);
-                dt1 = m_a1*std::exp(-te1)*(-te1)/m_t1;
+                // da1 = 1e0 - std::exp(-te1);
+                da1 = -std::expm1(-te1);
+                dt1 = -m_a1*std::exp(-te1)*dtq/(m_t1*m_t1);
                 break;
             case psd_model::logexp:
                 te1 = dtq/m_t1;
@@ -218,6 +222,7 @@ public:
                 da2 = 1e0 - std::exp(-te2);
                 dt2 = m_a2*std::exp(-te2)*(-te2)/m_t2;
         }
+        /*
 #ifdef DEBUG
         if ( std::fetestexcept(FE_ALL_EXCEPT & ~FE_INEXACT) ) {
             std::cerr<<"\n\nFloating Point Exception at \"diriv_at()\"";
@@ -229,6 +234,7 @@ public:
                     std::cerr<<"\n\t te1     = "<<te1;
                     std::cerr<<"\n\t a1      = "<<m_a1;
                     std::cerr<<"\n\t 1e0+te1 = "<<1e0+te1;
+                    std::cerr<<"\n\tComputation: std::log10("<<1e0+te1<<") = "<< std::log10(1e0+te1) <<" and -"<<m_a1*dtq<<"/"<<m_t1*m_t1*(1e0+te1)<<" = "<<-(m_a1*dtq)/(m_t1*m_t1*(1e0+te1));
                     break;
                 case psd_model::exp:
                     std::cerr<<"\n\t t1      = "<<m_t1;
@@ -268,6 +274,7 @@ public:
             std::exit(1);
         }
 #endif
+        */
         return;
     }
 

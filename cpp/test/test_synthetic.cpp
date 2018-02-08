@@ -92,6 +92,9 @@ main(int argc, char* argv[])
     //+ constructed
     /* timeseries<milliseconds,pt_marker> */
     auto ts = synthetic_ts<milliseconds,pt_marker>(epochs, ref_model, 0, 1e-4);
+    std::ofstream f_0 {"original.ts"};
+    ts.dump(f_0);
+    f_0.close();
 
     /*
      * if the earthquake is modeled via a non-linear function, split the
@@ -105,6 +108,9 @@ main(int argc, char* argv[])
         timeseries<milliseconds,pt_marker> ts2 {ts, idx};
         ts2.epoch_ptr() = &eph_vec2;
         std::cout<<"\nSize of epochs="<<eph_vec2.size()<<" starting from "<< eph_vec2[0].as_mjd();
+        std::ofstream f_1 {"split.ts"};
+        ts2.dump(f_1);
+        f_1.close();
         ngpt::ts_model<milliseconds> estim_mdl2;
         estim_mdl2.mean_epoch() = ref_model.mean_epoch();
         estim_mdl2.add_earthquake(event, psd_type, a1_app, t1_app, a2_app, t2_app);
