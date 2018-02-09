@@ -201,6 +201,9 @@ public:
                 dt1 = -(m_a1*dtq)/(m_t1*m_t1*(1e0+te1));
                 break;
             case psd_model::exp:
+#ifdef DEBUG
+                assert(std::abs(te1) < 708.0e0);
+#endif
                 te1 = dtq/m_t1;
                 // da1 = 1e0 - std::exp(-te1);
                 da1 = -std::expm1(-te1);
