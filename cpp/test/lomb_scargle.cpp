@@ -122,7 +122,7 @@ main(int argc, char* argv[])
     xmodel.mean_epoch() = ts.mean_epoch();
     auto ymodel {xmodel},
          zmodel {xmodel};
-    auto res_ts = ts.qr_fit( xmodel, ymodel, zmodel );
+    auto res_ts = ts.qr_fit(xmodel, ymodel, zmodel);
     std::ofstream f1 {"original.ts"};
     ts.dump(f1, true, false);
     f1.close();
@@ -140,18 +140,19 @@ main(int argc, char* argv[])
     components.push_back(&ts.y_component());
     components.push_back(&ts.z_component());
 
-    std::vector<std::string> cmp_names = {std::string("North"), std::string("East"), std::string("Up")};
+    std::vector<std::string> cmp_names = 
+        {std::string("North"), std::string("East"), std::string("Up")};
 
-
-    auto   tdif = ts.last_epoch().delta_date( ts.first_epoch() );
+    auto   tdif = ts.last_epoch().delta_date(ts.first_epoch());
     double ddif = tdif.days().as_underlying_type() / 365.25;
     double div  = 1e0/ddif;
 
     auto it  = components.begin();
     auto cit = cmp_names.cbegin();
+    char answr;
     for (; it != components.end(); ++it) {
-        std::string ofile = sname + (*cit) + ".prd";
-        std::ofstream fout {ofile.c_str()};
+        // std::string ofile = sname + (*cit) + ".prd";
+        // std::ofstream fout {ofile.c_str()};
         
         std::size_t N = (*it)->data_pts() - (*it)->skipped_pts();
         double          ofac{4}, hifac{div/div};
@@ -171,13 +172,13 @@ main(int argc, char* argv[])
         px      = mempool;
         py      = mempool + nout;
         if (!dfreq)
-            ngpt::lomb_scargle_period( **it, ofac, hifac, px, py, nout, nout, jmax, prob );
+            ngpt::lomb_scargle_period(**it, ofac, hifac, px, py, nout, nout, jmax, prob);
         else
-            ngpt::lomb_scargle_period( **it, minfreq, maxfreq, dfreq, px, py, nout, nout, jmax, prob );
+            ngpt::lomb_scargle_period(**it, minfreq, maxfreq, dfreq, px, py, nout, nout, jmax, prob);
         // fout << "\n#New Component : " << *cit;
-        for (int i=0;i<nout;i++) {
-            fout << "\n" << px[i] << " " << py[i] << " " << 1e0/px[i];
-        }
+        // for (int i=0;i<nout;i++) {
+        //     fout << "\n" << px[i] << " " << py[i] << " " << 1e0/px[i];
+        // }
         std::cout<<"\nComponent: "<<*cit;
         std::cout<<"\n---------------------------------------------------------";
         std::cout<<"\n\tDominant frequency in time-series: "<<px[jmax]<<" (at: "<<jmax<<")";
@@ -186,10 +187,23 @@ main(int argc, char* argv[])
             <<", i.e. a period of "<<1e0/px[0]<<" days";
         std::cout<<"\n\tMaximum frequency examined is: "<<px[nout-1]
             <<", i.e. a period of "<<1e0/px[nout-1]<<" days\n";
+        std::cout<<"\nDo you want to apply the frequency to the model (y/n)?";
+        std::cin>>answr;
+        if (answr == 'y' || answr == 'Y') {
+            ngpt::ts_model<ngpt::milliseconds> *tmp_model;
+            if (*cit == "North")
+                tmp_model = &xmodel;
+            else if (*cit == "East")
+                tmp_model = &ymodel;
+            else
+                tmp_model = &zmodel;
+            tmp_model->add_period(1e0/px[jmax]);
+            std::cout<<"\nAdded period "<<1e0/px[jmax]<<" to the model.";
+        }
 
         ++cit;
         delete[] mempool;
-        fout.close();
+        // fout.close();
     }
 
     return 0;
