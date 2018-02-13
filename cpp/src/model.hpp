@@ -278,7 +278,7 @@ public:
     : m_x0{0e0},
       m_vx{0e0}
     {
-        for (auto it = events.it_begin(); it != events.it_end(); ++it)
+        for (auto it = events.it_cbegin(); it != events.it_cend(); ++it)
         {
             if ( it->second == ts_event::jump ) {
                 m_jumps.emplace_back(it->first);

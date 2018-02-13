@@ -113,6 +113,7 @@ main(int argc, char* argv[])
         ts.apply_earthquake_catalogue(eq_cat, MIN_ERTHQ_MAG);
     }
 
+    ts.clear_event_list(ngpt::datetime_interval<ngpt::milliseconds>{ngpt::modified_julian_day{1}, ngpt::milliseconds{0}}, 10);
     std::cout<<"\n\tEvents: ";
     ts.events().dump_event_list(std::cout);
 
@@ -126,24 +127,20 @@ main(int argc, char* argv[])
     std::ofstream f1 {"original.ts"};
     ts.dump(f1, true, false);
     f1.close();
-    ts = std::move(res_ts);
+    // ts = std::move(res_ts);
     std::ofstream f2 {"clear.ts"};
-    ts.dump(f2, true, false);
+    res_ts.dump(f2, true, false);
     f2.close();
-    std::ofstream f3 {"model.ts"};
-    // ts.dump_model_line(f3, xmodel, ymodel, zmodel, true, false);
-    models_to_json(f3, xmodel, ymodel, zmodel);
-    f3.close();
 
+    // treat each component individualy (for harmonic analysis)
     std::vector<ngpt::timeseries<ngpt::milliseconds, ngpt::pt_marker>*> components;
-    components.push_back(&ts.x_component());
-    components.push_back(&ts.y_component());
-    components.push_back(&ts.z_component());
-
+    components.push_back(&res_ts.x_component());
+    components.push_back(&res_ts.y_component());
+    components.push_back(&res_ts.z_component());
     std::vector<std::string> cmp_names = 
         {std::string("North"), std::string("East"), std::string("Up")};
 
-    auto   tdif = ts.last_epoch().delta_date(ts.first_epoch());
+    auto   tdif = res_ts.last_epoch().delta_date(res_ts.first_epoch());
     double ddif = tdif.days().as_underlying_type() / 365.25;
     double div  = 1e0/ddif;
 
@@ -151,14 +148,18 @@ main(int argc, char* argv[])
     auto cit = cmp_names.cbegin();
     char answr;
     for (; it != components.end(); ++it) {
-        // std::string ofile = sname + (*cit) + ".prd";
-        // std::ofstream fout {ofile.c_str()};
-        
+        std::ofstream fouc { sname + *cit + std::string(".cmp") };
+        (*it)->dump(fouc);
+        fouc.close();
         std::size_t N = (*it)->data_pts() - (*it)->skipped_pts();
-        double          ofac{4}, hifac{div/div};
-        int             nout = 0.5*ofac*hifac*N + 1;
-        double          *px, *py, prob, *mempool;
-        int             jmax;
+        double          ofac{4},
+                        hifac{div/div},
+                        *px,
+                        *py,
+                        prob,
+                        *mempool;
+        int             nout (0.5*ofac*hifac*N+1),
+                        jmax;
         double          days_in_year = 365.25e0;
         if (dfreq) {
             std::cout<<"\n[DEBUG] Total number of days: "<<ddif * 365.25e0;
@@ -199,12 +200,17 @@ main(int argc, char* argv[])
                 tmp_model = &zmodel;
             tmp_model->add_period(1e0/px[jmax]);
             std::cout<<"\nAdded period "<<1e0/px[jmax]<<" to the model.";
+            double post_stddev;
+            (*it)->qr_ls_solve(*tmp_model, post_stddev, 1e-3, false, true); 
         }
 
         ++cit;
         delete[] mempool;
         // fout.close();
     }
+
+    // final fit.
+    ts.qr_fit(xmodel, ymodel, zmodel);
 
     return 0;
 }

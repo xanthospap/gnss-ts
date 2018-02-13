@@ -327,14 +327,41 @@ public:
 
     /// Get a const_iterator to the begining of the m_events vector.
     typename std::vector<event>::const_iterator
-    it_begin() const noexcept
+    it_cbegin() const noexcept
     { return m_events.cbegin(); }
     
     /// Get a const_iterator to end (i.e. one past the end) the of the
     /// m_events vector.
     typename std::vector<event>::const_iterator
-    it_end() const noexcept
+    it_cend() const noexcept
     { return m_events.cend(); }
+    
+    /// Get an iterator to the begining of the m_events vector.
+    typename std::vector<event>::const_iterator
+    it_begin() noexcept
+    { return m_events.begin(); }
+    
+    /// Get an iterator to end (i.e. one past the end) the of the
+    /// m_events vector.
+    typename std::vector<event>::iterator
+    it_end() noexcept
+    { return m_events.end(); }
+
+    /// Size of event list (i.e. number of events)
+    std::size_t
+    size() const noexcept
+    { return m_events.size(); }
+
+    /// Just a push_back
+    /// Use with extreme care as the event_list must be sorted in chronological
+    /// order and this function make absolutely no check!
+    void push_back(const event& e) noexcept
+    { m_events.push_back(e); }
+
+    /// Get the event with index i.
+    event
+    operator()(std::size_t i) const
+    { return m_events[i]; }
 
 private:
 

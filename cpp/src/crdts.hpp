@@ -30,12 +30,9 @@
 #endif
 
 // gtms headers
-// #include "tsflag.hpp"
 #include "timeseries.hpp"
 #include "earthquake_cat.hpp"
 #include "event_list.hpp"
-// #include "model.hpp"
-// #include "period.hpp"
 
 namespace ngpt
 {
@@ -243,17 +240,17 @@ public:
         ngpt::car2ell<ngpt::ellipsoid::grs80>(m_x.mean(), m_y.mean(), m_z.mean(),
             slat, slon, shgt);
 
-        while ( catalogue.read_next_earthquake(eq) && eq.epoch() <= stop) {
+        while ( catalogue.read_next_earthquake(eq) && (eq.epoch() <= stop) ) {
 #ifdef DEBUG
             ++eq_read;
 #endif
             if (eq.epoch() >= start) {
                 distance = eq.epicenter_distance(slat, slon, faz, baz);
-                if ( eq.magnitude() >= min_mag && (eq.magnitude() >= -5.6 + 2.17 * std::log10(distance)) ) {
+                if ( (eq.magnitude() >= min_mag) && (eq.magnitude() >= -5.6 + 2.17 * std::log10(distance)) ) {
                     m_events.apply(ts_event::earthquake, eq.epoch());
                     ++eq_applied;
 #ifdef DEBUG
-                    std::cout<<"\tAdding earthquake at "<< eq.epoch().stringify() << " (" <<eq.lat()*180/DPI<<", "<<eq.lon()*180/DPI<<"), of size "<<eq.magnitude()<<"M.\n";
+                    std::cout<<"\tAdding earthquake at "<< eq.epoch().stringify() << " (epicentre distance: "<<distance/1e3/*<<eq.lat()*180/DPI<<", "<<eq.lon()*180/DPI<<*/<<" km), of size "<<eq.magnitude()<<"M.\n";
 #endif
                 }
             }
@@ -322,6 +319,43 @@ public:
         m_events.apply_event_list_file(evn_file, first_epoch(), last_epoch());
     }
 
+    /// event_list must be in chronological order
+    void
+    clear_event_list(ngpt::datetime_interval<T> dt, std::size_t npts=10)
+    {
+        event_list<T> new_list;
+        auto it   = m_events.it_begin();
+        auto iend = m_events.it_end()-1;
+        for (; it != iend; ++it) {
+            auto itp1 = it+1;
+            auto t1   = std::get<0>(*it),
+                 t2   = std::get<0>(*itp1);
+            auto e1   = std::get<1>(*it),
+                 e2   = std::get<1>(*it);
+            if ( (t2.delta_date(t1) < dt)
+              && (e1!=ts_event::velocity_change && e2!=ts_event::velocity_change) ) {
+                // new_list.emplace_back(itp1);
+                std::cout<<"\n\t[DEBUG] Event at "<<strftime_ymd_hms(t1)<<" not added because next is too close ("<<strftime_ymd_hms(t2)<<")";
+                ;
+            } else if (t2.delta_date(t1) > dt) {
+                std::size_t idx1, idx2;
+                this->x_component().upper_bound(t1, idx1);
+                this->x_component().lower_bound(t2, idx2);
+                if ( (idx2-idx1 < npts) 
+                   &&(e1!=ts_event::velocity_change && e2!=ts_event::velocity_change) ) {
+                    //new_list.emplace_back(itp1);
+                    std::cout<<"\n\t[DEBUG] Event at "<<strftime_ymd_hms(t1)<<" not added because intermediate points are too few, "<<idx2-idx1<<" ("<<strftime_ymd_hms(t2)<<")";
+                    ;
+                } else {
+                    std::cout<<"\n\t[DEBUG] Event at "<<strftime_ymd_hms(t1)<<" added";
+                    new_list.push_back(*it);
+                }
+            }
+        }
+        new_list.push_back(m_events(m_events.size()-1));
+        m_events = new_list;
+    }
+
     void
     apply_stalog_file(const char* log_file)
     {
@@ -329,6 +363,9 @@ public:
     }
 
     ///
+    /// @note 
+    ///      - this will NOT set the reference epoch of the (input) models.
+    ///      - outlier detection and marking will be performed
     auto
     qr_fit(ngpt::ts_model<T>& xmodel, ngpt::ts_model<T>& ymodel, ngpt::ts_model<T>& zmodel)
     {
