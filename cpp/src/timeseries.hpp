@@ -62,7 +62,7 @@ public:
     
     /// Constructor.
     explicit
-    data_point(double val=0.0, double sigma=1.0, tflag f=tflag{})
+    data_point(double val=0.0, double sigma=1e-3, tflag f=tflag{})
     noexcept
     : m_value{val},
       m_sigma{sigma},
@@ -450,7 +450,7 @@ public:
     ///         skipped data points (if needed).
     /// @return The updated time-series mean value.
     double
-    add_point(double val, double sigma=1e0, tflag f=tflag{})
+    add_point(double val, double sigma=1e-3, tflag f=tflag{})
     {
         return this->add_point( entry{val, sigma, f} );
     }

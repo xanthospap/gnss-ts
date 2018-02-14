@@ -159,7 +159,7 @@ public:
     void add(
         const epoch& t,
         double x,          double y,         double z,
-        double sx=1.0,     double sy=1.0,    double sz=1.0,
+        double sx=1e-3,     double sy=1e-3,    double sz=1e-3,
         tflag  fx=tflag{}, tflag fy=tflag{}, tflag fz=tflag{}
         )
     {
@@ -563,6 +563,10 @@ public:
     {
         return m_events.dump_event_list_as_json(os);
     }
+
+    const std::vector<epoch>*
+    epoch_vector() const noexcept
+    { return &m_epochs; }
 
 private:
 

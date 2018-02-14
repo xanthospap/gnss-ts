@@ -138,8 +138,6 @@ template<typename T,
 ///
 /// Read a time-series in cartesian coordinates (aka crdts<T>) off from a .cts file.
 /// Note that each line (in the file) can have no more than 256 characters.
-/// Also note that the sigmas are scaled to 1000 (i.e. they are assumed meters
-/// and converted to millimeters).
 /// The function will skip any lines starting with '#'.
 ///
 /// @param[in] cts_file  The filename of the 'cts' format file to read in.
@@ -206,8 +204,7 @@ template<class T,
                 throw std::invalid_argument
                     ("cts_read: Dates are not sorted! Line #"+std::to_string(line_counter));
             }
-            ts.add(epoch, data[0], data[2], data[4], data[1]*1000.0,
-                data[3]*1000.0, data[5]*1000.0);
+            ts.add(epoch, data[0], data[2], data[4], data[1], data[3], data[5]);
             ++line_counter;
         }
     }

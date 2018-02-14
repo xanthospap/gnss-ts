@@ -211,6 +211,22 @@ main(int argc, char* argv[])
 
     // final fit.
     ts.qr_fit(xmodel, ymodel, zmodel);
+    /*
+    auto vn = xmodel.make_model( *(ts.epoch_vector()) );
+    auto ve = ymodel.make_model( *(ts.epoch_vector()) );
+    auto vu = zmodel.make_model( *(ts.epoch_vector()) );
+    std::ofstream fout { sname + std::string(".mod") };
+    const std::vector<ngpt::datetime<ngpt::milliseconds>>* epoch_vec = ts.epoch_vector();
+    for (std::size_t i=0; i<ts.size(); i++) {
+        fout << ((*epoch_vec)[i]).as_mjd() << " " << vn[i] << " " << ve[i] << " " << vu[i] <<"\n";
+    }
+    fout.close();
+    */
+    std::ofstream fout { sname + std::string(".mod") };
+    xmodel.dump(fout);
+    ymodel.dump(fout);
+    zmodel.dump(fout);
+    fout.close();
 
     return 0;
 }
