@@ -736,6 +736,30 @@ public:
         m_earthqs.emplace_back(start, m, a1, t1, a2, t2);
     }
 
+    void
+    add_earthquake(const md_earthquake<T>& e)
+    noexcept
+    { m_earthqs.emplace_back(e); }
+
+    /// Remove an earthquake from the earthquake events vector, given a date.
+    /// The function will search for an earthquake that has happened at this
+    /// date and if found, it will remove it from the model.
+    void
+    erase_earthquake_at(const datetime<T>& t)
+    {
+        for (auto it = m_earthqs.begin(); it != m_earthqs.end(); ++it) {
+            if ( it->start() == t ) {
+                m_earthqs.erase(it);
+                return;
+            }
+        }
+        /* I do not understand why this does not work! WTF???
+        auto it = std::find_if(m_earthqs.begin(), m_earthqs.end(),
+                            [&t](const md_earthquake<T>& a){a.start() == t;});
+        if (it!=m_earthqs.end()) m_earthqs.erase(it);
+        */
+    };
+
     /// Return the total number of parameters of this instance.
     /// (i.e. 2 for the linear term + 1 for each velocity change + 2 for each
     /// harmonic + 1 for each jump + 4 for each PSD/earthquake)
@@ -897,6 +921,16 @@ public:
     std::vector<md_harmonics<T>>
     harmonics() const noexcept
     { return m_harmonics; }
+
+    /// Return a copy of the earthquake events vector of the model.
+    std::vector<md_earthquake<T>>
+    earthquakes() const noexcept
+    { return m_earthqs; }
+
+    /// Clear (i.e remove) all earthquakes
+    void
+    clear_earthquakes() noexcept
+    { m_earthqs.clear(); }
 
 private:
     double                             m_x0,          ///< const linear term.

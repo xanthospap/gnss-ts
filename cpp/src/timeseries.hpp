@@ -726,11 +726,12 @@ public:
         Eigen::MatrixXd Q = Eigen::MatrixXd(parameters, parameters);
         // Q = (A.transpose() * A).fullPivLu().solve(Eigen::MatrixXd::Identity(N,N));
         Q = (A.transpose() * A).ldlt().solve(Eigen::MatrixXd::Identity(N,N));
-        std::cout<<"\n\tVar-Covar Info:";
+        
+        // std::cout<<"\n\tVar-Covar Info:";
         // std::cout<<"\n\tQ is of type:"<<Q.rows()<<"x"<<Q.cols()<<" (N="<<N<<")";
-        for (int i=0; i<N; i++) {
-            std::cout<<"\n\t"<<x(i)<<" +/- "<<post_std_dev*std::sqrt( Q(i,i) ) << " ratio: "<<x(i) / (post_std_dev*std::sqrt( Q(i,i) ));
-        }
+        // for (int i=0; i<N; i++) {
+        //    std::cout<<"\n\t"<<x(i)<<" +/- "<<post_std_dev*std::sqrt( Q(i,i) ) << " ratio: "<<x(i) / (post_std_dev*std::sqrt( Q(i,i) ));
+        // }
 
         // apply outlier detection algorithm and mark them
         if (mark_outliers) {

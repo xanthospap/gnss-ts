@@ -2,6 +2,11 @@
 #include <fstream>
 #include "period.hpp"
 #include "cts_read.hpp"
+#include "psd.hpp"
+
+ngpt::ts_model<ngpt::milliseconds>
+filter_earthquakes(ngpt::timeseries<ngpt::milliseconds, ngpt::pt_marker>& ts,
+    ngpt::ts_model<ngpt::milliseconds>& model, double Ut);
 
 void help()
 {
@@ -209,8 +214,9 @@ main(int argc, char* argv[])
         // fout.close();
     }
 
-    // final fit.
+    // fit.
     ts.qr_fit(xmodel, ymodel, zmodel);
+
     /*
     auto vn = xmodel.make_model( *(ts.epoch_vector()) );
     auto ve = ymodel.make_model( *(ts.epoch_vector()) );
@@ -222,11 +228,72 @@ main(int argc, char* argv[])
     }
     fout.close();
     */
+
+    auto mdl_n = filter_earthquakes(ts.x_component(), xmodel, 1e-3);
+    auto mdl_e = filter_earthquakes(ts.y_component(), ymodel, 1e-3);
+    auto mdl_u = filter_earthquakes(ts.z_component(), zmodel, 1e-3);
+
     std::ofstream fout { sname + std::string(".mod") };
-    xmodel.dump(fout);
-    ymodel.dump(fout);
-    zmodel.dump(fout);
+    mdl_n.dump(fout);
+    mdl_e.dump(fout);
+    mdl_u.dump(fout);
     fout.close();
 
     return 0;
+}
+
+ngpt::ts_model<ngpt::milliseconds>
+filter_earthquakes(ngpt::timeseries<ngpt::milliseconds, ngpt::pt_marker>& ts,
+    ngpt::ts_model<ngpt::milliseconds>& model, double Ut=1e-3)
+{
+    
+    std::vector<ngpt::md_earthquake<ngpt::milliseconds>> erthqk_vec {model.earthquakes()};
+    if (!erthqk_vec.size()) return model;
+    
+    double stddev_a,
+           stddev_n;
+    
+    /// Initial estimate to get the approximate earthquake offsets
+    ts.qr_ls_solve(model, stddev_n, 1e-3, false, false);
+
+    /// Get the a-priori earthquake vector and sort it according to each earthquake's
+    /// resulting offset.
+    //  -- already donde that!
+    // std::vector<ngpt::md_earthquake<ngpt::milliseconds>> erthqk_vec {model.earthquakes()};
+    std::sort(erthqk_vec.begin(), erthqk_vec.end(),
+        [](const ngpt::md_earthquake<ngpt::milliseconds>& a,
+           const ngpt::md_earthquake<ngpt::milliseconds>& b)
+        {return std::sqrt(a.a1()*a.a1()+a.a2()*a.a2()) > std::sqrt(b.a1()*b.a1()+b.a2()*b.a2());});
+    std::cout<<"\nInitial Earthquake offsets";
+    for (auto it = erthqk_vec.begin(); it != erthqk_vec.end(); ++it) {
+        std::cout<<"\n\tEarthquake at "<<ngpt::strftime_ymd_hms(it->start())<<" offset="<<it->a1();
+    }
+
+    /// Initialize a new model with no earthquakes
+    ngpt::ts_model<ngpt::milliseconds> amodel{model},
+                                       nmodel{model};
+    nmodel.clear_earthquakes();
+    amodel.clear_earthquakes();
+    
+    ts.qr_ls_solve(amodel, stddev_a, 1e-3, false, false);
+    std::vector<ngpt::md_earthquake<ngpt::milliseconds>>::iterator it = erthqk_vec.begin(),
+                                                             it_end = erthqk_vec.end();
+    double factor;
+    std::cout<<"\nStarting testing for significant offsets";
+    for (; it != it_end; ++it) {
+        nmodel.add_earthquake(*it);
+        ts.qr_ls_solve(nmodel, stddev_n, 1e-3, false, false);
+        factor = stddev_a / stddev_n;
+        std::cout<<"\nPrevious std="<<stddev_a<<", new std="<<stddev_n;
+        if ((factor-1e0) > Ut) {
+            amodel = nmodel;
+            stddev_a = stddev_n;
+            std::cout<<"\n\tEarthquake at "<<ngpt::strftime_ymd_hms(it->start())<<" added to the model; factor is "<<factor<<", value is: "<<it->a1();
+        } else {
+            nmodel.erase_earthquake_at( it->start() );
+            std::cout<<"\n\tEarthquake at "<<ngpt::strftime_ymd_hms(it->start())<<" removed from the model; factor is "<<factor<<", value is: "<<it->a1();
+        }
+    }
+
+    return amodel;
 }
