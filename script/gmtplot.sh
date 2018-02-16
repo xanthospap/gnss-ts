@@ -10,6 +10,8 @@ REMOVE_OUTLIERS=0
 pid=$(echo $$)
 ##  number of ticks on Y-axis
 Y_TICKS_NR=6
+## Append model (lines) to the plots
+PLOT_MODEL=0
 ## output file
 ps=koko.ps
 rm $ps 2>/dev/null
@@ -29,6 +31,11 @@ do
         -n|--no-outliers)
         REMOVE_OUTLIERS=1
         shift
+        ;;
+        -m|--model-ascii)
+        PLOT_MODEL=1
+        MODEL_INFILE="$2"
+        shift 2
         ;;
         *) # unknown option
         echoerr "Fuck is this: \"$key\"? skipped ..."
@@ -103,6 +110,25 @@ fi
 gmt set FONT_ANNOT_PRIMARY +8p
 gmt set PS_CHAR_ENCODING ISOLatin1+
 
+## If we want to append the model lines, prepare the input data
+if test "${PLOT_MODEL}" -eq 1
+then
+    if test "${USE_YMD_FORMAT}" -eq 1
+    then
+        if ! ./tsmodel.py -f "${MODEL_INFILE}" -s "${wesn[0]}" -e "${wesn[1]}" > .mld.dat
+        then
+            echo "[ERROR] Failed to parse model file"
+            exit 1
+        fi
+    else
+        if ! ./tsmodel.py -f "${MODEL_INFILE}" -s "${wesn[0]}" -e "${wesn[1]}" -m > .mld.dat
+        then
+            echo "[ERROR] Failed to parse model file"
+            exit 1
+        fi
+    fi
+fi
+
 it=2
 for comp in up east north
 do
@@ -135,6 +161,16 @@ do
         gmt psxy "${R[$it]}" -J \
         -Wthin,red  -Gblack -Sc.05 \
         -h --IO_N_HEADER_RECS=1 -O -K >> $ps
+
+    if test "${PLOT_MODEL}" -eq 1
+    then
+        mcol=$((2+${it}))
+        echo "awking cols 1 and $mcol"
+        cat .mld.dat | \
+        awk -v y=$mcol '{print $1,$y}' | \
+        gmt psxy "${R[$it]}" -J \
+        -Wthin,yellow -O -K >> $ps
+    fi
 
     let it=it-1
 done
