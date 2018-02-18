@@ -12,6 +12,8 @@ pid=$(echo $$)
 Y_TICKS_NR=6
 ## Append model (lines) to the plots
 PLOT_MODEL=0
+## PLOT EVENTS
+PLOT_EVENTS=0
 ## output file
 ps=koko.ps
 rm $ps 2>/dev/null
@@ -36,6 +38,10 @@ do
         PLOT_MODEL=1
         MODEL_INFILE="$2"
         shift 2
+        ;;
+        -e|--plot-events)
+        PLOT_EVENTS=1
+        shift
         ;;
         *) # unknown option
         echoerr "Fuck is this: \"$key\"? skipped ..."
@@ -111,17 +117,21 @@ gmt set FONT_ANNOT_PRIMARY +8p
 gmt set PS_CHAR_ENCODING ISOLatin1+
 
 ## If we want to append the model lines, prepare the input data
+if test "${PLOT_EVENTS}" -eq 1
+then
+    APPND_CMD="-v .evn.dat"
+fi
 if test "${PLOT_MODEL}" -eq 1
 then
     if test "${USE_YMD_FORMAT}" -eq 1
     then
-        if ! ./tsmodel.py -f "${MODEL_INFILE}" -s "${wesn[0]}" -e "${wesn[1]}" > .mld.dat
+        if ! ./tsmodel.py -f "${MODEL_INFILE}" -s "${wesn[0]}" -e "${wesn[1]}" ${APPND_CMD} > .mld.dat
         then
             echo "[ERROR] Failed to parse model file"
             exit 1
         fi
     else
-        if ! ./tsmodel.py -f "${MODEL_INFILE}" -s "${wesn[0]}" -e "${wesn[1]}" -m > .mld.dat
+        if ! ./tsmodel.py -f "${MODEL_INFILE}" -s "${wesn[0]}" -e "${wesn[1]}" -m  ${APPND_CMD} > .mld.dat
         then
             echo "[ERROR] Failed to parse model file"
             exit 1
@@ -155,6 +165,29 @@ do
             -Bpy"${YAI[$it]}"+l${comp} -B"${XAT[$it]}"+t"Time Series"+glightgreen \
             ${Ysh} >> $ps
     fi
+    
+    if test "${PLOT_EVENTS}" -eq 1
+    then
+        c_min=$(echo "${R[$it]}" | awk -F "/" '{print $3}')
+        c_max=$(echo "${R[$it]}" | awk -F "/" '{print $4}')
+        evncols=("brown" "orange" "yellow")
+        evncit=0
+        for evn in j e v
+        do
+            echo "color for $evn is ${evncols[$evncit]}, evncit=$evncit"
+            if grep $evn .evn.dat > .evn.dat${evn} 2>/dev/null
+            then
+                while read line
+                do
+                    t=$(echo $line | sed "s/${evn}//g" | sed "s/ $//g" | tr ' ' 'T')
+                    echo "${t} ${c_min}" >  .evn.dat${evn}${evn}
+                    echo "${t} ${c_max}" >> .evn.dat${evn}${evn}
+                    cat .evn.dat${evn}${evn} | gmt psxy "${R[$it]}" -J -W0.3p,"${evncols[$evncit]}" -O -K >> $ps
+                done < .evn.dat${evn}
+            fi
+            let evncit=evncit+1
+        done
+    fi
 
     cat ${cts_file} | \
         awk -F "," -v y=$ycol '{print $1,$y}' | \
@@ -165,11 +198,10 @@ do
     if test "${PLOT_MODEL}" -eq 1
     then
         mcol=$((2+${it}))
-        echo "awking cols 1 and $mcol"
         cat .mld.dat | \
         awk -v y=$mcol '{print $1,$y}' | \
         gmt psxy "${R[$it]}" -J \
-        -Wthin,yellow -O -K >> $ps
+        -Wthin,blue -O -K >> $ps
     fi
 
     let it=it-1

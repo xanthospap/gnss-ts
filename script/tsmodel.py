@@ -87,6 +87,18 @@ class Model:
         self.a = a
         self.b = b
 
+    def get_event_list(self, use_pydatetime=False):
+        def dtf(mjd, pydt=False):
+            return mjd if not pydt else julian.from_jd(mjd, fmt='mjd')
+        event_list = {'j':[], 'v':[], 'e':[]}
+        for i in self.jumps:
+            event_list['j'].append(dtf(i.t_mjd, use_pydatetime))
+        for i in self.velocity_changes:
+            event_list['v'].append(dtf(i.fro, use_pydatetime))
+        for i in self.earthquakes:
+            event_list['e'].append(dtf(i.t, use_pydatetime))
+        return event_list
+
     def add_harmonic(self, period_in_days, in_phase=0e0, out_of_phase=0e0, start_at=tmin, stop_at=tmax):
         self.harmonics.append(Harmonic(period_in_days, in_phase, out_of_phase, start_at, stop_at))
 
@@ -251,6 +263,13 @@ parser.add_argument('-m', '--mjd',
     help     = 'Output dates written as MJD.',
     dest     = 'use_mjd',
 )
+parser.add_argument('-v', '--event-file',
+    action   = 'store',
+    required = False,
+    help     = '(output) event file.',
+    metavar  = 'EVENT_OUT_FILE',
+    dest     = 'event_file'
+)
 
 ##  Parse command line arguments
 args = parser.parse_args()
@@ -283,6 +302,14 @@ try:
         t = [ i.strftime('%Y-%m-%dT%H:%M:%S') for i in t ]
     for idx, eph in enumerate(t):
         print('{:} {:10.5f} {:10.5f} {:10.5f}'.format(eph, yvals[0][idx], yvals[1][idx], yvals[2][idx]))
+    if args.event_file:
+        event_dicts = []
+        for i in models:
+            event_dicts.append(i.get_event_list(not args.use_mjd))
+        with open(args.event_file, 'w') as fout:
+            for key in ['j', 'v', 'e']:
+                for t in list(set(event_dicts[0][key] + event_dicts[1][key] + event_dicts[2][key])):
+                    print('{:} {:}'.format(t, key), end="\n", file=fout)
 except:
     status = 1
 
