@@ -1,4 +1,4 @@
-#! /usr/bin/python
+#! /usr/bin/python3.6
 
 """  
 """
@@ -183,16 +183,15 @@ def model_from_ascii(filename):
                         in_phase = float(l[0])
                         out_of_phase = float(fin.readline().split()[0])
                         model.add_harmonic(period, in_phase, out_of_phase, start, stop)
-                        ##print('adding harmonic with period={:}'.format(period))
+                        #print('adding harmonic with period={:}'.format(period))
                         line = fin.readline()
                 elif line.strip() == 'Jumps/Offsets:':
                     line = fin.readline()
                     while len(line.split()) > 2 and line.split()[1] == 'at':
-                        l = fin.readline().split()
-                        assert l[1] == 'at'
+                        l = line.split()
                         t = datetime.datetime.strptime(l[2] + " " + l[3], "%Y-%m-%d %H:%M:%S")
                         model.add_jump(t, float(l[0]))
-                        ##print('adding jump with value={:}'.format(float(l[0])))
+                        #print('adding jump with value={:}'.format(float(l[0])))
                         line = fin.readline()
                 elif line.strip() == 'Velocity Changes:':
                     line = fin.readline()
@@ -223,7 +222,7 @@ def model_from_ascii(filename):
                         assert l[0] == 'Offset:'
                         val = float(l[1])
                         model.add_earthquake(t, 0, val)
-                        ##print('adding earthquake with val={:}'.format(val))
+                        #print('adding earthquake with val={:}'.format(val))
                         line = fin.readline()
                 elif len(line.split()) > 2 and (line.split()[0] == 'Central' and line.split()[1] == 'Epoch'):
                     models.append(model)
@@ -275,42 +274,44 @@ parser.add_argument('-v', '--event-file',
 args = parser.parse_args()
 
 status = 0
+#try:
+models = model_from_ascii(args.input_file)
 try:
-    models = model_from_ascii(args.input_file)
-    try:
-        start_t = datetime.datetime.strptime(args.start_t, "%Y-%m-%dT%H:%M:%S")
-    except:
-        try:
-            start_t = datetime.datetime.strptime(args.start_t, "%Y-%b-%dT%H:%M:%S")
-        except:
-            raise RuntimeError
-    try:
-        end_t = datetime.datetime.strptime(args.end_t, "%Y-%m-%dT%H:%M:%S")
-    except:
-        try:
-            end_t = datetime.datetime.strptime(args.end_t, "%Y-%b-%dT%H:%M:%S")
-        except:
-            raise RuntimeError
-    if len(models) != 3:
-        sys.stderr.write("[Error] Failed to read 3 models from input file\n")
-        raise RuntimeError
-    yvals = []
-    for mdl in models:
-        t, y = mdl.make_line(start_t, end_t, not args.use_mjd)
-        yvals.append(y)
-    if not args.use_mjd:
-        t = [ i.strftime('%Y-%m-%dT%H:%M:%S') for i in t ]
-    for idx, eph in enumerate(t):
-        print('{:} {:10.5f} {:10.5f} {:10.5f}'.format(eph, yvals[0][idx], yvals[1][idx], yvals[2][idx]))
-    if args.event_file:
-        event_dicts = []
-        for i in models:
-            event_dicts.append(i.get_event_list(not args.use_mjd))
-        with open(args.event_file, 'w') as fout:
-            for key in ['j', 'v', 'e']:
-                for t in list(set(event_dicts[0][key] + event_dicts[1][key] + event_dicts[2][key])):
-                    print('{:} {:}'.format(t, key), end="\n", file=fout)
+    start_t = datetime.datetime.strptime(args.start_t, "%Y-%m-%dT%H:%M:%S")
 except:
-    status = 1
+    try:
+        start_t = datetime.datetime.strptime(args.start_t, "%Y-%b-%dT%H:%M:%S")
+    except:
+        status = 1
+        raise RuntimeError
+try:
+    end_t = datetime.datetime.strptime(args.end_t, "%Y-%m-%dT%H:%M:%S")
+except:
+    try:
+        end_t = datetime.datetime.strptime(args.end_t, "%Y-%b-%dT%H:%M:%S")
+    except:
+        status = 1
+        raise RuntimeError
+if len(models) != 3:
+    sys.stderr.write("[Error] Failed to read 3 models from input file\n")
+    raise RuntimeError
+yvals = []
+for mdl in models:
+    t, y = mdl.make_line(start_t, end_t, not args.use_mjd)
+    yvals.append(y)
+if not args.use_mjd:
+    t = [ i.strftime('%Y-%m-%dT%H:%M:%S') for i in t ]
+for idx, eph in enumerate(t):
+    print('{:} {:10.5f} {:10.5f} {:10.5f}'.format(eph, yvals[0][idx], yvals[1][idx], yvals[2][idx]))
+if args.event_file:
+    event_dicts = []
+    for i in models:
+        event_dicts.append(i.get_event_list(not args.use_mjd))
+    with open(args.event_file, 'w') as fout:
+        for key in ['j', 'v', 'e']:
+            for t in list(set(event_dicts[0][key] + event_dicts[1][key] + event_dicts[2][key])):
+                print('{:} {:}'.format(t, key), end="\n", file=fout)
+#except:
+#    status = 1
 
 sys.exit(status)

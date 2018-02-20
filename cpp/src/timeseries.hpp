@@ -8,6 +8,7 @@
 #include <tuple>
 #ifdef DEBUG
 #include <iostream>
+#include <iomanip>
 #include <cstdio>
 #endif
 
@@ -356,7 +357,7 @@ public:
                 end = ts.m_data.size();
             }
             if (end < start || end > ts.m_data.size()) {
-                throw std::domain_error("Invalid start/stop indexes for copy c'tor");
+                throw std::domain_error("timeseries: Invalid start/stop indexes for copy c'tor");
             }
             m_data.reserve(end-start);
             double sz;
@@ -1845,7 +1846,7 @@ public:
     }
     
     entry
-    clean_iqr() const noexcept
+    clean_iqr() const
     {
         std::vector<double> vals, sigmas;
         int size = m_iterator_end.distance_from(m_iterator_begin);
@@ -1860,8 +1861,10 @@ public:
         }
         
         size = vals.size();
-        if (size == 1) {
-            std::cout<<"------ZERO SIZE VECTOR--------------";
+        if (!size) {
+            std::cerr<<"\n[ERROR] Running window with no points!";
+            throw std::runtime_error("running_window::clean_iqr");
+        } else if (size == 1) {
             return entry{vals[0], sigmas[0]};
         }
 
@@ -1884,7 +1887,7 @@ public:
     }
     
     entry
-    clean_median() const noexcept
+    clean_median() const
     {
         std::vector<double> vals, sigmas;
         int size = m_iterator_end.distance_from(m_iterator_begin);
@@ -1899,7 +1902,12 @@ public:
         }
 
         size = vals.size();
-        if (size<5) std::cout<<"\nToo few points:";
+        if (!size) {
+            std::cerr<<"\n[ERROR] Running window with no points!";
+            throw std::runtime_error("running_window::clean_median");
+        } else if (size == 1) {
+            return entry {vals[0], sigmas[0]};
+        }
 
         if (size%2) { /* odd size */
             std::nth_element(vals.begin(), vals.begin() + size/2+1, vals.end());
@@ -1944,7 +1952,8 @@ private:
 
 template<class T, class F>
     void
-    nikolaidis(timeseries<T, F>& residuals, timeseries<T, F>& original_ts, const datetime_interval<T>& window)
+    nikolaidis(timeseries<T, F>& residuals, timeseries<T, F>& original_ts,
+        const datetime_interval<T>& window)
 {
 #ifdef DEBUG
     std::size_t num_of_outliers = 0, valid_pts = 0;
@@ -1965,9 +1974,7 @@ template<class T, class F>
             res    = rw_it.centre().data().value();
             median = rw_it.clean_median();
             iqr    = rw_it.clean_iqr();
-            // auto foo = rw_it.centre().epoch();
-            // std::cout<<"\n"<<foo.as_mjd()<<" " <<original_ts[counter].value()<<" "<<res;
-            if ( std::abs(res-median.value()) > 3.0*iqr.value() ) {
+            if ( std::abs(res-median.value()) > 3e0*iqr.value() ) {
                 rw_it.centre().mark(pt_marker::outlier);
                 original_ts.mark(counter, pt_marker::outlier);
 #ifdef DEBUG
@@ -1979,50 +1986,12 @@ template<class T, class F>
     }
     assert( counter == original_ts.data_pts() );
 #ifdef DEBUG
-    std::cout<<"\nOutliers: " << num_of_outliers << "/" << valid_pts << " = " << ((double)num_of_outliers/valid_pts)*100;
+    std::cout<<"\n[DEBUG] Outliers: " << num_of_outliers << "/" 
+        << valid_pts << " = ";
+    printf("%5.2f", ((double)num_of_outliers/valid_pts)*100);
 #endif
     return;
 }
-
-/*
-template<class T, class F>
-    void
-    three_sigma(timeseries<T, F>& residuals, timeseries<T, F>& original_ts, double sigma)
-{
-#ifdef DEBUG
-    std::size_t num_of_outliers = 0, valid_pts = 0;
-#endif
-    double res;
-    std::size_t counter = 0;
-
-    for (auto rw_it  = residuals.begin();
-              rw_it != residuals.end();
-              ++rw_it)
-    {
-        if ( !rw_it.data().skip() ) {
-#ifdef DEBUG
-            ++valid_pts;
-#endif
-            res    = rw_it.data().value();
-            //median = rw_it.clean_median();
-            //iqr    = rw_it.clean_iqr();
-            if ( std::abs(res) > 3.0*sigma ) {
-                rw_it.data().flag().set(pt_marker::outlier);
-                // std::cout<<"\nmarking cause: |" << res << "-"<< median.value() << "| > 3.0 * " << iqr.value();
-                original_ts[counter].flag().set(pt_marker::outlier);
-#ifdef DEBUG
-                ++num_of_outliers;
-#endif
-            }
-        }
-        ++counter;
-    }
-    assert( counter == original_ts.data_pts() );
-#ifdef DEBUG
-    std::cout<<"\nOutliers: " << num_of_outliers << "/" << valid_pts << " = " << ((double)num_of_outliers/valid_pts)*100;
-#endif
-    return;
-}*/
 
 } // end namespace ngpt
 

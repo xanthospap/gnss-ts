@@ -173,7 +173,7 @@ template<class T,
 
     std::ifstream ifs (cts_file.c_str(), std::ifstream::in);
     if ( !ifs.is_open() ) {
-        throw std::invalid_argument("Cannot find file \""+cts_file+"\"");
+        throw std::invalid_argument("[ERROR] Cannot find file \""+cts_file+"\"");
     }
 
     char line[MAX_CHARS];
@@ -210,7 +210,7 @@ template<class T,
     }
 
 #ifdef DEBUG
-    std::cout<<"\tRead #"<<line_counter<<" lines from cts file.\n";
+    std::cout<<"\n[DEBUG] Read #"<<line_counter<<" lines from cts file.\n";
 #endif
     ifs.close();
     ts.crd_type() = coordinate_type::cartesian;

@@ -246,18 +246,21 @@ public:
 #endif
             if (eq.epoch() >= start) {
                 distance = eq.epicenter_distance(slat, slon, faz, baz);
-                // if ( (eq.magnitude() >= min_mag) && (eq.magnitude() >= -5.6 + 2.17 * std::log10(distance)) ) {
-                if ( (distance/1e3 < 300e0 && eq.magnitude()>=min_mag) && (eq.magnitude() >= -4e0 + 2e0*std::log10(distance)) ) {
+                if ( ((distance/1e3 < 300e0) && (eq.magnitude() >= min_mag))
+                     && (eq.magnitude() >= -5.6 + 2.17 * std::log10(distance)) ) {
                     m_events.apply(ts_event::earthquake, eq.epoch());
                     ++eq_applied;
 #ifdef DEBUG
-                    std::cout<<"\tAdding earthquake at "<< eq.epoch().stringify() << " (epicentre distance: "<<distance/1e3/*<<eq.lat()*180/DPI<<", "<<eq.lon()*180/DPI<<*/<<" km), of size "<<eq.magnitude()<<"M.\n";
+                    std::cout<<"\n[DEBUG] Adding earthquake at "
+                        << eq.epoch().stringify() << " (epicentre distance: "
+                        << distance/1e3<<" km), of size "
+                        << eq.magnitude()<<"M.";
 #endif
                 }
             }
         }
 #ifdef DEBUG
-        std::cout<<"\tRead "<<eq_read<<" earthquakes from catalogue\n";
+        std::cout<<"\n[DEBUG] Read "<<eq_read<<" earthquakes from catalogue.";
 #endif
         return eq_applied;
     }
@@ -321,9 +324,12 @@ public:
     }
 
     /// event_list must be in chronological order
+    /// * If two events are within dt, then only keep one.
     void
     clear_event_list(ngpt::datetime_interval<T> dt, std::size_t npts=10)
     {
+        if ( !m_events.size() ) return;
+
         event_list<T> new_list;
         auto it   = m_events.it_begin();
         auto iend = m_events.it_end()-1;
@@ -335,7 +341,6 @@ public:
                  e2   = std::get<1>(*it);
             if ( (t2.delta_date(t1) < dt)
               && (e1!=ts_event::velocity_change && e2!=ts_event::velocity_change) ) {
-                // new_list.emplace_back(itp1);
                 std::cout<<"\n\t[DEBUG] Event at "<<strftime_ymd_hms(t1)<<" not added because next is too close ("<<strftime_ymd_hms(t2)<<")";
                 ;
             } else if (t2.delta_date(t1) > dt) {
@@ -344,7 +349,6 @@ public:
                 this->x_component().lower_bound(t2, idx2);
                 if ( (idx2-idx1 < npts) 
                    &&(e1!=ts_event::velocity_change && e2!=ts_event::velocity_change) ) {
-                    //new_list.emplace_back(itp1);
                     std::cout<<"\n\t[DEBUG] Event at "<<strftime_ymd_hms(t1)<<" not added because intermediate points are too few, "<<idx2-idx1<<" ("<<strftime_ymd_hms(t2)<<")";
                     ;
                 } else {
@@ -373,11 +377,8 @@ public:
         // a-posteriori std. devs
         double x_stddev, y_stddev, z_stddev;
 
-        std::cout<<"\nComponent X:";
         auto mx = m_x.qr_ls_solve(xmodel, x_stddev, 1e-3);
-        std::cout<<"\nComponent Y:";
         auto my = m_y.qr_ls_solve(ymodel, y_stddev, 1e-3);
-        std::cout<<"\nComponent Z:";
         auto mz = m_z.qr_ls_solve(zmodel, y_stddev, 1e-3);
 
         /*crdts<T> residuals {std::move(mx), std::move(my), std::move(mz)};*/

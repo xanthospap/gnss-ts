@@ -174,7 +174,6 @@ do
         evncit=0
         for evn in j e v
         do
-            echo "color for $evn is ${evncols[$evncit]}, evncit=$evncit"
             if grep $evn .evn.dat > .evn.dat${evn} 2>/dev/null
             then
                 while read line
