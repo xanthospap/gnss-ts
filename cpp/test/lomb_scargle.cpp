@@ -28,7 +28,7 @@ split_path(std::string s)
     return s.substr(pos+1, 4);
 }
 
-double MIN_ERTHQ_MAG = 5.0e0;
+double MIN_ERTHQ_MAG = 4.0e0;
 double minfreq = 0e0;
 double maxfreq = 0e0;
 double dfreq   = 0e0;
@@ -235,7 +235,9 @@ main(int argc, char* argv[])
 
     std::ofstream fout { sname + std::string(".mod") };
     mdl_n.dump(fout);
+    fout<<"\n";
     mdl_e.dump(fout);
+    fout<<"\n";
     mdl_u.dump(fout);
     fout.close();
 

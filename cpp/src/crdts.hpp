@@ -246,7 +246,8 @@ public:
 #endif
             if (eq.epoch() >= start) {
                 distance = eq.epicenter_distance(slat, slon, faz, baz);
-                if ( (eq.magnitude() >= min_mag) && (eq.magnitude() >= -5.6 + 2.17 * std::log10(distance)) ) {
+                // if ( (eq.magnitude() >= min_mag) && (eq.magnitude() >= -5.6 + 2.17 * std::log10(distance)) ) {
+                if ( (distance/1e3 < 300e0 && eq.magnitude()>=min_mag) && (eq.magnitude() >= -4e0 + 2e0*std::log10(distance)) ) {
                     m_events.apply(ts_event::earthquake, eq.epoch());
                     ++eq_applied;
 #ifdef DEBUG
