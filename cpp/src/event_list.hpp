@@ -62,6 +62,7 @@ public:
     /// @param[in] stop  The epoch to stop copying at
     /// @return          An event_list<T>, containing all events of the calling
     ///                  instance that have a time-stamp between [start, stop].
+    /// @todo            Need to also copy the m_details vector!
     event_list<T>
     limit_copy(const epoch& start, const epoch& stop) const noexcept
     {
@@ -79,15 +80,15 @@ public:
     /// @param[in] t An epoch (aka ngpt::datetime<T>), i.e. the date/time when
     ///              the events (i.e. the enums set) happened.
     void
-    apply(tflag f, const epoch& t) noexcept
+    apply(tflag f, const epoch& t, std::string info=std::string{""}) noexcept
     {
         if ( is_event(f) ) {
             if ( f.check(ts_event::jump) )
-                sorted_insert(ts_event::jump, t);
+                sorted_insert(ts_event::jump, t, info);
             if ( f.check(ts_event::velocity_change) )
-                sorted_insert(ts_event::velocity_change, t);
+                sorted_insert(ts_event::velocity_change, t, info);
             if ( f.check(ts_event::earthquake) )
-                sorted_insert(ts_event::earthquake, t);
+                sorted_insert(ts_event::earthquake, t, info);
         }
         return;
     }
@@ -97,17 +98,17 @@ public:
     /// @param[in] f The ts_event to add.
     /// @param[in] t The epoch (aka ngpt::datetime<T>) it happened at.
     void
-    apply(ts_event f, const epoch& t) noexcept
+    apply(ts_event f, const epoch& t, std::string info=std::string{""}) noexcept
     {
         switch (f) {
             case ts_event::jump:
-                sorted_insert(f, t);
+                sorted_insert(f, t, info);
                 return;
             case ts_event::velocity_change:
-                sorted_insert(f, t);
+                sorted_insert(f, t, info);
                 return;
             case ts_event::earthquake:
-                sorted_insert(f, t);
+                sorted_insert(f, t, info);
                 return;
         }
         return;
@@ -121,16 +122,18 @@ public:
     apply_stalog_file(const char* igsfl, epoch start, epoch stop)
     {
         ngpt::igs_log log { std::string(igsfl) };
+        std::string rec_chng {"Receiver Change"};
         auto rec_changes = log.receiver_changes<T>();
+        std::string ant_chng {"Antenna Change"};
         auto ant_changes = log.antenna_changes<T>();
         for (auto& t : rec_changes) {
             if (t >= start && t <= stop) {
-                apply(ts_event::jump, t);
+                apply(ts_event::jump, t, rec_chng);
             } 
         }
         for (auto& t : ant_changes) {
             if (t >= start && t <= stop) {
-                apply(ts_event::jump, t);
+                apply(ts_event::jump, t, ant_chng);
             }
         }
         return;
@@ -355,8 +358,11 @@ public:
     /// Just a push_back
     /// Use with extreme care as the event_list must be sorted in chronological
     /// order and this function make absolutely no check!
-    void push_back(const event& e) noexcept
-    { m_events.push_back(e); }
+    void push_back(const event& e, std::string info=std::string("")) noexcept
+    { 
+        m_events.push_back(e);
+        m_details.push_back(info);
+    }
 
     /// Get the event with index i.
     event
@@ -378,13 +384,14 @@ private:
     ///            be sorted (chronologicaly).
     ///
     bool
-    sorted_insert(ts_event e, const epoch& t)
+    sorted_insert(ts_event e, const epoch& t, std::string info=std::string(""))
     {
         event new_event {t, e};
 
         // easy ... vec is empty, just add the event
         if ( !m_events.size() ) {
             m_events.push_back(new_event);
+            m_details.push_back(info);
             return true;
         }
 
@@ -394,10 +401,13 @@ private:
         // check that this is not a duplicate and insert or push_back
         if ( it == m_events.end() && (*(m_events.end()-1) != new_event) ) {
             m_events.push_back(new_event);
+            m_details.push_back(info);
             return true;
         } else {
             if ( *(it-1) != new_event ) {
                  m_events.insert(it, new_event);
+                 auto pos = std::distance(m_events.begin(), it);
+                 m_details.insert(pos, info);
                  return true;
             }
         }
@@ -405,6 +415,7 @@ private:
     }
 
     std::vector<event> m_events; ///< Vector of events, sorted by epoch.
+    std::vector<std::string> m_details; ///< Event details (as string).
 
 }; // class event_list
 
