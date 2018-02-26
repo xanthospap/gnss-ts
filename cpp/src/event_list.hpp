@@ -407,7 +407,7 @@ private:
             if ( *(it-1) != new_event ) {
                  m_events.insert(it, new_event);
                  auto pos = std::distance(m_events.begin(), it);
-                 m_details.insert(pos, info);
+                 m_details.insert(m_details.begin()+pos, info);
                  return true;
             }
         }
