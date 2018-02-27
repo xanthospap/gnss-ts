@@ -190,6 +190,48 @@ private:
     double m_magnitude;        ///< The magnitude in (??)
 
 }; // end class earthquake
+    
+/// @brief Resolve a NOA earthquake catalogue file line.
+///
+/// This function will resolve a NOA earthquake catalogue file line and
+/// return the individual fields. The line follows the format:
+/// YYYY OOO DD   HH MM SS.S   LAT     LON     DEPTH(km)  MAGNITUDE
+/// where 'OOO' is the month as 3-char uppercase string, LAT and LON are
+/// given in decimal degrees with a precision of e-2, depth is given in
+/// integer km and magnitude in M with precision 1e-1. Example:
+/// 1964 FEB 24   23 30 25.0   38.90   23.90   10         5.3
+///
+/// @parameter[in] line A line of the earthquake catalogue file (to be
+///                     resolved.
+/// @return             An earthquake instance, comprised of the information
+///                     resolved.
+///
+/// @note The information are transformed to the 'correct units' for the
+///       instance. That is, degrees are transformed to radians, km to
+///       meters.
+template<typename T>
+    earthquake<T>
+    resolve_noa_earthquake_catalogue_line(char* line)
+{
+    float info[4];
+    char *start(line),
+         *end;
+    datetime<T> eph = ngpt::strptime_yod_hms<T>(line, &start);
+
+    for (int i = 0; i < 4; ++i) {
+        info[i] = std::strtod(start, &end);
+        if (errno == ERANGE || start == end) {
+            errno = 0;
+            throw std::invalid_argument
+                ("resolve_noa_earthquake_catalogue_line: Invalid line: \""+std::string(line)+"\" (argument #"+
+                std::to_string(i+1)+") in catalogue file.");
+        }
+        start = end;
+    }
+
+    earthquake<T> eqt {eph, deg2rad(info[0]), deg2rad(info[1]), info[2]/1000.0, info[3]};
+    return eqt;
+}
 
 /// A wrapper class to hold an earthquake catalogue as distributed by noa
 ///
@@ -299,7 +341,7 @@ public:
             return false;
         }
         
-        eq = resolve_noa_earthquake_catalogue_line(line);
+        eq = resolve_noa_earthquake_catalogue_line<T>(line);
         /*
         static float info[4];
         char *start(line), *end;
@@ -331,46 +373,6 @@ private:
     /// The position within the stream, to start reading the first earthquake
     std::ifstream::pos_type m_end_of_header;
 
-    /// @brief Resolve a NOA earthquake catalogue file line.
-    ///
-    /// This function will resolve a NOA earthquake catalogue file line and
-    /// return the individual fields. The line follows the format:
-    /// YYYY OOO DD   HH MM SS.S   LAT     LON     DEPTH(km)  MAGNITUDE
-    /// where 'OOO' is the month as 3-char uppercase string, LAT and LON are
-    /// given in decimal degrees with a precision of e-2, depth is given in
-    /// integer km and magnitude in M with precision 1e-1. Example:
-    /// 1964 FEB 24   23 30 25.0   38.90   23.90   10         5.3
-    ///
-    /// @parameter[in] line A line of the earthquake catalogue file (to be
-    ///                     resolved.
-    /// @return             An earthquake instance, comprised of the information
-    ///                     resolved.
-    ///
-    /// @note The information are transformed to the 'correct units' for the
-    ///       instance. That is, degrees are transformed to radians, km to
-    ///       meters.
-    earthquake<T>
-    resolve_noa_earthquake_catalogue_line(char* line) const
-    {
-        float info[4];
-        char *start(line),
-             *end;
-        datetime<T> eph = ngpt::strptime_yod_hms<T>(line, &start);
-
-        for (int i = 0; i < 4; ++i) {
-            info[i] = std::strtod(start, &end);
-            if (errno == ERANGE || start == end) {
-                errno = 0;
-                throw std::invalid_argument
-                    ("resolve_noa_earthquake_catalogue_line: Invalid line: \""+std::string(line)+"\" (argument #"+
-                    std::to_string(i+1)+") in catalogue file.");
-            }
-            start = end;
-        }
-
-        earthquake<T> eqt {eph, deg2rad(info[0]), deg2rad(info[1]), info[2]/1000.0, info[3]};
-        return eqt;
-    }
     
     /// @brief Read header records.
     ///
