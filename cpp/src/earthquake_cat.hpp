@@ -233,6 +233,41 @@ template<typename T>
     return eqt;
 }
 
+/// @brief Resolve a NOA earthquake catalogue file line.
+///
+/// This function will resolve a NOA earthquake catalogue file line and
+/// return the individual fields. The line follows the format:
+/// YYYY OOO DD   HH MM SS.S   LAT     LON     DEPTH(km)  MAGNITUDE
+/// where 'OOO' is the month as 3-char uppercase string, LAT and LON are
+/// given in decimal degrees with a precision of e-2, depth is given in
+/// integer km and magnitude in M with precision 1e-1. Example:
+/// 1964 FEB 24   23 30 25.0   38.90   23.90   10         5.3
+///
+/// @parameter[in] line A line of the earthquake catalogue file (to be
+///                     resolved.
+/// @return             An earthquake instance, comprised of the information
+///                     resolved.
+///
+/// @note The information are transformed to the 'correct units' for the
+///       instance. That is, degrees are transformed to radians, km to
+///       meters.
+template<typename T>
+    earthquake<T>
+    resolve_noa_earthquake_catalogue_line(const std::string& str)
+{
+    earthquake<T> eq;
+    char *cstr = new char[str.length() + 1];
+    std::strcpy(cstr, str.c_str());
+    try {
+        eq = resolve_noa_earthquake_catalogue_line<T>(cstr);
+    } catch (std::invalid_argument& e) {
+        delete[] cstr;
+        throw e;
+    }
+    delete[] cstr;
+    return eq;
+}
+
 /// A wrapper class to hold an earthquake catalogue as distributed by noa
 ///
 /// The use of this class is limited to reading catalogue files; so what it

@@ -56,10 +56,6 @@ main(int argc, char* argv[])
                *event_file = nullptr,
                *erthq_file = nullptr;
     bool ctsf_found       = false;
-    /*
-         log_file_found   = false,
-         event_file_found = false,
-         erthq_file_found = false;*/
     // Parse command line options 
     for (int i = 1; i < argc; i++) {
         if (!strcmp(argv[i], "-i")) {
@@ -133,6 +129,10 @@ main(int argc, char* argv[])
     }
 
     // Filter the event list; two events must be at least 10 days apart
+    auto test_evn_lst = ts.events();
+    test_evn_lst.dump_event_list(std::cout);
+    test_evn_lst.filter_earthquake_sequences(ngpt::datetime_interval<ngpt::milliseconds>{ngpt::modified_julian_day{7}, ngpt::milliseconds{0}});
+    test_evn_lst.dump_event_list(std::cout);
     int min_interval_for_events = 10;
     std::cout<<"\nFiltering event list; min interval between two events is: "
         << min_interval_for_events<<" days.";

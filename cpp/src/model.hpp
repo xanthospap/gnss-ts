@@ -280,12 +280,12 @@ public:
     {
         for (auto it = events.it_cbegin(); it != events.it_cend(); ++it)
         {
-            if ( it->second == ts_event::jump ) {
-                m_jumps.emplace_back(it->first);
-            } else if ( it->second == ts_event::velocity_change ) {
-                m_vel_changes.emplace_back(it->first);
-            } else if ( it->second == ts_event::earthquake ) {
-                m_earthqs.emplace_back(it->first, psd_model::pwl);
+            if ( it->event_type() == ts_event::jump ) {
+                m_jumps.emplace_back(it->epoch());
+            } else if ( it->event_type() == ts_event::velocity_change ) {
+                m_vel_changes.emplace_back(it->epoch());
+            } else if ( it->event_type() == ts_event::earthquake ) {
+                m_earthqs.emplace_back(it->epoch(), psd_model::pwl);
             }
         }
         ngpt::datetime<T> t0 {modified_julian_day{0}, T{0}};

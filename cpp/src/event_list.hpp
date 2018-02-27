@@ -12,7 +12,6 @@
 #include "ggdatetime/datetime_write.hpp"
 
 // gtms headers
-// #include "genflags.hpp"
 #include "tsflag.hpp"
 #include "earthquake_cat.hpp"
 #include "stalogrd.hpp"
@@ -33,6 +32,79 @@ is_event(ngpt::flag<ts_event> f) noexcept
         || f.check(ts_event::earthquake);
 }
 
+template<class T>
+    class event
+{
+public:
+    event() noexcept {};
+
+    event(const ngpt::datetime<T>& t, ts_event evn, std::string info=std::string{""})
+    noexcept
+    : m_epoch(t),
+      m_event_type(evn),
+      m_info(info)
+    {};
+
+    /*
+    event(const event<T>& e) noexcept
+    : m_epoch(e.epoch()),
+      m_event_type(e.event_type()),
+      m_info(e.info_str())
+    {};
+
+    event(event<T>&& e) noexcept
+    : m_epoch(std::move(e.m_epoch)),
+      m_event_type(e.m_event_type),
+      m_info(std::move(e.m_info))
+    {};
+
+    event&
+    operator=(const event<T>& e) noexcept
+    {
+        if (this!=&e) {
+            m_epoch = e.epoch();
+            m_event_type = e.event_type();
+            m_info = e.info_str();
+        }
+        return *this;
+    }
+    
+    event&
+    operator=(event<T>&& e) noexcept
+    {
+        if (this!=&e) {
+            m_epoch = std::move(e.m_epoch);
+            m_event_type = e.event_type();
+            m_info = std::move(e.m_info);
+        }
+        return *this;
+    }
+    */
+
+    ngpt::datetime<T>
+    epoch() const noexcept { return m_epoch; }
+
+    ts_event
+    event_type() const noexcept { return m_event_type; }
+
+    std::string
+    info_str() const noexcept { return m_info; }
+
+    bool
+    operator==(const event<T>& e) const noexcept
+    { return (this->m_epoch == e.m_epoch)
+          && (this->m_event_type == e.m_event_type); }
+    
+    bool
+    operator!=(const event<T>& e) const noexcept
+    { return !(this->operator==(e)); }
+
+private:
+    ngpt::datetime<T> m_epoch;
+    ts_event m_event_type;
+    std::string m_info;
+}; // class event
+
 /// A class to handle time-series events (e.g. jumps, earthquakes, etc...).
 /// The basic role in this class, is performed by instances of type
 /// ngpt::flag<ts_event>, aka tflags. Remember that a tflag has actually on/off
@@ -50,7 +122,7 @@ public:
 
     using epoch   = ngpt::datetime<T>;
     using tflag   = ngpt::flag<ts_event>;
-    using event   = std::pair<epoch, ts_event>;
+    // using event   = std::pair<epoch, ts_event>;
     using earthq  = ngpt::earthquake<T>;
 
     /// Null constructor.
@@ -68,7 +140,7 @@ public:
     {
         event_list<T> new_events;
         std::copy_if(m_events.cbegin(), m_events.cend(), new_events.begin(),
-                [&](const event& it){it.first>=start && it.second<=stop;});
+                [&](const event<T>& it){it.epoch()>=start && it.epoch()<=stop;});
         return new_events;
     }
 
@@ -98,8 +170,18 @@ public:
     /// @param[in] f The ts_event to add.
     /// @param[in] t The epoch (aka ngpt::datetime<T>) it happened at.
     void
+    apply(const event<T>& e) noexcept
+    { this->sorted_insert(e); }
+
+    /// Given a ts_event, apply it. By 'apply', i mean that the ts_event is
+    /// added in chronological order at the instance's m_events vector.
+    /// @param[in] f The ts_event to add.
+    /// @param[in] t The epoch (aka ngpt::datetime<T>) it happened at.
+    void
     apply(ts_event f, const epoch& t, std::string info=std::string{""}) noexcept
     {
+        this->apply(event<T>{t, f, info});
+        /*
         switch (f) {
             case ts_event::jump:
                 sorted_insert(f, t, info);
@@ -112,6 +194,7 @@ public:
                 return;
         }
         return;
+        */
     }
 
     /// Given an IGS station log file, read through the receiver and antenna
@@ -264,12 +347,12 @@ public:
         earthquakes.clear();
 
         for (auto i = m_events.cbegin(); i != m_events.cend(); ++i) {
-            if (i->second == ts_event::jump ) {
-                jumps.emplace_back(i->first);
-            } else if (i->second == ts_event::velocity_change ) {
-                vel_changes.emplace_back(i->first);
-            } else if (i->second == ts_event::earthquake ) {
-                earthquakes.emplace_back(i->first);
+            if (i->event_type() == ts_event::jump ) {
+                jumps.emplace_back(i->epoch());
+            } else if (i->event_type() == ts_event::velocity_change ) {
+                vel_changes.emplace_back(i->epoch());
+            } else if (i->event_type() == ts_event::earthquake ) {
+                earthquakes.emplace_back(i->epoch());
             }
         }
         return;
@@ -282,8 +365,8 @@ public:
     {
         os << "YYYY MM DD HH mm SS **** EVENT *** COMMENT";
         for (auto i = m_events.cbegin(); i != m_events.cend(); ++i) {
-            os << "\n" << strftime_ymd_hms(i->first) << "       " 
-               << event2char(i->second) << "     ";
+            os << "\n" << strftime_ymd_hms(i->epoch()) << "       " 
+               << event2char(i->event_type()) << "     ";
         }
         return os;
     }
@@ -329,24 +412,24 @@ public:
     }
 
     /// Get a const_iterator to the begining of the m_events vector.
-    typename std::vector<event>::const_iterator
+    typename std::vector<event<T>>::const_iterator
     it_cbegin() const noexcept
     { return m_events.cbegin(); }
     
     /// Get a const_iterator to end (i.e. one past the end) the of the
     /// m_events vector.
-    typename std::vector<event>::const_iterator
+    typename std::vector<event<T>>::const_iterator
     it_cend() const noexcept
     { return m_events.cend(); }
     
     /// Get an iterator to the begining of the m_events vector.
-    typename std::vector<event>::const_iterator
+    typename std::vector<event<T>>::const_iterator
     it_begin() noexcept
     { return m_events.begin(); }
     
     /// Get an iterator to end (i.e. one past the end) the of the
     /// m_events vector.
-    typename std::vector<event>::iterator
+    typename std::vector<event<T>>::iterator
     it_end() noexcept
     { return m_events.end(); }
 
@@ -354,22 +437,121 @@ public:
     std::size_t
     size() const noexcept
     { return m_events.size(); }
+    
+    /// @brief Replace earthquake sequences with individual earthquakes.
+    ///
+    /// It may happen (and it actually happens a lot!) that earthquake sequences
+    /// occur in high frequency mode. That is, we may have an event list with
+    /// a lot of earthquakes in a very limited time span, e.g. 3 to 4 days.
+    /// This function will identify these sequencies and replace them with a
+    /// single earthquake, the one that has the maximum magnitude.
+    ///
+    /// @parameter[in] dt A (date)time interval; if two or more earthquakes
+    ///                   occur within dt, then they are replaced with a single
+    ///                   earthquake, the one with the maximum magnitude.
+    void
+    filter_earthquake_sequences(const ngpt::datetime_interval<T>& dt)
+    {
+        if ( !m_events.size() ) return;
+        
+        // normalize the input datetime_interval (just to be sure).
+        auto delta_t = dt;
+        delta_t.normalize();
+
+        // find the first earthquake in the list.
+        auto it = std::find_if(m_events.cbegin(), m_events.cend(),
+            [](const event<T>& e)
+            {return e.event_type() == ts_event::earthquake;});
+        if ( it == m_events.cend() ) return;
+
+        while ( it < m_events.cend() ) {
+            auto t1  = (*it).epoch();
+            auto pos = std::distance(m_events.cbegin(), it);
+            // find next earthquake that is more than dt away.
+            auto it_end = std::find_if(it, m_events.cend(),
+                [&delta_t, &t1](const event<T>& e)
+                {return (e.event_type() == ts_event::earthquake)
+                     && (e.epoch().delta_date(t1) > delta_t);});
+            if ( it_end == m_events.cend() ) {
+                break;
+            } else {
+                // find the biggest earthquake within the sequence (max_it).
+                double max_mag = 0e0;
+                auto max_it = it;
+                for (auto ij = it; ij != it_end; ++ij) {
+                    if ( ij->event_type() == ts_event::earthquake ) {
+                        auto eq = resolve_noa_earthquake_catalogue_line<T>(ij->info_str());
+                        if (eq.magnitude() > max_mag) {
+                            max_mag = eq.magnitude();
+                            max_it  = ij;
+                        }
+                    }
+                }
+                // store max earthquake (as an event).
+                event<T> max_event {*max_it};
+                // erase every earthquake in the sequence.
+                m_events.erase(std::remove_if(it, it_end,
+                    [](event<T> e){return e.event_type() == ts_event::earthquake;}));
+                // (sorted) insert the max earthquake
+                this->sorted_insert(max_event);
+                // re-establish the iterator.
+                it = m_events.cbegin()+pos;
+            } // (else)
+        } // (while)
+        return;
+    }
 
     /// Just a push_back
     /// Use with extreme care as the event_list must be sorted in chronological
     /// order and this function make absolutely no check!
-    void push_back(const event& e, std::string info=std::string("")) noexcept
+    void push_back(const event<T>& e) noexcept
     { 
         m_events.push_back(e);
-        m_details.push_back(info);
     }
 
     /// Get the event with index i.
-    event
+    event<T>
     operator()(std::size_t i) const
     { return m_events[i]; }
 
 private:
+
+    /// Insert an event into the
+    /// m_events vector in sorted (i.e. chronologically) order. If the event
+    /// is a duplicate, it will not be added.
+    ///
+    /// @param[in] e A ts_event to be inserted in the instance (i.e. in the 
+    ///              m_events member vector).
+    /// @param[in] t The time-stamp of the event (i.e. when it happened).
+    /// @return      True if the ts_event is indeed added, or false if it is
+    ///              not (because it is a duplicate).
+    /// @warning   For this algorith to work properly, the m_events vector must
+    ///            be sorted (chronologicaly).
+    ///
+    bool
+    sorted_insert(const event<T>& new_event)
+    {
+        // easy ... vec is empty, just add the event
+        if ( !m_events.size() ) {
+            m_events.push_back(new_event);
+            return true;
+        }
+
+        auto it = std::upper_bound(m_events.begin(), m_events.end(), new_event,
+            [](const event<T>& a, const event<T>& b){return a.epoch() < b.epoch();});
+        
+        // check that this is not a duplicate and insert or push_back
+        if ( it == m_events.end() && (*(m_events.end()-1) != new_event) ) {
+            m_events.push_back(new_event);
+            return true;
+        } else {
+            if ( *(it-1) != new_event ) {
+                 m_events.insert(it, new_event);
+                 return true;
+            }
+        }
+        return false;
+    }
 
     /// Insert an event (aka std::pair<datetime<T>, ts_event>) into the
     /// m_events vector in sorted (i.e. chronologically) order. If the event
@@ -386,37 +568,11 @@ private:
     bool
     sorted_insert(ts_event e, const epoch& t, std::string info=std::string(""))
     {
-        event new_event {t, e};
-
-        // easy ... vec is empty, just add the event
-        if ( !m_events.size() ) {
-            m_events.push_back(new_event);
-            m_details.push_back(info);
-            return true;
-        }
-
-        auto it = std::upper_bound(m_events.begin(), m_events.end(), new_event,
-            [](const event& a, const event& b){return a.first < b.first;});
-        
-        // check that this is not a duplicate and insert or push_back
-        if ( it == m_events.end() && (*(m_events.end()-1) != new_event) ) {
-            m_events.push_back(new_event);
-            m_details.push_back(info);
-            return true;
-        } else {
-            if ( *(it-1) != new_event ) {
-                 m_events.insert(it, new_event);
-                 auto pos = std::distance(m_events.begin(), it);
-                 m_details.insert(m_details.begin()+pos, info);
-                 return true;
-            }
-        }
-        return false;
+        event<T> new_event {t, e, info};
+        return this->sorted_insert(new_event);
     }
 
-    std::vector<event> m_events; ///< Vector of events, sorted by epoch.
-    std::vector<std::string> m_details; ///< Event details (as string).
-
+    std::vector<event<T>> m_events; ///< Vector of events, sorted by epoch.
 }; // class event_list
 
 } // end namespace ngpt

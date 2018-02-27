@@ -229,7 +229,7 @@ public:
         datetime<T> start {this->first_epoch()},
                     stop  {this->last_epoch()};
         earthquake<T> eq;
-        std::size_t /*start_search_at = 0,*/eq_applied = 0;
+        std::size_t eq_applied = 0;
         double faz = 0,
                baz = 0;
 #ifdef DEBUG
@@ -248,7 +248,7 @@ public:
                 distance = eq.epicenter_distance(slat, slon, faz, baz);
                 if ( ((distance/1e3 < 300e0) && (eq.magnitude() >= min_mag))
                      && (eq.magnitude() >= -5.6 + 2.17 * std::log10(distance)) ) {
-                    m_events.apply(ts_event::earthquake, eq.epoch());
+                    m_events.apply(ts_event::earthquake, eq.epoch(), eq.to_string());
                     ++eq_applied;
 #ifdef DEBUG
                     std::cout<<"\n[DEBUG] Adding earthquake at "
@@ -335,10 +335,10 @@ public:
         auto iend = m_events.it_end()-1;
         for (; it != iend; ++it) {
             auto itp1 = it+1;
-            auto t1   = std::get<0>(*it),
-                 t2   = std::get<0>(*itp1);
-            auto e1   = std::get<1>(*it),
-                 e2   = std::get<1>(*it);
+            auto t1   = it->epoch(),        //std::get<0>(*it),
+                 t2   = itp1->epoch();      //std::get<0>(*itp1);
+            auto e1   = it->event_type(),   //std::get<1>(*it),
+                 e2   = itp1->event_type(); //std::get<1>(*it);
             if ( (t2.delta_date(t1) < dt)
               && (e1!=ts_event::velocity_change && e2!=ts_event::velocity_change) ) {
                 std::cout<<"\n\t[DEBUG] Event at "<<strftime_ymd_hms(t1)<<" not added because next is too close ("<<strftime_ymd_hms(t2)<<")";
