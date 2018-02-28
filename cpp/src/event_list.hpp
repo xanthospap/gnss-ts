@@ -45,7 +45,6 @@ public:
       m_info(info)
     {};
 
-    /*
     event(const event<T>& e) noexcept
     : m_epoch(e.epoch()),
       m_event_type(e.event_type()),
@@ -58,10 +57,10 @@ public:
       m_info(std::move(e.m_info))
     {};
 
-    event&
+    event<T>&
     operator=(const event<T>& e) noexcept
     {
-        if (this!=&e) {
+        if (this != &e) {
             m_epoch = e.epoch();
             m_event_type = e.event_type();
             m_info = e.info_str();
@@ -69,17 +68,16 @@ public:
         return *this;
     }
     
-    event&
+    event<T>&
     operator=(event<T>&& e) noexcept
     {
-        if (this!=&e) {
+        if (this != &e) {
             m_epoch = std::move(e.m_epoch);
             m_event_type = e.event_type();
             m_info = std::move(e.m_info);
         }
         return *this;
     }
-    */
 
     ngpt::datetime<T>
     epoch() const noexcept { return m_epoch; }
@@ -459,20 +457,20 @@ public:
         delta_t.normalize();
 
         // find the first earthquake in the list.
-        auto it = std::find_if(m_events.cbegin(), m_events.cend(),
+        auto it = std::find_if(m_events.begin(), m_events.end(),
             [](const event<T>& e)
             {return e.event_type() == ts_event::earthquake;});
         if ( it == m_events.cend() ) return;
 
-        while ( it < m_events.cend() ) {
+        while ( it < m_events.end() ) {
             auto t1  = (*it).epoch();
-            auto pos = std::distance(m_events.cbegin(), it);
+            auto pos = std::distance(m_events.begin(), it);
             // find next earthquake that is more than dt away.
-            auto it_end = std::find_if(it, m_events.cend(),
+            auto it_end = std::find_if(it, m_events.end(),
                 [&delta_t, &t1](const event<T>& e)
                 {return (e.event_type() == ts_event::earthquake)
                      && (e.epoch().delta_date(t1) > delta_t);});
-            if ( it_end == m_events.cend() ) {
+            if ( it_end == m_events.end() ) {
                 break;
             } else {
                 // find the biggest earthquake within the sequence (max_it).
@@ -495,7 +493,7 @@ public:
                 // (sorted) insert the max earthquake
                 this->sorted_insert(max_event);
                 // re-establish the iterator.
-                it = m_events.cbegin()+pos;
+                it = m_events.begin()+pos;
             } // (else)
         } // (while)
         return;
