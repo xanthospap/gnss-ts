@@ -73,6 +73,18 @@ class Earthquake:
         else:
             raise RuntimeError
 
+    def find_in_noa_catalogue(self, catalogue):
+        with open(catalogue, 'r') as fin:
+            line = fin.readline()
+            line = fin.readline()
+            for line in fin.readlines():
+                l = line.split()
+                dt_str= ' '.join([ l[0], l[1][0]+l[1][1:].lower(), l[2], l[3], l[4], str(int(float(l[5]))) ])
+                datet = datetime.datetime.strptime(dt_str, '%Y %b %d %H %M %S')
+                mjd = p2mjd(datet)
+                if datet == self.t:
+                    return [ float(x) for x in l[6:] ]
+        return []
 
 class Model:
 
@@ -87,7 +99,7 @@ class Model:
         self.a = a
         self.b = b
 
-    def get_event_list(self, use_pydatetime=False):
+    def get_event_list(self, use_pydatetime=False, noa_catalogue=None):
         def dtf(mjd, pydt=False):
             return mjd if not pydt else julian.from_jd(mjd, fmt='mjd')
         event_list = {'j':[], 'v':[], 'e':[]}
@@ -96,7 +108,11 @@ class Model:
         for i in self.velocity_changes:
             event_list['v'].append(dtf(i.fro, use_pydatetime))
         for i in self.earthquakes:
-            event_list['e'].append(dtf(i.t, use_pydatetime))
+            info = []
+            if noa_catalogue:
+                eq = Earthquake(julian.from_jd(i, fmt='mjd'))
+                info = eq.find_in_noa_catalogue(noa_catalogue)
+            event_list['e'].append( [dtf(i.t, use_pydatetime), info] )
         return event_list
 
     def add_harmonic(self, period_in_days, in_phase=0e0, out_of_phase=0e0, start_at=tmin, stop_at=tmax):
@@ -269,6 +285,13 @@ parser.add_argument('-v', '--event-file',
     metavar  = 'EVENT_OUT_FILE',
     dest     = 'event_file'
 )
+parser.add_argument('-q', '--noa-earthquake-catalogue',
+    action   = 'store',
+    required = False,
+    help     = 'NOA earthquake catalogue',
+    metavar  = 'NOA_CAT_FILE',
+    dest     = 'noa_cat_file'
+)
 
 ##  Parse command line arguments
 args = parser.parse_args()
@@ -308,9 +331,12 @@ if args.event_file:
     for i in models:
         event_dicts.append(i.get_event_list(not args.use_mjd))
     with open(args.event_file, 'w') as fout:
-        for key in ['j', 'v', 'e']:
+        for key in ['j', 'v' ]:
             for t in list(set(event_dicts[0][key] + event_dicts[1][key] + event_dicts[2][key])):
                 print('{:} {:}'.format(t, key), end="\n", file=fout)
+        key = 'e'
+        for t in list(set(event_dicts[0][key][0] + event_dicts[1][key][0] + event_dicts[2][key][0])):
+            print('{:} {:}'.format(t, key), end="\n", file=fout)
 #except:
 #    status = 1
 

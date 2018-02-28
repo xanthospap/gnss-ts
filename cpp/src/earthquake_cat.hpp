@@ -175,8 +175,8 @@ template<class T,
         using ngpt::_i2s_;
 
         std::string evnt_str = earthquake_catalogue_detail::strfdt_as_noa(m_epoch);
-        evnt_str += "   " + _d2s_(m_lat, 2);
-        evnt_str += "   " + _d2s_(m_lon, 2);
+        evnt_str += "   " + _d2s_(rad2deg(m_lat), 2);
+        evnt_str += "   " + _d2s_(rad2deg(m_lon), 2);
         evnt_str += "   " + _i2s_((static_cast<int>(m_depth/1e3)), 3);
         evnt_str += "   " + _d2s_(m_magnitude, 1);
         return evnt_str;

@@ -128,11 +128,15 @@ main(int argc, char* argv[])
         ts.apply_earthquake_catalogue(eq_cat, MIN_ERTHQ_MAG);
     }
 
-    // Filter the event list; two events must be at least 10 days apart
-    auto test_evn_lst = ts.events();
-    test_evn_lst.dump_event_list(std::cout);
-    test_evn_lst.filter_earthquake_sequences(ngpt::datetime_interval<ngpt::milliseconds>{ngpt::modified_julian_day{7}, ngpt::milliseconds{0}});
-    test_evn_lst.dump_event_list(std::cout);
+    // Filter the event list; two events must be at least a week apart
+    ngpt::datetime_interval<ngpt::milliseconds> aweek
+        {ngpt::modified_julian_day{7}, ngpt::milliseconds{0}};
+    auto initial_events = ts.events().size();
+    ts.events().filter_earthquake_sequences(aweek);
+    std::cout<<"\nEarthquake sequences removed; Number of events: "
+        <<ts.events().size()
+        <<" (removed "<<initial_events-ts.events().size()<<" earthquakes)";
+    /*
     int min_interval_for_events = 10;
     std::cout<<"\nFiltering event list; min interval between two events is: "
         << min_interval_for_events<<" days.";
@@ -140,6 +144,7 @@ main(int argc, char* argv[])
         {ngpt::modified_julian_day{1}, ngpt::milliseconds{0}}, min_interval_for_events);
     std::cout<<"\nInitial List of Events:\n";
     ts.events().dump_event_list(std::cout);
+    */
 
     // Must remove linear trend and offsets before searching for harmonic
     // signals. Hence try an initial estimate. Make a seperate model for each

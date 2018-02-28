@@ -45,6 +45,7 @@ public:
       m_info(info)
     {};
 
+    /*
     event(const event<T>& e) noexcept
     : m_epoch(e.epoch()),
       m_event_type(e.event_type()),
@@ -78,6 +79,7 @@ public:
         }
         return *this;
     }
+    */
 
     ngpt::datetime<T>
     epoch() const noexcept { return m_epoch; }
@@ -462,23 +464,37 @@ public:
             {return e.event_type() == ts_event::earthquake;});
         if ( it == m_events.cend() ) return;
 
+        // iterate through all (valid) earthquakes ...
         while ( it < m_events.end() ) {
             auto t1  = (*it).epoch();
             auto pos = std::distance(m_events.begin(), it);
+            // find next earthquake.
+            auto e_next = std::find_if(it+1, m_events.end(),
+                [](const event<T>& e)
+                {return (e.event_type() == ts_event::earthquake);});
             // find next earthquake that is more than dt away.
-            auto it_end = std::find_if(it, m_events.end(),
+            auto it_end = std::find_if(it+1, m_events.end(),
                 [&delta_t, &t1](const event<T>& e)
                 {return (e.event_type() == ts_event::earthquake)
                      && (e.epoch().delta_date(t1) > delta_t);});
-            if ( it_end == m_events.end() ) {
+            if ( it_end == m_events.end() ) { // have we hit the end?
                 break;
+            } else if (it_end == e_next) {    // is the next earthquake the next 'valid' one?
+                it = e_next;
             } else {
+                // we have a sequence between the earthquakes at [it, it_end)
                 // find the biggest earthquake within the sequence (max_it).
+#ifdef DEBUG
+                std::cout<<"\n[DEBUG] Earthquake sequence detected! The following earthquake events:";
+#endif
                 double max_mag = 0e0;
                 auto max_it = it;
                 for (auto ij = it; ij != it_end; ++ij) {
                     if ( ij->event_type() == ts_event::earthquake ) {
                         auto eq = resolve_noa_earthquake_catalogue_line<T>(ij->info_str());
+#ifdef DEBUG
+                        std::cout<<"\n\t\t* "<<ij->info_str();
+#endif
                         if (eq.magnitude() > max_mag) {
                             max_mag = eq.magnitude();
                             max_it  = ij;
@@ -486,14 +502,31 @@ public:
                     }
                 }
                 // store max earthquake (as an event).
+#ifdef DEBUG
+                std::cout<<"\n\tReplaced with "<<max_it->info_str();
+#endif
                 event<T> max_event {*max_it};
-                // erase every earthquake in the sequence.
-                m_events.erase(std::remove_if(it, it_end,
-                    [](event<T> e){return e.event_type() == ts_event::earthquake;}));
-                // (sorted) insert the max earthquake
+                // (remove-)erase every earthquake in the sequence.
+                std::size_t elements_removed = 0;
+                auto pte = std::remove_if(it, it_end,
+                    [&elements_removed](event<T> e){
+                        if (e.event_type() == ts_event::earthquake) {
+                            ++elements_removed;
+                            return true;
+                        }
+                        return false;
+                    });
+                m_events.erase(pte, pte+elements_removed);
+                // (sorted) insert the max earthquake (to replace the sequence).
                 this->sorted_insert(max_event);
                 // re-establish the iterator.
-                it = m_events.begin()+pos;
+                it  = m_events.begin()+pos;
+#ifdef DEBUG
+                auto it__ = std::find_if(m_events.begin()+pos, m_events.end(),
+                    [](const event<T>& e)
+                    {return (e.event_type() == ts_event::earthquake);});
+                assert( it == it__ );
+#endif
             } // (else)
         } // (while)
         return;
