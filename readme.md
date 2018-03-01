@@ -1,9 +1,9 @@
 # GNSS-Derived Time Series Analysis Tools & Libraries
 
 ## Dependencies
-    * ggeodesy (https://github.com/xanthospap/ggeodesy)
+    * [ggeodesy](https://github.com/xanthospap/ggeodesy)
       To install, just clone and compile.
-      ``` bash
+      ```Shell
       $> git clone https://github.com/xanthospap/ggeodesy
       $> cd ggeodesy
       $> ./configure
