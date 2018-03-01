@@ -17,6 +17,9 @@ tmin = datetime.datetime.min
 def p2mjd(t):
     return julian.to_jd(t) - 2400000.5
 
+def mjd2p(mjd):
+    return julian.from_jd(mjd, fmt='mjd')
+
 ONE_SEC_DIF_MJD = p2mjd(datetime.datetime(2007, 1, 1, 12, 0, 1))-p2mjd(datetime.datetime(2007, 1, 1, 12, 0, 0))
 
 def approx_distance_on_earth(lat1, lon1, lat2, lon2):
@@ -86,17 +89,19 @@ class Earthquake:
             raise RuntimeError
 
     def find_in_noa_catalogue(self, catalogue):
+        this_year = mjd2p(self.t).year
         with open(catalogue, 'r') as fin:
             line = fin.readline()
             line = fin.readline()
             for line in fin.readlines():
                 l = line.split()
-                dt_str= ' '.join([ l[0], l[1][0]+l[1][1:].lower(), l[2], l[3], l[4], str(int(float(l[5]))) ])
-                datet = datetime.datetime.strptime(dt_str, '%Y %b %d %H %M %S')
-                mjd = p2mjd(datet)
-                if abs(mjd-self.t) < ONE_SEC_DIF_MJD:
-                    return [ float(x) for x in l[6:] ]
-                if mjd > self.t:
+                if int(l[0]) == this_year:
+                    dt_str= ' '.join([ l[0], l[1][0]+l[1][1:].lower(), l[2], l[3], l[4], str(int(float(l[5]))) ])
+                    datet = datetime.datetime.strptime(dt_str, '%Y %b %d %H %M %S')
+                    mjd = p2mjd(datet)
+                    if abs(mjd-self.t) < ONE_SEC_DIF_MJD:
+                        return [ float(x) for x in l[6:] ]
+                if int(l[0]) > this_year:
                     break
         return [None]*4
 
