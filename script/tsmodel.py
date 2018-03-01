@@ -17,6 +17,18 @@ tmin = datetime.datetime.min
 def p2mjd(t):
     return julian.to_jd(t) - 2400000.5
 
+ONE_SEC_DIF_MJD = p2mjd(datetime.datetime(2007, 1, 1, 12, 0, 1))-p2mjd(datetime.datetime(2007, 1, 1, 12, 0, 0))
+
+def approx_distance_on_earth(lat1, lon1, lat2, lon2):
+    """ see https://www.movable-type.co.uk/scripts/latlong.html
+    """
+    R = 6371008.8e0
+    delta_phi    = lat2 - lat1
+    delta_lambda = lon2 - lon1
+    a = (math.sin(delta_phi/2e0) **2) + math.cos(lat1)*math.cos(lat2)*(math.sin(delta_lambda/2e0) **2)
+    c = 2e0 * math.atan2(math.sqrt(a), math.sqrt(1e0-a))
+    return R*c
+
 class Harmonic:
 
     def __init__(self, period_in_days, in_phase=0e0, out_of_phase=0e0, start_at=tmin, stop_at=tmax):
@@ -82,9 +94,11 @@ class Earthquake:
                 dt_str= ' '.join([ l[0], l[1][0]+l[1][1:].lower(), l[2], l[3], l[4], str(int(float(l[5]))) ])
                 datet = datetime.datetime.strptime(dt_str, '%Y %b %d %H %M %S')
                 mjd = p2mjd(datet)
-                if datet == self.t:
+                if abs(mjd-self.t) < ONE_SEC_DIF_MJD:
                     return [ float(x) for x in l[6:] ]
-        return []
+                if mjd > self.t:
+                    break
+        return [None]*4
 
 class Model:
 
@@ -108,9 +122,9 @@ class Model:
         for i in self.velocity_changes:
             event_list['v'].append(dtf(i.fro, use_pydatetime))
         for i in self.earthquakes:
-            info = []
+            info = [None]*4
             if noa_catalogue:
-                eq = Earthquake(julian.from_jd(i, fmt='mjd'))
+                eq = Earthquake(julian.from_jd(i.t, fmt='mjd'))
                 info = eq.find_in_noa_catalogue(noa_catalogue)
             event_list['e'].append( [dtf(i.t, use_pydatetime), info] )
         return event_list
@@ -157,10 +171,26 @@ class Model:
             d = [ julian.from_jd(mjd, fmt='mjd') for mjd in t ]
             return d, v
 
+def mean_crd_from_model_file(filename):
+    mean_xyz = [None]*3
+    with open(filename, 'r') as fin:
+        line = fin.readline()
+        l = line.split()
+        if len(l) > 3:
+            if l[0] == 'Approximate' and l[1]=='Station' and l[2]=='Coordinates:':
+                # lat, lon, hgt = [ float(x) for x in l[3:6] ]
+                return [ float(x) for x in l[3:6] ]
+    return mean_xyz
+
 def model_from_ascii(filename):
     models = []
     with open(filename, 'r') as fin:
         line = fin.readline()
+        l = line.split()
+        if len(l) > 3:
+            if l[0] == 'Approximate' and l[1]=='Station' and l[2]=='Coordinates:':
+                lat, lon, hgt = [ float(x) for x in l[3:6] ]
+            line = fin.readline()
         while len(line) > 1:
             l = line.split()
             if l[0] != 'Central' or l[1] != 'Epoch':
@@ -288,7 +318,7 @@ parser.add_argument('-v', '--event-file',
 parser.add_argument('-q', '--noa-earthquake-catalogue',
     action   = 'store',
     required = False,
-    help     = 'NOA earthquake catalogue',
+    help     = 'NOA earthquake catalogue. If given and we are writting an event file, then every earthquake will be matched to the catalogues and its magnitude given.',
     metavar  = 'NOA_CAT_FILE',
     dest     = 'noa_cat_file'
 )
@@ -329,14 +359,30 @@ for idx, eph in enumerate(t):
 if args.event_file:
     event_dicts = []
     for i in models:
-        event_dicts.append(i.get_event_list(not args.use_mjd))
+        event_dicts.append(i.get_event_list(not args.use_mjd, args.noa_cat_file))
     with open(args.event_file, 'w') as fout:
         for key in ['j', 'v' ]:
             for t in list(set(event_dicts[0][key] + event_dicts[1][key] + event_dicts[2][key])):
                 print('{:} {:}'.format(t, key), end="\n", file=fout)
         key = 'e'
-        for t in list(set(event_dicts[0][key][0] + event_dicts[1][key][0] + event_dicts[2][key][0])):
-            print('{:} {:}'.format(t, key), end="\n", file=fout)
+        #  list of lists: [ [te1, Me1], [te2, Me2] ,...] sorted by date but may
+        #+ include duplicates.
+        magn_index = 3
+        lat_index  = 0
+        lon_index  = 1
+        nl = [ [i[0], i[1][magn_index], i[1][lat_index], i[1][lon_index]] for i in sorted(event_dicts[0][key] + event_dicts[1][key] + event_dicts[2][key], key=lambda x: x[0], reverse=False)]
+        # keep only unique elements (actually print them!)
+        mean_crd = mean_crd_from_model_file(args.input_file)
+        el = []
+        for l in nl:
+            if l[0] not in el:
+                el.append(l[0])
+                if mean_crd == [None]*3:
+                    print('{:} {:} {:}'.format(l[0], key, l[1]), end="\n", file=fout)
+                else:
+                    argd = [ math.radians(float(x)) for x in [mean_crd[0], mean_crd[1], l[2], l[3]] ]
+                    d = approx_distance_on_earth(*argd)
+                    print('{:} {:} {:},D={:<5.1f}'.format(l[0], key, l[1], d/1e3), end="\n", file=fout)
 #except:
 #    status = 1
 

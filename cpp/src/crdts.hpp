@@ -570,6 +570,10 @@ public:
     epoch_vector() const noexcept
     { return &m_epochs; }
 
+    auto
+    mean_coordinates() const noexcept
+    { return std::make_tuple(m_x.mean(), m_y.mean(), m_z.mean()); }
+
 private:
 
     /// Set the epoch pointer of each timeseries component.

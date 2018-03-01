@@ -43,6 +43,10 @@ do
         PLOT_EVENTS=1
         shift
         ;;
+        -q|--noa-catalogue)
+        NOA_CAT_FILE="$2"
+        shift 2
+        ;;
         *) # unknown option
         echoerr "Fuck is this: \"$key\"? skipped ..."
         shift
@@ -120,6 +124,12 @@ gmt set PS_CHAR_ENCODING ISOLatin1+
 if test "${PLOT_EVENTS}" -eq 1
 then
     APPND_CMD="-v .evn.dat"
+    if [ ! -z ${NOA_CAT_FILE+x} ]
+    then
+        APPND_CMD="${APPND_CMD} -q ${NOA_CAT_FILE}"
+        echo "[DEBUG] Identifing earthquakes with a catalogues files may take a little longer"
+        echo "        Hold on ..."
+    fi
 fi
 if test "${PLOT_MODEL}" -eq 1
 then
@@ -168,20 +178,40 @@ do
     
     if test "${PLOT_EVENTS}" -eq 1
     then
+        echo "[DEBUG] Ploting events ..."
         c_min=$(echo "${R[$it]}" | awk -F "/" '{print $3}')
         c_max=$(echo "${R[$it]}" | awk -F "/" '{print $4}')
         evncols=("brown" "orange" "yellow")
         evncit=0
+        eq_text_dy=(0.0 0.3)
         for evn in j e v
         do
-            if grep $evn .evn.dat > .evn.dat${evn} 2>/dev/null
+            if grep " $evn" .evn.dat > .evn.dat${evn} 2>/dev/null
             then
+                eq_it=0
                 while read line
                 do
-                    t=$(echo $line | sed "s/${evn}//g" | sed "s/ $//g" | tr ' ' 'T')
+                    #t=$(echo $line | sed "s/${evn}//g" | sed "s/ $//g" | tr ' ' 'T')
+                    t=$(echo $line | awk '{print $1"T"$2}' | sed 's/\..*$//g')
+                    magn=$(echo $line | awk '{print $NF}')
                     echo "${t} ${c_min}" >  .evn.dat${evn}${evn}
                     echo "${t} ${c_max}" >> .evn.dat${evn}${evn}
                     cat .evn.dat${evn}${evn} | gmt psxy "${R[$it]}" -J -W0.3p,"${evncols[$evncit]}" -O -K >> $ps
+                    if test "${evn}" = "e" && test "${comp}" = "up"
+                    then
+                        magn_upper=$(echo "$magn" | tr 'a-z' 'A-Z')
+                        if test "${magn_upper}" != "NONE"
+                        then
+                            crd=$(echo "$c_min + ($c_max - $c_min)/8" | bc -l)
+                            dy_idx=$(echo $((eq_it%2)))
+                            echo "${t} ${crd} ${magn}" | \
+                            gmt pstext "${R[$it]}" -J -Dj0c/"${eq_text_dy[$dy_idx]}"c \
+                            -F+a0+f7,Helvetica+jCT -O -K >> $ps
+                            let eq_it=eq_it+1
+                        else
+                            echo "[DEBUG] No magnitude for earthquake at $t; omitting ..."
+                        fi
+                    fi
                 done < .evn.dat${evn}
             fi
             let evncit=evncit+1

@@ -99,6 +99,7 @@ main(int argc, char* argv[])
     // milliseconds.
     ngpt::crdts<ngpt::milliseconds> ts = 
         ngpt::cts_read<ngpt::milliseconds>(ctsf, sname);
+    auto mean_crd_xyz = ts.mean_coordinates();
     
     // Transform to topocentric rf (asumming input ts was geocentric cartesian).
     ts.cartesian2topocentric();
@@ -256,6 +257,11 @@ main(int argc, char* argv[])
     std::cout<<"\nDumping component models to file: \'" 
         << std::string(sname + std::string(".mod")) <<"\'.";
     std::ofstream fout { sname + std::string(".mod") };
+    fout <<"Approximate Station Coordinates: ";
+    double lat, lon, hgt;
+    ngpt::car2ell<ngpt::ellipsoid::grs80>(std::get<0>(mean_crd_xyz), 
+        std::get<1>(mean_crd_xyz), std::get<2>(mean_crd_xyz), lat, lon, hgt);
+    fout << ngpt::rad2deg(lat) << " " << ngpt::rad2deg(lon) << " " << hgt << "\n";
     mdl_n.dump(fout);
     fout<<"\n";
     mdl_e.dump(fout);
