@@ -16,6 +16,6 @@
       ```
    
    * [Eigen](http://eigen.tuxfamily.org/index.php?title=Main_Page)
-     Eigen is *a is a C++ template library for linear algebra*. Very easy to install, follow the description in the documentation (eg http://eigen.tuxfamily.org/dox/GettingStarted.html).
+     Eigen is *a is a C++ template library for linear algebra*. Very easy to install, follow the description in the [documentation] (http://eigen.tuxfamily.org/dox/GettingStarted.html).
      
 ## Installation
