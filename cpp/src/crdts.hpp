@@ -570,13 +570,22 @@ public:
     epoch_vector() const noexcept
     { return &m_epochs; }
 
+    /// @brief Return the average (mean) coordinates.
+    ///
+    /// Return the average (mean) coordinates of the time-series. Note that
+    /// the reference frame and units of the coordinate set depends on the
+    /// processing that has already been performed at the instance.
+    /// The average (mean) coordinate set is not re-calculated.
+    ///
+    /// @return A tuple of three doubles; they represent the average coordinates
+    ///         in [x,y,z] components respectively.
     auto
     mean_coordinates() const noexcept
     { return std::make_tuple(m_x.mean(), m_y.mean(), m_z.mean()); }
 
 private:
 
-    /// Set the epoch pointer of each timeseries component.
+    /// @brief Set the epoch pointer of each timeseries component.
     void set_epoch_ptr() noexcept
     {
         m_x.epoch_ptr() = &m_epochs;

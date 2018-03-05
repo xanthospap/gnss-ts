@@ -32,7 +32,8 @@ dist_include_HEADERS = \
 	model.hpp \
 	crdts.hpp \
 	artificial.hpp \
-	stalogrd.hpp
+	stalogrd.hpp \
+	procalgo.hpp
 
 dist_libgtms_la_SOURCES = \
 	tsflag.cpp \

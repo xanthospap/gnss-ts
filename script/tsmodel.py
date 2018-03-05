@@ -382,7 +382,7 @@ if args.event_file:
         for l in nl:
             if l[0] not in el:
                 el.append(l[0])
-                if mean_crd == [None]*3:
+                if not args.noa_cat_file:
                     print('{:} {:} {:}'.format(l[0], key, l[1]), end="\n", file=fout)
                 else:
                     argd = [ math.radians(float(x)) for x in [mean_crd[0], mean_crd[1], l[2], l[3]] ]

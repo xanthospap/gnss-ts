@@ -745,7 +745,7 @@ public:
     /// The function will search for an earthquake that has happened at this
     /// date and if found, it will remove it from the model.
     void
-    erase_earthquake_at(const datetime<T>& t)
+    erase_earthquake_at(const datetime<T>& t) noexcept
     {
         for (auto it = m_earthqs.begin(); it != m_earthqs.end(); ++it) {
             if ( it->start() == t ) {
