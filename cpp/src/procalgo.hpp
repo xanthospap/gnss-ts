@@ -1,0 +1,176 @@
+#ifndef __NGPT_CRD_GENALGO__
+#define __NGPT_CRD_GENALGO__
+
+// standard headers
+#include <stdexcept>
+#ifdef DEBUG
+#include <iostream>
+#endif
+
+// gtms headers
+#include "timeseries.hpp"
+#include "earthquake_cat.hpp"
+#include "period.hpp"
+
+namespace ngpt
+{
+
+template<class T>
+    ngpt::ts_model<T>
+    identify_harmonics(ngpt::timeseries<T, ngpt::pt_marker>& ts,
+        ngpt::ts_model<T>& model, double Ut=1e-3, double min_amplitude=0e0)
+{
+    // Time-span of the time-series in days and years.
+    auto   tdif = ts.last_epoch().delta_date(ts.first_epoch());
+    double ddif = tdif.days().as_underlying_type() / 365.25e0;
+    double div  = 1e0 / ddif;
+    std::size_t N = ts.data_pts() - ts.skipped_pts();
+    double ofac{4},
+           hifac{div/div},
+           *px,
+           *py,
+           prob,
+           *mempool;
+    int    nout (0.5*ofac*hifac*N+1),
+           jmax;
+    try {
+        mempool = new double[2*nout];
+    } catch (std::bad_alloc&) {
+        std::cerr<<"\n[ERROR] Cannot allocate memmory for identify_harmonics";
+        return model;
+    }
+    px = mempool;
+    py = mempool + nout;
+    auto   nmodel {model},
+           amodel {model};
+    double nstddev,
+           astddev,
+           factor;
+    auto nts{ts};
+    // first fit.
+    nts = nts.qr_ls_solve(amodel, astddev, 1e-3, false, true);
+    std::size_t dummy_it = 0;
+    while ( dummy_it < 10 ) {
+        ngpt::lomb_scargle_period(nts, ofac, hifac, px, py, nout, nout, jmax, prob);
+        std::cout<<"\n\tDominant frequency in time-series: "<<px[jmax]<<" (at: "<<jmax<<")"
+                    <<"; this is a period of "<<1e0/px[jmax]<<" days -- posibility: "<<prob<<" --";
+        nmodel.add_period( 1e0/px[jmax] );
+        auto res_ts = nts.qr_ls_solve(nmodel, nstddev, 1e-3, false, false);
+        factor = astddev / nstddev;
+        /// TODO match the amplitude!!
+        if ((factor-1e0) > Ut && > min_amplitude) {
+            nts = res_ts;
+            amodel.add_period( 1e0/px[jmax] );
+            astddev = nstddev;
+            nmodel = amodel;
+            std::cout<<"\n\tFrequency added to the model; factor was: "<<(factor-1e0);
+        } else {
+            break;
+        }
+        ++dummy_it;
+    }
+
+    delete[] mempool;
+
+    if ( dummy_it >= 50 ) {
+        std::cerr<<"\n[ERROR] Harmonic Analysis is corrupt! More than 50 frequencies identified!";
+    }
+
+    return amodel;
+}
+
+/// @brief Filter out earthquakes from a model.
+///
+/// Given a time-series and a model, try to filter out (from the model) any
+/// earthquakes that produce statisticaly insignificant offsets. We will start
+/// with a no-earthquake model, and iteratively add all earthquakes included
+/// in the a-priori (input) model only keeping the ones for which the offset
+/// induced is statisticaly significant. By 'statisticaly significant' we mean
+/// that the a-priori std. deviation and the a-posteriori std. deviation (i.e.
+/// before anf after including the earthquake in the model) satisfy the
+/// relation:
+/// (a_priori_stddev/a_posteriori_stddev) - 1 > U_t
+///
+/// @parameter[in] ts    The input time-series (this will remain const).
+/// @parameter[in] model The input, a-priori model; the final estimated 
+///                      (returned) model will include all earthquakes from 
+///                      this model that produce statisticaly significant
+///                      offset values.
+/// @parameter[in] Ut    Critical value for the test of significance (see
+///                      description). Default value is .001
+/// @return              A new model; besides the earthquakes, all other member
+///                      variables will be indentical to the a-priori model. Yet,
+///                      this model will only include a subset of the
+///                      earthquakes; the ones with statisticaly significant
+///                      offset values.
+template<class T>
+    ngpt::ts_model<T>
+    filter_earthquakes(ngpt::timeseries<T, ngpt::pt_marker>& ts,
+        ngpt::ts_model<T>& model, double Ut=1e-3)
+{
+    
+    // get the list of vectors from the input model.
+    std::vector<ngpt::md_earthquake<T>> erthqk_vec {model.earthquakes()};
+
+    // no earthquakes; quick return
+    if ( !erthqk_vec.size() ) return model;
+    
+    double stddev_a, // previous std. dev
+           stddev_n; // next (this) std. dev
+    
+    // Initial estimate to get the approximate earthquake offsets (no outlier
+    // marking)
+    ts.qr_ls_solve(model, stddev_n, 1e-3, false, false);
+
+    // Get the a-priori earthquake vector and sort it according to each 
+    // earthquake's resulting offset (as estimated with the a-priori model).
+    std::sort(erthqk_vec.begin(), erthqk_vec.end(),
+        [](const ngpt::md_earthquake<T>& a,
+           const ngpt::md_earthquake<T>& b)
+        {return std::sqrt(a.a1()*a.a1()+a.a2()*a.a2())
+              > std::sqrt(b.a1()*b.a1()+b.a2()*b.a2());
+        }
+    );
+
+    // Initialize a new model (identical to the a-priori) with no earthquakes.
+    ngpt::ts_model<ngpt::milliseconds> amodel{model},
+                                       nmodel{model};
+    nmodel.clear_earthquakes();
+    amodel.clear_earthquakes();
+    
+    // initial guess is a no-earthquake model.
+    ts.qr_ls_solve(amodel, stddev_a, 1e-3, false, false);
+    // iterators to the (sorted) earthquakes vector.
+    typename std::vector<ngpt::md_earthquake<T>>::iterator
+        it = erthqk_vec.begin(),
+        it_end = erthqk_vec.end();
+    double factor;
+
+    // Add all earthquakes from list to the model (iteratively) and check the
+    // post-fit residuals; if needed add the earthquake to the (final) model.
+    std::cout<<"\n[DEBUG] Start testing for significant offsets:";
+    for (; it != it_end; ++it) {
+        // add (the next) earthquake to the model and check the residuals.
+        nmodel.add_earthquake(*it);
+        ts.qr_ls_solve(nmodel, stddev_n, 1e-3, false, false);
+        factor = stddev_a / stddev_n;
+        if ((factor-1e0) > Ut) {
+            amodel = nmodel;
+            stddev_a = stddev_n;
+            std::cout<<"\n\t[DEBUG] Earthquake at "<<ngpt::strftime_ymd_hms(it->start())
+                <<" added to the model; factor is "<<factor
+                <<", value is: "<<it->a1();
+        } else {
+            nmodel.erase_earthquake_at( it->start() );
+            std::cout<<"\n\t[DEBUG] Earthquake at "<<ngpt::strftime_ymd_hms(it->start())
+                <<" removed from the model; factor is "
+                <<factor<<", value is: "<<it->a1();
+        }
+    }
+
+    return amodel;
+}
+
+}// namespace ngpt
+
+#endif
