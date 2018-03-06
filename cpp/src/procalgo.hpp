@@ -57,8 +57,8 @@ template<class T>
         nmodel.add_period( 1e0/px[jmax] );
         auto res_ts = nts.qr_ls_solve(nmodel, nstddev, 1e-3, false, false);
         factor = astddev / nstddev;
-        /// TODO match the amplitude!!
-        if ((factor-1e0) > Ut && > min_amplitude) {
+        double ampl = nmodel.harmonic_with_period(1e0/px[jmax])->amplitude();
+        if ((factor-1e0) > Ut && ampl > min_amplitude) {
             nts = res_ts;
             amodel.add_period( 1e0/px[jmax] );
             astddev = nstddev;

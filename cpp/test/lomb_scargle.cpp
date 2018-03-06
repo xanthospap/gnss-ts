@@ -172,9 +172,11 @@ main(int argc, char* argv[])
         {std::string("North"), std::string("East"), std::string("Up")};
 
     if (automatic_harmonic_analysis) {
-        xmodel = ngpt::identify_harmonics(res_ts.x_component(), xmodel, 1e-2);
-        ymodel = ngpt::identify_harmonics(res_ts.y_component(), ymodel, 1e-2);
-        zmodel = ngpt::identify_harmonics(res_ts.z_component(), zmodel, 1e-2);
+        double Ut = 1e-2;
+        double min_ampl = 1e-3;
+        xmodel = ngpt::identify_harmonics(res_ts.x_component(), xmodel, Ut, min_ampl);
+        ymodel = ngpt::identify_harmonics(res_ts.y_component(), ymodel, Ut, min_ampl);
+        zmodel = ngpt::identify_harmonics(res_ts.z_component(), zmodel, Ut, min_ampl);
     } else {
         // Time-span of the time-series in days and years.
         auto   tdif = res_ts.last_epoch().delta_date(res_ts.first_epoch());

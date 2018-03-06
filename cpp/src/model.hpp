@@ -932,6 +932,26 @@ public:
     clear_earthquakes() noexcept
     { m_earthqs.clear(); }
 
+    /// Remove a harmonic term given a period
+    int
+    remove_harmonic_with_period(double per)
+    noexcept
+    {
+        std::size_t original_size = m_harmonics.size();
+        m_harmonics.erase(std::remove(m_harmonics.begin(), m_harmonics.end(),
+            [per](const md_harmonics<T>& h){return h.period() == per;}),
+            m_harmonics.end());
+        return original_size - m_harmonics.size();
+    }
+
+    /// Get a const iterator to a harmonic given its period.
+    typename std::vector<md_harmonics<T>>::const_iterator
+    harmonic_with_period(double per) const noexcept
+    {
+        return std::find_if(m_harmonics.cbegin(), m_harmonics.cend(),
+            [per](const md_harmonics<T>& h){return h.period() == per;});
+    }
+
 private:
     double                             m_x0,          ///< const linear term.
                                        m_vx,          ///< linear velocity
