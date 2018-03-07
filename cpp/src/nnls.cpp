@@ -139,216 +139,92 @@ fnnls(const Eigen::MatrixXd& A, const Eigen::VectorXd& y, double tol = -1e0)
 
     return x;
 }
-// http://digitalassets.lib.berkeley.edu/sdtr/ucb/text/394.pdf
+
+bool
+__kuhn_tucker_test__(const Eigen::VectorXd& w, const std::vector<std::size_t>& L,
+    const std::vector<std::size_t>& Ui, std::size_t& t) noexcept
+{
+    t = 0;
+    double argmax = std::numeric_limits<double>::min();
+
+    for (auto i = L.cbegin(); L.cend(); ++i) {
+        if ( w(*it) > 0e0 ) {
+            return false;
+        } else {
+            if ( w(*it) >= argmax ) t = *it;
+        }
+    }
+    for (auto i = U.cbegin(); U.cend(); ++i) {
+        if ( w(*it) < 0e0 ) {
+            return false;
+        } else {
+            if ( -w(*it) >= argmax ) t = *it;
+        }
+    }
+    return true;
+}
+
 auto
-bvls(int key, const Eigen::MatrixXd& A, const Eigen::VectorXd& b, 
-    const Eigen::VectorXd& bl, const Eigen::VectorXd& bu,
-    double tol = -1e0)
+__data_vector_less_bound_vars__(const Eigen::MatrixXd& A, const Eigen::VectorXd& b,
+    const std::vector<std::size_t>& F, const Eigen::VectorXd& x)
+{
+    std::size_t fs = F.size();
+    std::size_t lu = A.cols() - fs;
+
+    // data vector less the predictions of the bound variables
+    Eigen::VectorXd bt = Eigen::VectorXd::Zero(lu);
+    Eigen::VectorXd xt = Eigen::VectorXd::Zero(lu);
+    Eigen::MatrixXd A_ = Eigen::Matrix(A.rows(), lu);
+    std::size_t bt_row = 0,
+                xt_row = 0,
+                a__col = 0;
+
+    // the matrix composed of those columns of A whose indices are in F
+    Eigen::MatrixXd At = Eigen::MatrixXd(A.rows(), fs);
+    std::size_t at_col = 0;
+
+    for (std::size_t i = 0; i < A.cols(); i++) {
+        // index i is in F
+        if ( std::find(F.cbegin(), F.cend(), i) != F.cend() ) {
+            At.col(at_col) = A.col(i);
+            ++at_col;
+        } else { // index i is in L(union)U
+           A_.col(a__col) = A.col(i); 
+        }
+    }
+}
+
+auto
+bvls(const Eigen::MatrixXd& A, const Eigen::VectorXd& y)
 {
     using Eigen::MatrixXd;
     using Eigen::VectorXd;
 
-    // initialize variables
-    if (tol < 0e0) {
-        tol = std::numeric_limits<double>::epsilon();
-    }
     int m = A.rows();
     int n = A.cols();
     assert( y.rows() == m );
-    assert( bu.rows() == bl.rows() && bl.rows() == n );
+    VectorXd x = VectorXd::Zero(n);
+    VectorXd w = VectorXd::Zero(n);
 
-    // Step 1. Initialize everything free and bound sets, initial values, etc
-    int mm  = std::min(m,n);
-    int mm1 = mm+1;
-    int jj  = 0;
-    int ifrom5 = 0;
+    // STEP 1
+    std::vector<std::size_t> F,
+                             U,
+                             L,
+                             FS;
+    F.reserve(n);                     // F is an empty set (of indexes)
+    U.reserve(n);                     // U is an empty set (of indexes)
+    std::iota(L.begin(), L.end(), 0); // L contains all indexes
+    FS = L;                           // FS contains all indexes (ordered)
     
-    // check consistency of given bounds
-    double bdiff = 0e0;
-    for (int j = 0; j < n; j++) {
-        bdiff = std::max(bdiff, bu(j)-bl(j));
-        if ( bl(j) > bu(j) ) {
-            std::cerr<<"\nInconsistent bounds in BVLS; parmeter num = "<<i;
-            return 1;
-        }
-    }
-    if (bdiff == 0e0) {
-        std::cerr<<"\nNo free variables in BVLS; check input bounds.";
-        return 1;
-    }
+    // STEP 2
+    w = A.transpose()*(y-A*x);
 
-    /*
-     * In a fresh initialization (key = 0) bind all variables at their lower 
-     * bounds. If (key != 0), use the supplied istate vector to initialize 
-     * the variables. istate(n+1) contains the number of bound variables. The
-     * absolute values of the first nbound=istate(n+1) entries of istate are
-     * the indices of the bound variables. The sign of each entry determines 
-     * whether the indicated variable is at its upper (positive) or lower 
-     * (negative) bound.
-     */
-    int nbound, nact;
-    if ( !key ) {
-        nbound = n;
-        nact   = 0;
-        for (int j = 0; j < nbound; j++) istate(j) = -j;
-    } else {
-        nbound = istate(n);
+    // STEP 3
+    std::size_t t;
+    if ( (F == FS) || __kuhn_tucker_test__(w, L, U, t) ) {
+        return x;
     }
-    nact = n-nbound;
-    if (nact > mm) {
-        std::cerr<<"\nToo many free variables in BVLS starting solution.";
-        return 1;
-    }
-    for (int k = 0; k < nbound; k++) {
-        int j = std::abs(istate(k));
-        if (istate(k) < 0e0) x(j) = bl(j);
-        if (istate(k) > 0e0) x(j) = bu(j);
-    }
-
-    /* 
-     * In a warm start (key != 0) initialize the free variables to (bl+bu)/2. 
-     * This is needed in case the initial qr results in free variables 
-     * out-of-bounds and Steps 8-11 get executed the first time through.
-     */
-    for (int k = nbound; k < n; k++) {
-        int kk = istate(k);
-        x(kk) = (bu(kk)+bl(kk)) / 2e0;
-    }
-
-    /* Compute bnorm, the norm of the data vector b, for reference. */
-    double bnorm = b.norm();
-
-    double obj,
-           worst;
-    int    j,
-           it;
-    /* Initialization complete. Begin major loop (Loop A). */
-    for (int loopA = 0; loopA < 3*n; loopA++) { // 15000
-        act.col(mm1-1) = b - A*x;
-        /* 
-         * Step 2
-         * Initialize the negative gradient vector w(*). Compute the residual 
-         * vector b-a.x, the negative gradient vector w(*), and the current 
-         * objective value obj = ||a.x - b||. The residual vector is stored in 
-         * the mm+1'st column of act(*,*).
-         */
-        w   = A.transpose()*act.col(mm1-1);
-        obj = act.col(mm1-1).norm();
-        if (obj <= tol*bnorm || (loopA > 1 && nbound == 0)) {
-            istate(n) = nbound;
-            w(0) = obj;
-            return;
-        }
-        for (int k = nbound; k < n; k++) {
-            j = istate(k);
-            for (int i = 0; i < m; i++) {
-                act(i, mm1) += a(i,j)*x(j);
-            }
-        }
-        if (loopA == 1 && key != 0) {
-            goto 6000
-        }
-        worst = 0e0; // 3000
-        it = 1;
-        for (int i = 0; i < nbound; i++) {
-            int ks = std::abs(istate(i));
-            double bad = w(ks) * std::copysign(1e0, istate(i));
-            if (bad < worst) {
-                it    = j;
-                worst = bad;
-                iact  = ks;
-            }
-        }
-        if (worst >= 0e0) {
-            istate(n) = nbound;
-            w(0) = obj;
-            return;
-        }
-        if (iact == jj) {
-            w(jj) = 0e0;
-            goto 3000
-        }
-        if (istate(it) > 0e0) bound = bu(iact);
-        if (istate(it) < 0e0) bound = bl(iact);
-        act.col(mm1) = act.col(mm1) + bound*a.col(iact);
-        ifrom5 = istate(it);
-        istate(it) = istate(nbound);
-        --nbound;
-        ++nact;
-        istate(nbound+1) = iact;
-        if (mm < nact) {
-            std::cerr<<"\nToo many free variables in BVLS.";
-            return 1;
-        }
-        for (int i = 0; i < m; i++) { // 6000
-            act(i, mm1+1) = act(i, mm1);
-            for (int k = nbound; k < n ; k++) {
-                j = istate(k);
-                act(i, nact+1-k*nbound) = a(i,j);
-            }
-        }
-        CALL qr(m, nact, act, act(1,mm1+1), zz, resq);
-        if (resq < 0e0 
-            || (ifrom5 > 0 && zz(nact) > bu(iact))
-            || (ifrom5 < 0e0 && zz(nact) < bl(iact)) ) {
-            ++nbound;
-            istate(nbound) = istate(nbound) * std::copysign(1e0, x(iact)-bu(iact));
-            --nact;
-            act.col(mm1) = act.col(mm1) - x(iact)*a.col(iact);
-            ifrom5  = 0;
-            w(iact) = 0e0;
-            goto 3000
-        }
-        if (ifrom5) jj = 0;
-        ifrom = 0
-        for (int k = 0; k < nact; k++) {
-            j = istate(k+nbound);
-            if (zz(nact+1-k) < bl(j) || zz(nact+1-k) > bu(j)) {
-                goto 8000
-            }
-        }
-        for (int k = 0; k < nact; k++) {
-            j = istate(k+nbound);
-            x(j) = zz(nact+1-k);
-        }
-        goto 15000
-        double alpha = 2e0, // 8000
-                alf  = alpha;
-        for (int k = k1; k < nact; k++) {
-            j = istate(k+nbound);
-            if (zz(nact+1-k) > bu(j)) alf=(bu(j)-x(j))/(zz(nact+1-k)-x(j));
-            if (zz(nact+1-k) < bl(j)) alf=(bl(j)-x(j))/(zz(nact+1-k)-x(j));
-            if (alf < alpha) {
-                alpha = alf;
-                jj = j;
-                double sj = std::copysign(1e0, zz(nact+1-k)-bl(j));
-            }
-        }
-        for (int k= 0 ; k < nact; k++) {
-            j = istate(k+nbound);
-            x(j) += alpha*(zz(nact+1-k)-x(j));
-        }
-        nold = nbound;
-        for (int k = 0; k < nact; k++) {
-            j = istate(k+nold)
-            if (((bu(j)-x(j)) <= 0e0) || (j == jj && sj > 0e0)) {
-                x(j) = bu(j);
-                istate(k+noldb) = istate(nbound+1);
-                istate(nbound+1) = j;
-                ++nbound;
-                act.col(mm1) = act.col(mm1) - bu(j)*a.col(j);
-            } else if (((x(j)-bl(j) <= 0e0) || (j == jj && sj < 0e0)) {
-                x(j) = bl(j);
-                istate(k+noldb) = istate(nbound+1);
-                istate(nbound+1) = -j;
-                ++nbound;
-                act.col(mm1) = act.col(mm1) - bl(j)*a.col(j);
-            }
-        }
-        nact = n - nbound;
-        if (nact > 0) goto 6000
-
-    } // 15000
+    F.push_back(t);
 
 }
 

@@ -7,6 +7,15 @@
 
 using namespace ngpt;
 
+///
+/// MODELS THAT HAVE PASSED THE TEST:
+///
+/// Model type | Int | Passed | Comments
+/// -----------+-----+--------+------------------------------------------------
+/// PiceWise L.|  0  | OK     | 1-parameter
+/// Logarithmic|  1  | OK     | 2-parameter. At least seems ok!
+/// Exponential|  2  |        |
+
 int
 main(int argc, char* argv[])
 {
@@ -26,7 +35,7 @@ main(int argc, char* argv[])
     fin >> a1_app>> t1_app>> a2_app>> t2_app;
     fin.close();
 
-    int ITERS = 10;
+    int ITERS = 3;
     int mt {0};
     psd_model psd_type;
     if ( argc >= 3 ) {
@@ -125,8 +134,6 @@ main(int argc, char* argv[])
         }
     }
 
-    return 6;
-
     // let's dare an estimate
     ngpt::ts_model<milliseconds> estim_mdl;
     estim_mdl.mean_epoch() = ref_model.mean_epoch();
@@ -143,9 +150,6 @@ main(int argc, char* argv[])
         std::cout<<"\nA-Posteriori std. = "<<post_std_dev;
     }
 
-    /*
-    */
-    
     // write time-series to "foo.ts"
     std::cout<<"\n> TimeSeries written to \"foo.ts\"";
     std::ofstream ts_fout {"foo.ts"};
