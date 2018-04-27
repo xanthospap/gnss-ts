@@ -132,6 +132,13 @@ main(int argc, char* argv[])
             estim_mdl2.dump(std::cout);
             std::cout<<"\nA-Posteriori std. = "<<post_std_dev2;
         }
+        std::vector<ngpt::datetime<milliseconds>> mjds;
+        auto yy2 = estim_mdl2.make_model(start, stop, step, &mjds);
+        std::cout<<"\n> Partial Model written to \"bar2.ts\"";
+        std::ofstream md_out {"bar2.ts"};
+        for (std::size_t i = 0; i < yy2.size(); i++)
+            md_out << "\n" << mjds[i].as_mjd() << " " << yy2[i];
+        md_out.close();
     }
 
     // let's dare an estimate
@@ -157,7 +164,7 @@ main(int argc, char* argv[])
 
     // write the 'model-line'
     std::vector<ngpt::datetime<milliseconds>> mjds;
-    auto yy = estim_mdl.make_model(start, stop, step, &mjds);
+    auto yy  = estim_mdl.make_model(start, stop, step, &mjds);
     std::cout<<"\n> Model written to \"bar.ts\"";
     std::ofstream md_out {"bar.ts"};
     for (std::size_t i = 0; i < yy.size(); i++)

@@ -108,7 +108,6 @@ public:
                 break;
             case psd_model::exp:
                 te1 = dtq/m_t1;
-                // d   = m_a1*(1e0-std::exp(-te1));
                 d = -m_a1*std::expm1(-te1);
                 break;
             case psd_model::logexp:
@@ -205,9 +204,8 @@ public:
                 assert(std::abs(te1) < 708.0e0);
 #endif
                 te1 = dtq/m_t1;
-                // da1 = 1e0 - std::exp(-te1);
                 da1 = -std::expm1(-te1);
-                dt1 = -m_a1*std::exp(-te1)*dtq/(m_t1*m_t1);
+                dt1 = -m_a1*std::exp(-te1)*dtq / (m_t1*m_t1);
                 break;
             case psd_model::logexp:
                 te1 = dtq/m_t1;

@@ -8,11 +8,9 @@ parser = argparse.ArgumentParser(
     description='Given a range (aka xmin, xmax) and a number of ticks, compute annotation interval.'
 )
 parser.add_argument('min',
-#    type     = float,
     help     = 'Min tick on axis'
 )
 parser.add_argument('max',
-#    type     = float,
     help     = 'Max tick on axis.'
 )
 parser.add_argument('ticks',
@@ -56,4 +54,3 @@ else:
     else:
         ant = 1
     print('{:02d}'.format(ant))
-        
