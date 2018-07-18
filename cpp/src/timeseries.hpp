@@ -1704,13 +1704,15 @@ public:
     {
         ++m_iterator;
 
-        while (  (m_iterator > m_iterator_begin)
-              && (m_iterator.delta_time(m_iterator_begin) > m_half_window) )
-            ++m_iterator_begin;
-        
-        while (  (m_iterator_end != m_END)
-              && (m_iterator_end.delta_time(m_iterator) < m_half_window) )
-            ++m_iterator_end;
+        if ( m_iterator != m_END) {
+            while (  (m_iterator > m_iterator_begin)
+                  && (m_iterator.delta_time(m_iterator_begin) > m_half_window) )
+                ++m_iterator_begin;
+            
+            while (  (m_iterator_end != m_END)
+                  && (m_iterator_end.delta_time(m_iterator) < m_half_window) )
+                ++m_iterator_end;
+        }
         
         return *this;
     }
@@ -1758,8 +1760,8 @@ public:
         double mean{0}, sigma{0};
         int size{0};
         for (auto it = m_iterator_begin; it != m_iterator_end; ++it) {
-            mean  = (it.data().value() + size*mean)/(size+1.0e0);
-            sigma = (it.data().sigma() + size*mean)/(size+1.0e0);
+            mean  = (it.data().value() + size*mean)/(size+1e0);
+            sigma = (it.data().sigma() + size*mean)/(size+1e0);
             ++size;
         }
         return entry{mean, sigma};
@@ -1772,8 +1774,8 @@ public:
         int size{0};
         for (auto it = m_iterator_begin; it != m_iterator_end; ++it) {
             if ( !it.data().skip() ) {
-                mean  = (it.data().value() + size*mean)/(size+1.0e0);
-                sigma = (it.data().sigma() + size*mean)/(size+1.0e0);
+                mean  = (it.data().value() + size*mean)/(size+1e0);
+                sigma = (it.data().sigma() + size*mean)/(size+1e0);
                 ++size;
             }
         }

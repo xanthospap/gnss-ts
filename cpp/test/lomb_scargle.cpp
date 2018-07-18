@@ -32,6 +32,8 @@ split_path(std::string s)
 
 /// Minimum earthquake magnitude to be considered.
 double MIN_ERTHQ_MAG = 4.0e0;
+double C1 = -3.5e0;
+double C2 = 2.0e0;
 
 /// Parameters for harmonic analysis
 double minfreq = 0e0;
@@ -76,6 +78,18 @@ main(int argc, char* argv[])
             assert( argc >= i+1 );
             ++i;
             erthq_file = argv[i];
+        } else if (!strcmp(argv[i], "-m")) {
+            assert( argc >= i+1 );
+            ++i;
+            MIN_ERTHQ_MAG = std::atof(argv[i]);
+        } else if (!strcmp(argv[i], "-c1")) {
+            assert( argc >= i+1 );
+            ++i;
+            C1 = std::atof(argv[i]);
+        } else if (!strcmp(argv[i], "-c2")) {
+            assert( argc >= i+1 );
+            ++i;
+            C2 = std::atof(argv[i]);
         } else if (!strcmp(argv[i], "-a")) {
             automatic_harmonic_analysis = true;
         } else {
@@ -122,7 +136,7 @@ main(int argc, char* argv[])
     if (erthq_file) {
         std::cout<<"\nApplying earthquake catalogue file: \'"<<erthq_file<<"\'.";
         ngpt::earthquake_catalogue<ngpt::milliseconds> eq_cat {erthq_file};
-        ts.apply_earthquake_catalogue(eq_cat, MIN_ERTHQ_MAG);
+        ts.apply_earthquake_catalogue(eq_cat, MIN_ERTHQ_MAG, C1, C2);
     }
 
     // Filter the event list; two events must be at least a week apart

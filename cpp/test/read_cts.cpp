@@ -56,19 +56,23 @@ main(int argc, char* argv[])
     std::vector<double> periods = { /*365.25*/ };
     ngpt::ts_model<ngpt::milliseconds> xmodel { ts.events() };
     xmodel.add_periods( periods );
+    std::cout<<"\n--Manipulating dates";
     xmodel.mean_epoch() = ts.mean_epoch();
     std::cout<<"\nFrom: "<<ts.first_epoch().as_mjd()<<" to: "<<ts.last_epoch().as_mjd();
     std::cout<<"\nCentral Epoch: "<< ts.mean_epoch().as_mjd();
+    std::cout<<"\nManipulating dates--";
     auto ymodel{xmodel}, zmodel{xmodel};
+    std::cout<<"\n--Fitting";
     auto residual_ts = ts.qr_fit( xmodel, ymodel, zmodel );
+    std::cout<<"\nFitting--";
 
     // test the iterator
     // ts.test_iter();
     // residual_ts.test_period();
     
     // test the running window
-    // ngpt::datetime_interval<ngpt::milliseconds> window {ngpt::modified_julian_day{30}, ngpt::milliseconds{0}};
-    // ts.test_running_window(window);
+    ngpt::datetime_interval<ngpt::milliseconds> window {ngpt::modified_julian_day{30}, ngpt::milliseconds{0}};
+    residual_ts.test_running_window(window);
     
     std::string filename = cts_name + std::string(".neu");
     // print the time-series

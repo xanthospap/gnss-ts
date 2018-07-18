@@ -820,9 +820,9 @@ public:
         // coef for constant (linear) velocity i.e. m/year
         A(row, col) = 1.0e0 * w;
         ++col;
-        A(row, col) = w * (dt/365.25);
+        A(row, col) = w * (dt/365.25e0);
         ++col;
-        l += x0() + (dt/365.25)*vx();
+        l += x0() + (dt/365.25e0)*vx();
         
         // Harmonic coefficients for each period ...
         for (auto j = m_harmonics.cbegin(); j != m_harmonics.cend(); ++j) {
@@ -881,7 +881,6 @@ public:
         b(row) = y;                                   // linear case
         if ( !this->is_linear() ) {
             b(row) = b(row) - l;  // non-linear case
-            // std::cout<<"\n"<< t.as_mjd() << " " << dt << " " << b(row) << " " << l;
         }
         b(row) *= w;
 

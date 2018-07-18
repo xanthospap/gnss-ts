@@ -223,7 +223,7 @@ public:
     ///
     /// \todo Should i also mark the ts records??
     std::size_t
-    apply_earthquake_catalogue(earthquake_catalogue<T>& catalogue, double min_mag=0e0)
+    apply_earthquake_catalogue(earthquake_catalogue<T>& catalogue, double min_mag=0e0, double c1=-3.5e0, double c2=2.0e0)
     {
         catalogue.rewind();
         datetime<T> start {this->first_epoch()},
@@ -247,7 +247,7 @@ public:
             if (eq.epoch() >= start) {
                 distance = eq.epicenter_distance(slat, slon, faz, baz);
                 if ( ((distance/1e3 < 300e0) && (eq.magnitude() >= min_mag))
-                     && (eq.magnitude() >= -5.6 + 2.17 * std::log10(distance)) ) {
+                     && (eq.magnitude() >= c1 + c2 * std::log10(distance)) ) {
                     m_events.apply(ts_event::earthquake, eq.epoch(), eq.to_string());
                     ++eq_applied;
 #ifdef DEBUG
@@ -429,21 +429,25 @@ public:
                   ++rw_it)
         {
             auto first  = rw_it.first(),
-                 centre = rw_it.centre(),
-                 last   = rw_it.last();
+                 centre = rw_it.centre();
+            //     last   = rw_it.last();
 
             auto vlast  = rw_it.vlast();
 
             from = centre.delta_time(first);
-            to   = last.delta_time(centre);
+            to   = vlast.delta_time(first);
             vto  = vlast.delta_time(centre);
 
+            /*
             auto data = rw_it.clean_average();
             auto median = rw_it.median();
             auto iqr = rw_it.iqr();
-            for (auto i = rw_it.first(); i!=rw_it.last(); ++i) {
+            */
+            std::cout<<"\n["<<rw_it.first().epoch().as_mjd()<<" < "<<rw_it.centre().epoch().as_mjd()<<" < "<<rw_it.vlast().epoch().as_mjd()<<"]";
+            std::cout<<" ["<<from.as_mjd()<<", "<<vto.as_mjd()<<", "<<to.as_mjd()<<"]";
+            /*for (auto i = rw_it.first(); i!=rw_it.last(); ++i) {
                 std::cout<<i.data().value() << ",";
-            }
+            }*/
         }
         return;
     }
