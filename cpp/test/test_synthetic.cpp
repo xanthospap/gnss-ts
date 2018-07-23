@@ -72,7 +72,7 @@ main(int argc, char* argv[])
     datetime<milliseconds> start 
         { modified_julian_day{53005}, milliseconds{0} };    // 01-01-2004
     datetime<milliseconds> stop
-        { modified_julian_day{55562}, milliseconds{0} };    // 01-01-2011
+        { modified_julian_day{56658}, milliseconds{0} };    // 01-01-2014
     datetime_interval<milliseconds> step
         { modified_julian_day{1}, milliseconds{0} };        // 1-day step size
     long mean_mjd = ((stop.as_mjd()-start.as_mjd())/2) + start.as_mjd();
@@ -101,6 +101,7 @@ main(int argc, char* argv[])
     //+ constructed
     /* timeseries<milliseconds,pt_marker> */
     auto ts = synthetic_ts<milliseconds,pt_marker>(epochs, ref_model, 0, 1e-4);
+    std::cout<<"\nPrint Time series (original) written to file: original.ts";
     std::ofstream f_0 {"original.ts"};
     ts.dump(f_0);
     f_0.close();
@@ -110,13 +111,15 @@ main(int argc, char* argv[])
      * time-series at the epoch of the earthquake
      */
     if ( psd_type != psd_model::pwl ) {
-        std::cout<<"\nSplitting time-Series.";
+        std::cout<<"\nNon-Linear PSD model!";
+        std::cout<<"\n\tSplitting time-Series.";
         std::size_t idx;
         ts.upper_bound(event, idx);
         std::vector<datetime<milliseconds>> eph_vec2 (epochs.begin()+idx, epochs.end());
         timeseries<milliseconds,pt_marker> ts2 {ts, idx};
         ts2.epoch_ptr() = &eph_vec2;
-        std::cout<<"\nSize of epochs="<<eph_vec2.size()<<" starting from "<< eph_vec2[0].as_mjd();
+        std::cout<<"\n\tSize of epochs="<<eph_vec2.size()<<" starting from "<< eph_vec2[0].as_mjd();
+        std::cout<<"\n\tSplit time-series written to file: split.ts";
         std::ofstream f_1 {"split.ts"};
         ts2.dump(f_1);
         f_1.close();
@@ -124,17 +127,28 @@ main(int argc, char* argv[])
         estim_mdl2.mean_epoch() = ref_model.mean_epoch();
         estim_mdl2.add_earthquake(event, psd_type, a1_app, t1_app, a2_app, t2_app);
         estim_mdl2.dump(std::cout);
-        double post_std_dev2;
+        double post_std_dev2,
+               post_std_dev_pr = std::numeric_limits<double>::max();
+        std::cout<<"\n\tEstimating PSD+ model from split time-series";
         for (int i = 0; i < ITERS; i++) {
             ts2.qr_ls_solve(estim_mdl2, post_std_dev2);
-            std::cout<<"\n\nEstimated Model (2), iteration: "<<i;
-            std::cout<<"\n------------------------------------------------------------\n";
-            estim_mdl2.dump(std::cout);
-            std::cout<<"\nA-Posteriori std. = "<<post_std_dev2;
+            if (std::abs(post_std_dev2-post_std_dev_pr)>1e-5) {
+                post_std_dev_pr = post_std_dev2;
+            } else {
+                break;
+            }
+            if (ITERS > 15) {
+                std::cout<<"\n\tFailed to converge after 15 iterations!";
+                break;
+            }
         }
+        std::cout<<"\n\tEstimated Model (for split time-series)";
+        std::cout<<"\n\t------------------------------------------------------------\n";
+        estim_mdl2.dump(std::cout);
+        std::cout<<"\n\tA-Posteriori std. = "<<post_std_dev2;
         std::vector<ngpt::datetime<milliseconds>> mjds;
         auto yy2 = estim_mdl2.make_model(start, stop, step, &mjds);
-        std::cout<<"\n> Partial Model written to \"bar2.ts\"";
+        std::cout<<"\n\t Partial Model written to \"bar2.ts\"";
         std::ofstream md_out {"bar2.ts"};
         for (std::size_t i = 0; i < yy2.size(); i++)
             md_out << "\n" << mjds[i].as_mjd() << " " << yy2[i];
