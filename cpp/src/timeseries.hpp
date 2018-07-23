@@ -662,16 +662,16 @@ public:
         datetime<T> current_epoch;// the current epoch
         timeseries_const_iterator<T, F> it = cbegin(),
                                     it_end = cend();
-        data_point<F> entry;
+        data_point<F> __entry;
 
         for (; it != it_end; ++it) {
-            entry         = it.data();
+            __entry       = it.data();
             current_epoch = it.epoch();
             // only include data that are not marked as 'skip'
-            if ( !entry.skip() ) {
+            if ( !__entry.skip() ) {
                 dt = current_epoch.as_mjd() - mean_epoch;
-                weight = sigma0 / entry.sigma();
-                model.assign_row(A, b, current_epoch, weight, dt, entry.value(), idx);
+                weight = sigma0 / __entry.sigma();
+                model.assign_row(A, b, current_epoch, weight, dt, __entry.value(), idx);
                 ++idx;
             }
             ++counter;
