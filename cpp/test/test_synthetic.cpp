@@ -88,7 +88,7 @@ main(int argc, char* argv[])
     ngpt::ts_model<milliseconds> ref_model;
     ref_model.mean_epoch() = mean;
     ref_model.x0()         = 0e0;  // constant coef.
-    ref_model.vx()         = 5e-4;  // velocity
+    ref_model.vx()         = 0.09e0;  // velocity
     // add an earthquake
     datetime<milliseconds> event
         {modified_julian_day{54693}, milliseconds{0}};  // 15-08-2008
@@ -96,6 +96,7 @@ main(int argc, char* argv[])
     std::cout<<"\nReference Model";
     std::cout<<"\n------------------------------------------------------------\n";
     ref_model.dump(std::cout);
+    std::cout<<"\n------------------------------------------------------------\n";
 
     //  make a synthetic time-series based on the epochs and ref_model we already
     //+ constructed
@@ -145,6 +146,7 @@ main(int argc, char* argv[])
         std::cout<<"\n\tEstimated Model (for split time-series)";
         std::cout<<"\n\t------------------------------------------------------------\n";
         estim_mdl2.dump(std::cout);
+        std::cout<<"\n\t------------------------------------------------------------\n";
         std::cout<<"\n\tA-Posteriori std. = "<<post_std_dev2;
         std::vector<ngpt::datetime<milliseconds>> mjds;
         auto yy2 = estim_mdl2.make_model(start, stop, step, &mjds);
@@ -156,20 +158,32 @@ main(int argc, char* argv[])
     }
 
     // let's dare an estimate
+    std::cout<<"\nEstimating model for the whole time-series";
     ngpt::ts_model<milliseconds> estim_mdl;
     estim_mdl.mean_epoch() = ref_model.mean_epoch();
     estim_mdl.add_earthquake(event, psd_type, a1_app, t1_app, a2_app, t2_app);
-    std::cout<<"\n\nApproximate Model";
-    std::cout<<"\n------------------------------------------------------------\n";
+    std::cout<<"\n\tStarting with approximate model";
+    std::cout<<"\n\t------------------------------------------------------------\n";
     estim_mdl.dump(std::cout);
-    double post_std_dev;
+    double post_std_dev,
+           post_std_dev_pr = std::numeric_limits<double>::max();
     for (int i = 0; i < ITERS; i++) {
         ts.qr_ls_solve(estim_mdl, post_std_dev);
-        std::cout<<"\n\nEstimated Model, iteration: "<<i;
-        std::cout<<"\n------------------------------------------------------------\n";
-        estim_mdl.dump(std::cout);
-        std::cout<<"\nA-Posteriori std. = "<<post_std_dev;
+        if (std::abs(post_std_dev-post_std_dev_pr)>1e-5) {
+            post_std_dev_pr = post_std_dev;
+        } else {
+            break;
+        }
+        if (ITERS > 15) {
+            std::cout<<"\n\tFailed to converge after 15 iterations!";
+            break;
+        }
     }
+    std::cout<<"\n\tEstimated Model: ";
+    std::cout<<"\n\t------------------------------------------------------------\n";
+    estim_mdl.dump(std::cout);
+    std::cout<<"\n\tA-Posteriori std. = "<<post_std_dev;
+    std::cout<<"\n\t------------------------------------------------------------\n";
 
     // write time-series to "foo.ts"
     std::cout<<"\n> TimeSeries written to \"foo.ts\"";
