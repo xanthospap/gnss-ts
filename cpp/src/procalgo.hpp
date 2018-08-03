@@ -161,7 +161,103 @@ template<class T>
                 <<" added to the model; factor is "<<factor
                 <<", value is: "<<it->a1();
         } else {
-            nmodel.erase_earthquake_at( it->start() );
+            // nmodel.erase_earthquake_at( it->start() );
+            std::cout<<"\n\t[DEBUG] Earthquake at "<<ngpt::strftime_ymd_hms(it->start())
+                <<" removed from the model; factor is "
+                <<factor<<", value is: "<<it->a1();
+        }
+    }
+
+    return amodel;
+}
+
+template<class T>
+    ngpt::ts_model<T>
+    try_earthquakes(ngpt::timeseries<T, ngpt::pt_marker>& ts,
+        ngpt::ts_model<T>& model, double Ut=1e-3)
+{
+    
+    // get the list of vectors from the input model.
+    std::vector<ngpt::md_earthquake<T>> erthqk_vec {model.earthquakes()};
+
+    // no earthquakes; quick return
+    if ( !erthqk_vec.size() ) return model;
+    
+    double stddev_a, // previous std. dev
+           stddev_n, // next (this) std. dev
+           stddev_n1, stddev_n2;
+    
+    // Initial estimate to get the approximate earthquake offsets (no outlier
+    // marking)
+    ts.qr_ls_solve(model, stddev_a, 1e-3, false, false);
+
+    // Get the a-priori earthquake vector and sort it according to each 
+    // earthquake's resulting offset (as estimated with the a-priori model).
+    std::sort(erthqk_vec.begin(), erthqk_vec.end(),
+        [](const ngpt::md_earthquake<T>& a,
+           const ngpt::md_earthquake<T>& b)
+        {return std::sqrt(a.a1()*a.a1()+a.a2()*a.a2())
+              > std::sqrt(b.a1()*b.a1()+b.a2()*b.a2());
+        }
+    );
+
+    // Initialize a new model (identical to the a-priori) with earthquakes.
+    ngpt::ts_model<ngpt::milliseconds> amodel{model},
+                                       nmodel{model},
+                                       logmdl{model},
+                                       expmdl{model};
+    
+    // iterators to the (sorted) earthquakes vector.
+    typename std::vector<ngpt::md_earthquake<T>>::iterator
+        it = erthqk_vec.begin(),
+        it_end = erthqk_vec.end();
+    double factor;
+
+    // Add all earthquakes from list to the model (iteratively) and check the
+    // post-fit residuals; if needed add the earthquake to the (final) model.
+    double pre_stddev;
+    std::cout<<"\n[DEBUG] Start testing for significant offsets:";
+    for (; it != it_end; ++it) {
+        // add (the next) earthquake to the model and check the residuals.
+        double ofst = it->a1();
+        logmdl = amodel;
+        expmdl = amodel;
+        logmdl.change_earthquake_at(it->start(), psd_model::log, ofst, 0.15e0);
+        expmdl.change_earthquake_at(it->start(), psd_model::exp, ofst, 0.15e0);
+        pre_stddev = std::numeric_limits<double>::max();
+        for (int iter = 0; iter < 10; iter++) {
+            ts.qr_ls_solve(logmdl, stddev_n1, 1e-3, false, false);
+            if (std::abs(stddev_n1 - pre_stddev)>1e-6) {
+                pre_stddev = stddev_n1;
+            } else {
+                break;
+            }
+        }
+        pre_stddev = std::numeric_limits<double>::max();
+        for (int iter = 0; iter < 10; iter++) {
+            ts.qr_ls_solve(expmdl, stddev_n2, 1e-3, false, false);
+            if (std::abs(stddev_n2 - pre_stddev)>1e-6) {
+                pre_stddev = stddev_n2;
+            } else {
+                break;
+            }
+        }
+        if (stddev_n1 < stddev_n2) {
+            stddev_n = stddev_n1;
+            nmodel = logmdl;
+        } else {
+            stddev_n = stddev_n2;
+            nmodel = expmdl;
+        }
+        factor = stddev_a / stddev_n;
+        if ((factor-1e0) > Ut) {
+            amodel = nmodel;
+            stddev_a = stddev_n;
+            std::cout<<"\n\t[DEBUG] Earthquake at "<<ngpt::strftime_ymd_hms(it->start())
+                <<" added to the model; factor is "<<factor
+                <<", value is: "<<it->a1();
+        } else {
+            // nmodel.change_earthquake_at(it->start(), psd_model::pwl, ofst);
             std::cout<<"\n\t[DEBUG] Earthquake at "<<ngpt::strftime_ymd_hms(it->start())
                 <<" removed from the model; factor is "
                 <<factor<<", value is: "<<it->a1();

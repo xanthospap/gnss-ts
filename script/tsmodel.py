@@ -83,8 +83,15 @@ class Earthquake:
 
     def value(self, t_mjd):
         if t_mjd < self.t: return 0e0
+        dtq = (t_mjd-self.t) / 365.25e0;
         if self.model == 0:
             return self.a1
+        elif self.model == 1:
+            te1 = dtq/self.t1
+            return self.a1 * math.log10(1e0+te1)
+        elif self.model == 2:
+            te1 = dtq/self.t1
+            return -self.a1*math.expm1(-te1)
         else:
             raise RuntimeError
 
@@ -270,10 +277,17 @@ def model_from_ascii(filename):
                         assert l[0] + ' ' + l[1] + ' ' + l[2] == 'Time of earthquake:'
                         t = datetime.datetime.strptime(l[3] + " " + l[4], "%Y-%m-%d %H:%M:%S")
                         l = fin.readline().split()
-                        assert l[0] == 'Offset:'
-                        val = float(l[1])
-                        model.add_earthquake(t, 0, val)
-                        #print('adding earthquake with val={:}'.format(val))
+                        if l[0] == 'Offset:':
+                            val = float(l[1])
+                            model.add_earthquake(t, 0, val)
+                            #print('adding earthquake with val={:}'.format(val))
+                        elif l[0] == 'Magnitude:':
+                            val = float(l[1])
+                            assert l[2] == 'Tau:'
+                            tau = float(l[3])
+                            assert l[4] == 'Mdl:'
+                            mdl = int(l[5])
+                            model.add_earthquake(t, mdl, val, tau)
                         line = fin.readline()
                 elif len(line.split()) > 2 and (line.split()[0] == 'Central' and line.split()[1] == 'Epoch'):
                     models.append(model)

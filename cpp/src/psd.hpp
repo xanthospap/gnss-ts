@@ -22,6 +22,19 @@ enum class psd_model
     expexp  ///< Two Exponential functions
 };
 
+int
+_psd2int_(psd_model x) noexcept
+{
+    switch (x) {
+        case psd_model::pwl:    return 0;
+        case psd_model::log:    return 1;
+        case psd_model::exp:    return 2;
+        case psd_model::logexp: return 3;
+        case psd_model::expexp: return 4;
+        default: return -1;
+    }
+}
+
 template<class T,
         typename = std::enable_if_t<T::is_of_sec_type>
         >
@@ -39,6 +52,14 @@ public:
       m_a2   {a2},
       m_t2   {t2}
     {}
+
+    void
+    set_psd_type(psd_model md) noexcept
+    { m_model = md; }
+
+    psd_model
+    psd_type() const noexcept
+    {return m_model;}
 
     double&
     a1() noexcept { return m_a1; }

@@ -182,6 +182,34 @@ template<class T,
         return evnt_str;
     }
 
+    /*
+    from_string(const std::string& str)
+    {
+        const char* c = str.c_str();
+        const char* start = c;
+        char *end;
+        datetime<T> t = ngpt::strptime_yod_hms(c, &end);
+
+        start = end+1;
+        double dbls[4];
+        for (int i = 0; i < 4; ++i) {
+            dbls[i] = static_cast<int>( std::abs(std::strtod(start, &end)) );
+            if (errno == ERANGE || start == end) {
+                errno = 0;
+                throw std::invalid_argument
+                    ("Invalid date format: \"" + std::string(str)
+                    +"\" (argument #" + std::to_string(i+1) + ").");
+            }
+            start = end+1;
+        }
+
+        return earthquake<T> {t, deg2rad(dbls[0]),
+                                 deg2rad(dbls[1]),
+                                 dbls[2]*1e3,
+                                 dbls[3]};
+    }
+    */
+
 private:
     ngpt::datetime<T> m_epoch; ///< The datetime it happened
     double m_lon;              ///< Epicenter longtitude (radians)

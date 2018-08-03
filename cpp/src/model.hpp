@@ -561,10 +561,10 @@ public:
                 os << "\n\tOffset: "<< j->a1();
             } 
             if ( p > 1 ) {
-                os << "\n\tMagnitude: "<<j->a1()<<", Tau: "<<j->t1();
+                os << "\n\tMagnitude: "<<j->a1()<<" Tau: "<<j->t1()<<" Mdl: "<<_psd2int_(j->psd_type());
             }
             if ( p > 3 ) {
-                os << "\n\tMagnitude: "<<j->a2()<<", Tau: "<<j->t2();
+                os << "\n\tMagnitude: "<<j->a2()<<" Tau: "<<j->t2()<<" Mdl: "<<_psd2int_(j->psd_type());
             }
         }
 
@@ -750,6 +750,26 @@ public:
         for (auto it = m_earthqs.begin(); it != m_earthqs.end(); ++it) {
             if ( it->start() == t ) {
                 m_earthqs.erase(it);
+                return;
+            }
+        }
+        /* I do not understand why this does not work! WTF???
+        auto it = std::find_if(m_earthqs.begin(), m_earthqs.end(),
+                            [&t](const md_earthquake<T>& a){a.start() == t;});
+        if (it!=m_earthqs.end()) m_earthqs.erase(it);
+        */
+    };
+    
+    void
+    change_earthquake_at(const datetime<T>& t, psd_model md, double a1=0e0, double t1=1.0e0, double a2=0e0, double t2=1.0e0) noexcept
+    {
+        for (auto it = m_earthqs.begin(); it != m_earthqs.end(); ++it) {
+            if ( it->start() == t ) {
+                it->set_psd_type(md);
+                it->a1() = a1;
+                it->a2() = a2;
+                it->t1() = t1;
+                it->t2() = t2;
                 return;
             }
         }

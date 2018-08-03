@@ -55,7 +55,8 @@ main(int argc, char* argv[])
                *event_file = nullptr,
                *erthq_file = nullptr;
     bool ctsf_found       = false;
-    bool automatic_harmonic_analysis = false;
+    bool automatic_harmonic_analysis = false,
+         test_earthquake_psd         = false;
     // Parse command line options 
     for (int i = 1; i < argc; i++) {
         if (!strcmp(argv[i], "-i")) {
@@ -92,6 +93,8 @@ main(int argc, char* argv[])
             C2 = std::atof(argv[i]);
         } else if (!strcmp(argv[i], "-a")) {
             automatic_harmonic_analysis = true;
+        } else if (!strcmp(argv[i], "-t")) {
+            test_earthquake_psd = true;
         } else {
             std::cerr<<"\n[DEBUG] Fuck is that? The switch "<<argv[i]<<" is unrelevant.";
         }
@@ -270,6 +273,12 @@ main(int argc, char* argv[])
     auto mdl_n = ngpt::filter_earthquakes(ts.x_component(), xmodel, 1e-3);
     auto mdl_e = ngpt::filter_earthquakes(ts.y_component(), ymodel, 1e-3);
     auto mdl_u = ngpt::filter_earthquakes(ts.z_component(), zmodel, 1e-3);
+    
+    if (test_earthquake_psd) {
+        mdl_n = ngpt::try_earthquakes(ts.x_component(), xmodel, 1e-3);
+        mdl_e = ngpt::try_earthquakes(ts.y_component(), ymodel, 1e-3);
+        mdl_u = ngpt::try_earthquakes(ts.z_component(), zmodel, 1e-3);
+    }
 
     // dump models to file
     std::cout<<"\nDumping component models to file: \'" 

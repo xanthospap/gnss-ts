@@ -122,7 +122,6 @@ public:
 
     using epoch   = ngpt::datetime<T>;
     using tflag   = ngpt::flag<ts_event>;
-    // using event   = std::pair<epoch, ts_event>;
     using earthq  = ngpt::earthquake<T>;
 
     /// Null constructor.
