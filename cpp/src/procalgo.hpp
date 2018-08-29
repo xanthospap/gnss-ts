@@ -174,7 +174,7 @@ template<class T>
 template<class T>
     ngpt::ts_model<T>
     try_earthquakes(ngpt::timeseries<T, ngpt::pt_marker>& ts,
-        ngpt::ts_model<T>& model, double min_mag=0e0, double Ut=1e-3)
+        ngpt::ts_model<T>& model, double min_mag=0e0, const event_list<T>* evns=nullptr, double Ut=1e-3)
 {
     
     // get the list of vectors from the input model.
@@ -200,11 +200,13 @@ template<class T>
               > std::sqrt(b.a1()*b.a1()+b.a2()*b.a2());
         }
     );
-    /*
-    erthqk_vec.erase(std::remove_if(erthqk_vec.begin(),
-                        erthqk_vec.end(),
-                        [min_mag](const ngpt::md_earthquake<T>& e){return e.magnitude() < min_mag;}),
-                    erthqk_vec.end());*/
+    
+    if (min_mag && evns) {
+        erthqk_vec.erase(std::remove_if(erthqk_vec.begin(),
+                            erthqk_vec.end(),
+                            [min_mag, &evns](const ngpt::md_earthquake<T>& e){return e.magnitude(*evns) < min_mag;}),
+                        erthqk_vec.end());
+    }
 
     // Initialize a new model (identical to the a-priori) with earthquakes.
     ngpt::ts_model<ngpt::milliseconds> amodel{model},

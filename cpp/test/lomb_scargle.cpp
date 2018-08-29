@@ -187,7 +187,8 @@ main(int argc, char* argv[])
     components.push_back(&res_ts.z_component());
     std::vector<std::string> cmp_names = 
         {std::string("North"), std::string("East"), std::string("Up")};
-
+    
+    /*
     if (automatic_harmonic_analysis) {
         double Ut = 1e-2;
         double min_ampl = 1e-3;
@@ -266,6 +267,7 @@ main(int argc, char* argv[])
             ++cit;
         }
     }
+    */
 
     // Re-apply the models, now containing (maybe) harmonic signals.
     ts.qr_fit(xmodel, ymodel, zmodel);
@@ -274,10 +276,92 @@ main(int argc, char* argv[])
     auto mdl_e = ngpt::filter_earthquakes(ts.y_component(), ymodel, 1e-3);
     auto mdl_u = ngpt::filter_earthquakes(ts.z_component(), zmodel, 1e-3);
     
+    xmodel = mdl_n;
+    ymodel = mdl_e;
+    zmodel = mdl_u;
+    if (automatic_harmonic_analysis) {
+        double Ut = 1e-2;
+        double min_ampl = 1e-3;
+        xmodel = ngpt::identify_harmonics(res_ts.x_component(), xmodel, Ut, min_ampl);
+        ymodel = ngpt::identify_harmonics(res_ts.y_component(), ymodel, Ut, min_ampl);
+        zmodel = ngpt::identify_harmonics(res_ts.z_component(), zmodel, Ut, min_ampl);
+    } else {
+        // Time-span of the time-series in days and years.
+        auto   tdif = res_ts.last_epoch().delta_date(res_ts.first_epoch());
+        double ddif = tdif.days().as_underlying_type() / 365.25;
+        double div  = 1e0/ddif;
+
+        auto it  = components.begin();
+        auto cit = cmp_names.cbegin();
+        char answr;
+        // Iterate through the components and perform harmonic analysis (via the
+        // Lomb-Scargle periodogram).
+        for (; it != components.end(); ++it) {
+            ngpt::timeseries<ngpt::milliseconds, ngpt::pt_marker> tts {**it};
+            answr = 'y';
+            std::cout<<"\nHarmonic Analysis of Component: "<<(*cit);
+            std::cout<<"\n-------------------------------------------------------";
+            std::cout<<"\nComponent written to file: "<<std::string(sname + *cit + std::string(".cmp"));
+            std::ofstream fouc { sname + *cit + std::string(".cmp") };
+            tts.dump(fouc);
+            fouc.close();
+            while (answr != 'n' && answr != 'N') {
+                std::size_t N = tts.data_pts() - tts.skipped_pts();
+                double          ofac{4},
+                                hifac{div/div},
+                                *px,
+                                *py,
+                                prob,
+                                *mempool;
+                int             nout (0.5*ofac*hifac*N+1),
+                                jmax;
+                double          days_in_year = 365.25e0;
+                if (dfreq) {
+                    std::cout<<"\n[DEBUG] Total number of days: "<<ddif * 365.25e0;
+                    minfreq = 1e0 / (ddif * 365.25e0); // 
+                    maxfreq = 1e0 / 0.5e0;             // 0.5 days frequency
+                    dfreq   = 1e-3;
+                    nout    = static_cast<int>((maxfreq-minfreq)/dfreq )+1;
+                }
+
+                mempool = new double[2*nout];
+                px      = mempool;
+                py      = mempool + nout;
+                if (!dfreq)
+                    ngpt::lomb_scargle_period(tts, ofac, hifac, px, py, nout, nout, jmax, prob);
+                else
+                    ngpt::lomb_scargle_period(tts, minfreq, maxfreq, dfreq, px, py, nout, nout, jmax, prob);
+                std::cout<<"\n\tDominant frequency in time-series: "<<px[jmax]<<" (at: "<<jmax<<")"
+                    <<"; this is a period of "<<1e0/px[jmax]<<" days";
+                std::cout<<"\n\tMinimum frequency examined is: "<<px[0]
+                    <<", i.e. a period of "<<1e0/px[0]<<" days";
+                std::cout<<"\n\tMaximum frequency examined is: "<<px[nout-1]
+                    <<", i.e. a period of "<<1e0/px[nout-1]<<" days\n";
+                std::cout<<"\nDo you want to apply the frequency to the model (y/n)?";
+                std::cin>>answr;
+                if (answr == 'y' || answr == 'Y') {
+                    ngpt::ts_model<ngpt::milliseconds> *tmp_model;
+                    if (*cit == "North")
+                        tmp_model = &xmodel;
+                    else if (*cit == "East")
+                        tmp_model = &ymodel;
+                    else
+                        tmp_model = &zmodel;
+                    tmp_model->add_period(1e0/px[jmax]);
+                    std::cout<<"\nAdded period "<<1e0/px[jmax]<<" to the model.";
+                    double post_stddev;
+                    tts = tts.qr_ls_solve(*tmp_model, post_stddev, 1e-3, false, true); 
+                }
+                delete[] mempool;
+            }
+            ++cit;
+        }
+    }
+    
     if (test_earthquake_psd) {
-        mdl_n = ngpt::try_earthquakes(ts.x_component(), xmodel, 5e0, 1e-3);
-        mdl_e = ngpt::try_earthquakes(ts.y_component(), ymodel, 5e0, 1e-3);
-        mdl_u = ngpt::try_earthquakes(ts.z_component(), zmodel, 5e0, 1e-3);
+        mdl_n = ngpt::try_earthquakes(ts.x_component(), xmodel, 5.1e0, &ts.events(), 1e-3);
+        mdl_e = ngpt::try_earthquakes(ts.y_component(), ymodel, 5.1e0, &ts.events(), 1e-3);
+        mdl_u = ngpt::try_earthquakes(ts.z_component(), zmodel, 5.1e0, &ts.events(), 1e-3);
     }
 
     // dump models to file

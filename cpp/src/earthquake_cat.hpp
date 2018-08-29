@@ -195,6 +195,7 @@ template<typename T>
     earthquake<T>
     event_string2earthquake(const std::string& str)
 {
+    errno = 0;
     const char* c = str.c_str();
     const char* start = c;
     char *end;
@@ -207,7 +208,7 @@ template<typename T>
         if (errno == ERANGE || start == end) {
             errno = 0;
             throw std::invalid_argument
-                ("Invalid date format: \"" + std::string(str)
+                ("Invalid noa earthquake format: \"" + std::string(str)
                 +"\" (argument #" + std::to_string(i+1) + ").");
         }
         start = end+1;
@@ -218,7 +219,7 @@ template<typename T>
                              dbls[2]*1e3,
                              dbls[3]};
 }
-    
+
 /// @brief Resolve a NOA earthquake catalogue file line.
 ///
 /// This function will resolve a NOA earthquake catalogue file line and

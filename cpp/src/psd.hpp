@@ -305,8 +305,15 @@ public:
     to_earthquake(const ngpt::event_list<T>& lst) const
     {
         auto evn = lst.event_at(m_start);
-        assert (evn->event_type() == ngpt::ts_event::earthquake);
-        return event_string2earthquake<T>(*evn);
+        assert (evn.event_type() == ngpt::ts_event::earthquake);
+        return event_string2earthquake<T>(evn.info_str());
+    }
+
+    double
+    magnitude(const ngpt::event_list<T>& lst) const
+    {
+        auto ethq {to_earthquake(lst)};
+        return ethq.magnitude();
     }
 
 private:

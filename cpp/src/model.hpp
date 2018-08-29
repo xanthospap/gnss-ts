@@ -1005,16 +1005,16 @@ private:
         }
         for (auto j = m_earthqs.begin(); j != m_earthqs.end(); ++j) {
             std::size_t p = j->parameters();
-            std::cout<<"\n\t -- a1 = "<<j->a1()<<" + "<<x_estim(idx);
+            //std::cout<<"\n\t -- a1 = "<<j->a1()<<" + "<<x_estim(idx);
             j->a1() += x_estim(idx); ++idx;
             if ( p > 1 ) {
-                std::cout<<"\n\t -- t1 = "<<j->t1()<<" + "<<x_estim(idx);
+                //std::cout<<"\n\t -- t1 = "<<j->t1()<<" + "<<x_estim(idx);
                 j->t1() += x_estim(idx); ++idx;
             }
             if ( p > 3 ) {
-                std::cout<<"\n\t -- a2 = "<<j->a2()<<" + "<<x_estim(idx);
+                //std::cout<<"\n\t -- a2 = "<<j->a2()<<" + "<<x_estim(idx);
                 j->a2() += x_estim(idx); ++idx;
-                std::cout<<"\n\t -- t2 = "<<j->t2()<<" + "<<x_estim(idx);
+                //std::cout<<"\n\t -- t2 = "<<j->t2()<<" + "<<x_estim(idx);
                 j->t2() += x_estim(idx); ++idx;
             }
         }
