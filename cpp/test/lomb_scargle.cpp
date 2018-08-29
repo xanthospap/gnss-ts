@@ -275,9 +275,9 @@ main(int argc, char* argv[])
     auto mdl_u = ngpt::filter_earthquakes(ts.z_component(), zmodel, 1e-3);
     
     if (test_earthquake_psd) {
-        mdl_n = ngpt::try_earthquakes(ts.x_component(), xmodel, 1e-3);
-        mdl_e = ngpt::try_earthquakes(ts.y_component(), ymodel, 1e-3);
-        mdl_u = ngpt::try_earthquakes(ts.z_component(), zmodel, 1e-3);
+        mdl_n = ngpt::try_earthquakes(ts.x_component(), xmodel, 5e0, 1e-3);
+        mdl_e = ngpt::try_earthquakes(ts.y_component(), ymodel, 5e0, 1e-3);
+        mdl_u = ngpt::try_earthquakes(ts.z_component(), zmodel, 5e0, 1e-3);
     }
 
     // dump models to file

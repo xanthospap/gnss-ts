@@ -6,6 +6,7 @@
 #include <cstdlib>
 #endif
 
+#include "event_list.hpp"
 // ggdatetime headers
 #include "ggdatetime/dtcalendar.hpp"
 
@@ -298,6 +299,14 @@ public:
 #endif
         */
         return;
+    }
+
+    auto
+    to_earthquake(const ngpt::event_list<T>& lst) const
+    {
+        auto evn = lst.event_at(m_start);
+        assert (evn->event_type() == ngpt::ts_event::earthquake);
+        return event_string2earthquake<T>(*evn);
     }
 
 private:

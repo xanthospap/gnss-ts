@@ -544,6 +544,19 @@ public:
     operator()(std::size_t i) const
     { return m_events[i]; }
 
+    /// Get the event at time t
+    event<T>
+    event_at(const epoch& t) const
+    {
+        auto it = std::find_if(m_events.cbegin(), m_events.cend(),
+            [t](const event<T>& e){return e.epoch() == t;});
+        if (it != m_events.cend()) {
+            return *it;
+        } else {
+            throw std::runtime_error("[ERROR] Not event at that time");
+        }
+    }
+
 private:
 
     /// Insert an event into the
