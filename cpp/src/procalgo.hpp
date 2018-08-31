@@ -127,9 +127,7 @@ template<class T>
     std::sort(erthqk_vec.begin(), erthqk_vec.end(),
         [](const ngpt::md_earthquake<T>& a,
            const ngpt::md_earthquake<T>& b)
-        {return std::sqrt(a.a1()*a.a1()+a.a2()*a.a2())
-              > std::sqrt(b.a1()*b.a1()+b.a2()*b.a2());
-        }
+        {return a.abs_offset() > b.abs_offset();}
     );
 
     // Initialize a new model (identical to the a-priori) with no earthquakes.
@@ -196,9 +194,7 @@ template<class T>
     std::sort(erthqk_vec.begin(), erthqk_vec.end(),
         [](const ngpt::md_earthquake<T>& a,
            const ngpt::md_earthquake<T>& b)
-        {return std::sqrt(a.a1()*a.a1()+a.a2()*a.a2())
-              > std::sqrt(b.a1()*b.a1()+b.a2()*b.a2());
-        }
+        {return a.abs_offset() > b.abs_offset();}
     );
     
     if (min_mag && evns) {

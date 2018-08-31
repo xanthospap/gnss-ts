@@ -104,6 +104,32 @@ public:
         }
         return 0;
     }
+    
+    double
+    offset() const noexcept
+    {
+        switch (m_model) {
+            case psd_model::pwl:    return m_a1;
+            case psd_model::log:    return m_a1;
+            case psd_model::exp:    return m_a1;
+            case psd_model::logexp: return m_a1+m_a2;
+            case psd_model::expexp: return m_a1+m_a2;
+        }
+        return 0;
+    }
+    
+    double
+    abs_offset() const noexcept
+    {
+        switch (m_model) {
+            case psd_model::pwl:    return std::abs(m_a1);
+            case psd_model::log:    return std::abs(m_a1);
+            case psd_model::exp:    return std::abs(m_a1);
+            case psd_model::logexp: return std::sqrt(m_a1*m_a1+m_a2*m_a2);
+            case psd_model::expexp: return std::sqrt(m_a1*m_a1+m_a2*m_a2);
+        }
+        return 0;
+    }
 
     double
     value_at(const ngpt::datetime<T>& t) const
