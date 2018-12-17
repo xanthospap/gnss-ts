@@ -103,8 +103,6 @@ main(int argc, char* argv[])
     // print the modelin json format
     std::ofstream fout_mod_json ("model.json");
     models_to_json(fout_mod_json, xmodel, ymodel, zmodel);
-    std::ofstream fout_evn_json ("events.json");
-    ts.dump_event_list_as_json(fout_evn_json);
     
     std::cout<<"\n";
 

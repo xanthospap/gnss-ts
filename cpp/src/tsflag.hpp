@@ -5,10 +5,8 @@
 /// @file  tsflag.hpp
 ///
 /// @brief This file defines the (strongly-typed) enumeration types, to be used
-///        for the timeseries<...> and crdts<...> classes.
+///        for the timeseries and crdts classes.
 ///
-/// @todo Add an example (somewhere) of how a user can adapt the enums, or make
-///       new ones to use for a time-series.
 
 #include <iostream>
 #include "genflags.hpp"
@@ -16,6 +14,8 @@
 namespace ngpt
 {
 
+/// @enum pt_marker
+///
 /// An enumeration type, to hold possible flags for (coordinate) time-series 
 /// data points.
 ///
@@ -56,8 +56,13 @@ operator<<(std::ostream& os, const flag<pt_marker>& marker)
     return os;
 }
 
-/// A (strongly typed) enumeration type to hold possible flags for coordinate
-/// time-series events.
+/// @enum ts_event
+///
+/// A (strongly typed) enumeration type to hold possible events for coordinate
+/// time-series.
+///
+/// @warning Any changes here (e.g. adding a new ts_event, will affect a big
+/// part of the rest of the code (e.g. event, event_list, etc).
 enum class ts_event
 : int
 {

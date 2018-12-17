@@ -379,7 +379,7 @@ public:
     void
     apply_stalog_file(const char* log_file)
     {
-        m_events.apply_stalog_file(log_file, first_epoch(), last_epoch());
+        m_events.apply_stalog_file(log_file/*, first_epoch(), last_epoch()*/);
     }
 
     ///
@@ -579,11 +579,13 @@ public:
         return m_events.dump_event_list(os);
     }
 
+    /*
     std::ostream&
     dump_event_list_as_json(std::ostream& os)
     {
         return m_events.dump_event_list_as_json(os);
     }
+    */
 
     const std::vector<epoch>*
     epoch_vector() const noexcept
