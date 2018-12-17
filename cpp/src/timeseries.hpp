@@ -32,6 +32,8 @@ template<class T, class F> class timeseries_iterator;
 template<class T, class F> class timeseries_const_iterator;
 template<class T, class F> class running_window;
 
+/// @class data_point
+///
 /// A time-series is a series of data points. This data_point class is designed
 /// to assist the handling of timeseries. The class itself does very little 
 /// and is pretty generic. The only limitation is that the F template parameter
@@ -112,10 +114,9 @@ private:
 
 }; // end class data_point
 
-
-/// A generic time-series class.
-/// Mean value and number of skipped points should always be correct
-/// (i.e. updated).
+/// @class timeseries
+///
+/// @brief A generic time-series class.
 ///
 /// @note     A time-series instance does **NOT** own an epoch vector; each
 ///           instance only holds a pointer to a vector of epochs. The
@@ -137,6 +138,9 @@ private:
 /// @param F  An enumeration class to act as flag; each data point of the
 ///           time-series will have a flag of type ngpt::flag<F> (see class
 ///           data_point for details).
+///
+/// @warning  Mean value and number of skipped points should always be correct
+///           (i.e. updated).
 ///
 /// @example  test_ts.cpp
 ///

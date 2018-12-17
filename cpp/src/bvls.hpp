@@ -6,7 +6,6 @@
 #include "eigen3/Eigen/Dense"
 
 // http://digitalassets.lib.berkeley.edu/sdtr/ucb/text/394.pdf
-
 bool
 kuhn_tucker_test(const Eigen::VectorXd& w, const std::set<int>& L, 
     const std::set<int>& U, const std::set<int>& F)

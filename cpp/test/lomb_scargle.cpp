@@ -54,7 +54,7 @@ main(int argc, char* argv[])
     const char *log_file   = nullptr,
                *event_file = nullptr,
                *erthq_file = nullptr;
-    bool ctsf_found       = false;
+    bool ctsf_found        = false;
     bool automatic_harmonic_analysis = false,
          test_earthquake_psd         = false;
     // Parse command line options 

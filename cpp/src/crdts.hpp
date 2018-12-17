@@ -37,10 +37,25 @@
 namespace ngpt
 {
 
-enum class coordinate_type : char
-{ cartesian, topocentric, ellipsoidal, unknown };
+/// @enum coordinate_type
+/// An enumeration to hold coordinate type
+enum class coordinate_type
+: char { 
+    cartesian,    ///< Cartesian crd (meters)
+    topocentric,  ///< Topocentric crd (meters)
+    ellipsoidal,  ///< Ellipsoidal crd (radians)
+    unknown       ///< Unknow crd type
+};
  
-/// A generic time-series class
+/// @class crdts
+/// @brief Coordinate time-series
+///
+/// A crdts instance holds information of a GNSS site time-series. It has
+/// * three individual components (m_x, m_y, m_z)
+/// * a vector of epochs (shared by the three components)
+/// * a name (aka the station name)
+/// * an event_list and 
+/// * a coordinate_type
 template<class T,
         typename = std::enable_if_t<T::is_of_sec_type>
         >
