@@ -33,6 +33,10 @@ namespace earthquake_catalogue_detail
     /// Given a datetime<T> instance, format it as a string of type:
     /// YYYY OOO DD  HH MM SS.S
     /// Where 'OOO' is the 3 first chars of the month, in uppercase.
+    /// @tparam    T  datetime instance resolution
+    /// @param[in] t  datetime<T> instance to be transformed to string
+    /// @return       string; the input datetime instance formated as:
+    ///               'YYYY OOO DD HH MM SS.S'
     template<typename T>
         std::string
         strfdt_as_noa(const ngpt::datetime<T>& t)
@@ -57,6 +61,8 @@ namespace earthquake_catalogue_detail
     }
 }
 
+/// @struct earthquake
+///
 /// @brief A simple class to hold an earthquake event.
 ///
 /// @tparam T The time precision; this can be any class (of ggdatetime), for
@@ -68,7 +74,7 @@ template<class T,
         >
     struct earthquake
 {
-    /// Defult constructor
+    /// Defult constructor (every float set to 0)
     earthquake() noexcept
     : m_epoch{},
       m_lon{0},
@@ -96,43 +102,63 @@ template<class T,
 
     /// @brief The earthquake's epoch (datetime)
     /// @return A reference to the instance's epoch
-    ngpt::datetime<T>& epoch() noexcept { return m_epoch; }
+    ngpt::datetime<T>&
+    epoch() noexcept
+    { return m_epoch; }
 
     /// @brief The earthquake's epoch (datetime)
     /// @return The instance's epoch (const version)
-    ngpt::datetime<T> epoch() const noexcept { return m_epoch; }
+    ngpt::datetime<T>
+    epoch() const noexcept
+    { return m_epoch; }
 
     /// @brief The earthquake's epicenter longtitude.
     /// @return A reference to the instance's longtitude (radians).
-    double& lon() noexcept { return m_lon; }
+    double&
+    lon() noexcept
+    { return m_lon; }
     
     /// @brief The earthquake's epicenter longtitude.
     /// @return The instance's longtitude (radians).
-    double lon() const noexcept { return m_lon; }
+    double
+    lon() const noexcept
+    { return m_lon; }
     
     /// @brief The earthquake's epicenter latitude.
     /// @return A reference to the instance's latitude (radians).
-    double& lat() noexcept { return m_lat; }
+    double&
+    lat() noexcept
+    { return m_lat; }
     
     /// @brief The earthquake's epicenter latitude..
     /// @return The instance's latitude (radians).
-    double lat() const noexcept { return m_lat; }
+    double
+    lat() const noexcept
+    { return m_lat; }
     
     /// @brief The earthquake's magnitude.
     /// @return A reference to the instance's magnitude.
-    double& magnitude() noexcept { return m_magnitude; }
+    double&
+    magnitude() noexcept
+    { return m_magnitude; }
 
     /// @brief The earthquake's magnitude.
     /// @return The instance's magnitude.
-    double magnitude() const noexcept { return m_magnitude; }
+    double
+    magnitude() const noexcept
+    { return m_magnitude; }
 
     /// @brief The earthquake's depth.
     /// @return A reference to the instance's depth (meters).
-    double& depth() noexcept { return m_depth; }
+    double&
+    depth() noexcept
+    { return m_depth; }
     
     /// @brief The earthquake's depth.
     /// @return The instance's depth (meters).
-    double depth() const noexcept { return m_depth; }
+    double
+    depth() const noexcept
+    { return m_depth; }
 
     /// @brief Return the distance of a point on the ellipsoid from the epcenter.
     ///
@@ -189,7 +215,7 @@ private:
     double m_depth;            ///< Depth (meters)
     double m_magnitude;        ///< The magnitude in (??)
 
-}; // end class earthquake
+}; // end earthquake
 
 template<typename T>
     earthquake<T>
@@ -231,9 +257,9 @@ template<typename T>
 /// 1964 FEB 24   23 30 25.0   38.90   23.90   10         5.3
 ///
 /// @parameter[in] line A line of the earthquake catalogue file (to be
-///                     resolved.
+///                     resolved (char*).
 /// @return             An earthquake instance, comprised of the information
-///                     resolved.
+///                     resolved (aka earthquake<T>).
 ///
 /// @note The information are transformed to the 'correct units' for the
 ///       instance. That is, degrees are transformed to radians, km to
@@ -297,7 +323,9 @@ template<typename T>
     return eq;
 }
 
-/// A wrapper class to hold an earthquake catalogue as distributed by noa
+/// @class earthquake_catalogue
+///
+/// @brief A wrapper class to hold an earthquake catalogue as distributed by noa
 ///
 /// The use of this class is limited to reading catalogue files; so what it
 /// is destined for, is making it easy to read in an earthquake catalogue and
@@ -334,14 +362,15 @@ public:
             throw std::invalid_argument
             ("earthquake_catalogue: Could not read header in earthquake catalogue file: \""+filename+"\"");
         }
-
     }
     
     /// No copy constructor.
-    earthquake_catalogue(const earthquake_catalogue&) = delete;
+    earthquake_catalogue
+    (const earthquake_catalogue&) = delete;
 
     /// No assignment operator.
-    earthquake_catalogue& operator=(const earthquake_catalogue&) = delete;
+    earthquake_catalogue&
+    operator=(const earthquake_catalogue&) = delete;
 
     /// Move constructor.
     earthquake_catalogue(earthquake_catalogue&& ec)
@@ -351,7 +380,8 @@ public:
     {}
 
     /// Move assignment operator.
-    earthquake_catalogue& operator=(earthquake_catalogue&& ec)
+    earthquake_catalogue&
+    operator=(earthquake_catalogue&& ec)
     {
         if (*this != ec) {
             m_filename = std::move(ec.m_filename);
@@ -371,7 +401,8 @@ public:
     ///
     /// Go to the top of the file (just after the header lines); that is, next
     /// line to be read should be the first earthquake in the catalogue.
-    void rewind() noexcept
+    void
+    rewind() noexcept
     {
         m_ifs.seekg(m_end_of_header, std::ios::beg);
         return;
@@ -392,7 +423,8 @@ public:
     /// @return         True if the (next) line was read successefuly and the
     ///                 earthquake was resolved. False if EOF was encountered.
     ///                 In case something went wrong, an exception is thrown.
-    bool read_next_earthquake(earthquake<T>& eq)
+    bool
+    read_next_earthquake(earthquake<T>& eq)
     {
         static char line[earthquake_catalogue_detail::MAX_CHARS_IN_LINE];
 
@@ -448,7 +480,8 @@ private:
     /// position to the point where the earthquake records start.
     ///
     /// @return True in case the header was read correctly; false otherwise.
-    bool read_header() noexcept
+    bool
+    read_header() noexcept
     {
         char line[earthquake_catalogue_detail::MAX_CHARS_IN_LINE];
         const char* line1 = "      DATE         TIME     LAT.   LONG.  DEPTH    MAGNITUDE";
