@@ -132,9 +132,8 @@ private:
 
 /// @class event_list
 ///
-/// This class is a list of events that affect a timeseries.
 /// A class to handle time-series events (e.g. jumps, earthquakes, etc...).
-/// N instance of this type, is actually no more than a vector of event 
+/// An instance of this type, is actually no more than a vector of event 
 /// instances **sorted** by epoch.
 ///
 /// @todo when adding an event (apply()) watch for duplicates
@@ -361,7 +360,7 @@ public:
 
     /// Split the vector of events (aka m_events) to individual vectors per
     /// event (i.e. one vector for jumps, one for velocity changes and one for
-    /// outliers. 
+    /// earthquakes. 
     /// @param[in] jumps       At output, the ordered vector of epochs where
     ///                        jumps happened
     /// @param[in] vel_changes At output, the ordered vector of epochs where
