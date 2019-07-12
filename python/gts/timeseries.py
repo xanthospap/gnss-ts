@@ -558,4 +558,5 @@ class TimeSeries:
 
     def print_as_cts(self):
         for i in range(0, self.size()):
-            print '{:s} {:+15.5f} {:9.5f} {:+15.5f} {:9.5f} {:+15.5f} {:9.5f} {:s} {:s}'.format(self.epoch_array[i].strftime('%Y-%m-%d %H:%M:%S'), self.x_array[i], self.sx_array[i], self.y_array[i], self.sy_array[i], self.z_array[i], self.sz_array[i], self.time_stamps[i].strftime('%Y-%m-%d %H:%M:%S'), self.comments[i])
+            #print '{:s} {:+15.5f} {:9.5f} {:+15.5f} {:9.5f} {:+15.5f} {:9.5f} {:s} {:s}'.format(self.epoch_array[i].strftime('%Y-%m-%d %H:%M:%S'), self.x_array[i], self.sx_array[i], self.y_array[i], self.sy_array[i], self.z_array[i], self.sz_array[i], self.time_stamps[i].strftime('%Y-%m-%d %H:%M:%S'), self.comments[i])
+            print '{:s} {:+15.5f} {:9.5f} {:+15.5f} {:9.5f} {:+15.5f} {:9.5f}'.format(self.epoch_array[i].strftime('%Y-%m-%d %H:%M:%S'), self.x_array[i], self.sx_array[i], self.y_array[i], self.sy_array[i], self.z_array[i], self.sz_array[i])
