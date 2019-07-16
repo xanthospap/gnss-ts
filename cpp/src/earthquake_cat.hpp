@@ -52,9 +52,9 @@ namespace earthquake_catalogue_detail
 
         const std::string wspace_str (1, ' ');
     
-        return _i2s_(std::get<0>(ymd).as_underlying_type(), 4) + wspace_str
-             + std::string(std::get<1>(ymd).short_name())      + wspace_str
-             + _i2s_(std::get<2>(ymd).as_underlying_type(), 2) + wspace_str
+        return _i2s_((ymd.__year).as_underlying_type(), 4) + wspace_str
+             + std::string((ymd.__month).short_name())      + wspace_str
+             + _i2s_((ymd.__dom).as_underlying_type(), 2) + wspace_str
              + _i2s_(std::get<0>(hmsf).as_underlying_type(),2) + wspace_str
              + _i2s_(std::get<1>(hmsf).as_underlying_type(),2) + wspace_str
              + _d2s_(secs, 1);

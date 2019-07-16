@@ -1937,7 +1937,7 @@ private:
         auto mjd = m_window.days();
         modified_julian_day::underlying_type t_mjd {mjd.as_underlying_type()/2};
 
-        auto sec = m_window.secs();
+        auto sec = m_window.sec();
         typename T::underlying_type t_sec {sec.as_underlying_type()/2};
 
         if ( t_mjd % 2 ) t_sec += (T::max_in_day/2);
