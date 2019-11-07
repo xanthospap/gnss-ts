@@ -139,6 +139,7 @@ main(int argc, char* argv[])
     if (erthq_file) {
         std::cout<<"\nApplying earthquake catalogue file: \'"<<erthq_file<<"\'.";
         ngpt::earthquake_catalogue<ngpt::milliseconds> eq_cat {erthq_file};
+    std::cout<<"\nRelevant Options: MIN_MAG: "<<MIN_ERTHQ_MAG<<", C1="<<C1<<" and C2="<<C2;
         ts.apply_earthquake_catalogue(eq_cat, MIN_ERTHQ_MAG, C1, C2);
     }
 

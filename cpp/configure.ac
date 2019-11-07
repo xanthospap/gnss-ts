@@ -63,6 +63,7 @@ AC_CHECK_FUNCS([floor modf pow sqrt])
 
 AC_CONFIG_FILES([Makefile
                  src/Makefile
-                 test/Makefile])
+                 test/Makefile
+                 bin/Makefile])
 
 AC_OUTPUT
