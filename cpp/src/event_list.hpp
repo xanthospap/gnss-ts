@@ -13,6 +13,10 @@
 // ggdatetime headers
 #include "ggdatetime/dtcalendar.hpp"
 #include "ggdatetime/datetime_write.hpp"
+// ggeodesy headers
+#include "ggeodesy/ellipsoid.hpp"
+#include "ggeodesy/geodesy.hpp"
+#include "ggeodesy/car2ell.hpp"
 // gtms headers
 #include "tsflag.hpp"
 #include "earthquake_cat.hpp"
@@ -150,6 +154,11 @@ public:
 
   /// Null constructor.
   event_list() noexcept {};
+
+  explicit
+  event_list(const std::vector<event<T>>& vec) noexcept
+  : m_events(vec)
+  {}
     
   /// Return a new event_list, which is a copy of the calling instance, but
   /// does not contain events that fall outside the interval [start, stop].
@@ -241,21 +250,24 @@ public:
   void
   apply_stalog_file(const char* igsfl,
       ngpt::datetime<T> start = ngpt::datetime<T>::min(), 
-      ngpt::datetime<T> stop  = ngpt::datetime<T>::max())
+      ngpt::datetime<T> stop  = ngpt::datetime<T>::max(),
+      bool apply_rec_changes=false)
   {
     ngpt::igs_log log {std::string(igsfl)};
 
-    std::string rec_chng {"Receiver Change"};
-    auto rec_changes = log.receiver_changes<T>();
+    if (apply_rec_changes) {
+      std::string rec_chng {"Receiver Change"};
+      auto rec_changes = log.receiver_changes<T>();
+      for (auto& t : rec_changes) {
+        if (t>= start && t <= stop) {
+          apply(ts_event::jump, t, rec_chng);
+        }
+      }
+    }
 
     std::string ant_chng {"Antenna Change"};
     auto ant_changes = log.antenna_changes<T>();
 
-    for (auto& t : rec_changes) {
-      if (t>= start && t <= stop) {
-        apply(ts_event::jump, t, rec_chng);
-      }
-    }
     for (auto& t : ant_changes) {
       if (t >= start && t<= stop ) {
         apply(ts_event::jump, t, ant_chng);
@@ -392,7 +404,8 @@ public:
     os << "YYYY MM DD HH mm SS **** EVENT *** COMMENT";
     for (auto i=m_events.cbegin(); i!=m_events.cend(); ++i) {
       os << "\n" << strftime_ymd_hms(i->epoch()) << "       " 
-        << event2char(i->event_type()) << "     ";
+        << event2char(i->event_type()) << "     "
+        << i->info_str();
     }
     return os;
   }
@@ -452,7 +465,7 @@ public:
       if (it->event_type() == ts_event::earthquake) {
         auto eq = resolve_noa_earthquake_line<T>(it->info_str().c_str());
 #ifdef DEBUG
-        std::cout<<"\n\tRemoving earthquake event: "<<it->info_str();
+        //std::cout<<"\n\tRemoving earthquake event: "<<it->info_str();
 #endif
         if (eq.magnitude()>max_magnitude) {
           largest_it = it;
@@ -463,14 +476,6 @@ public:
 
     // remove all earthquakes but the largest one
     const event<T> max_eq (*largest_it);
-    /*
-#ifdef DEBUG
-    std::cout<<"\nLargest earthquake in sequence is: "<<max_eq.info_str();
-    std::cout<<"\nSequence starts at: "<<start->info_str();
-    std::cout<<"\nAnd ends at: "<<stop->info_str();
-    auto __sz = std::distance(start, stop);
-#endif
-    */
     bool max_found = false;
     m_events.erase(std::remove_if(start, stop, [&](const auto& ei){
       if (ei.event_type() == ts_event::earthquake) {
@@ -482,16 +487,6 @@ public:
       } else {
         return false;
       }}), stop);
-    /*
-#ifdef DEBUG
-    std::cout<<"\nThis is the new sequence: ";
-    for (int i=0; i<__sz; i++) {
-      if ((start+i)->event_type()==ts_event::earthquake) {
-        std::cout<<"\n\tEarthquake event: "<<(start+i)->info_str();
-      }
-    }
-#endif
-  */
     // find the earthquake and get/return it's index/iterator
     largest_it = std::find_if(start, m_events.end(), [&](const auto& ei)
       {return ei.event_type()==ts_event::earthquake && ei.info_str()==max_eq.info_str();}
@@ -499,10 +494,38 @@ public:
 #ifdef DEBUG
     assert(largest_it->event_type() == ts_event::earthquake);
     assert(largest_it->info_str() == max_eq.info_str());
-    std::cout<<"\n\tInserting earthquake event: "<<largest_it->info_str();
+    //std::cout<<"\n\tInserting earthquake event: "<<largest_it->info_str();
 #endif
 
     return largest_it;
+  }
+
+  event_list<T>
+  filter_earthquakes(double stax, double stay, double staz, double min_mag=5e0,
+    double c1=-5e0, double c2=5.55) const
+  {
+    if (!m_events.size()) return event_list<T>(*this);
+
+    std::vector<event<T>> vec = this->m_events;
+    double slat, slon, shgt,
+           distance, faz, baz;
+    ngpt::car2ell<ngpt::ellipsoid::grs80>(stax, stay, staz, slat, slon, shgt);
+
+    vec.erase(std::remove_if(vec.begin(), vec.end(), [&](const event<T>& e){
+        if (e.event_type()==ts_event::earthquake) {
+          auto eq = resolve_noa_earthquake_line<T>(e.info_str().c_str());
+          if (eq.magnitude()>=min_mag) {
+            distance = eq.epicenter_distance(slat, slon, faz, baz) / 1000e0;
+            return !(eq.magnitude() >= c1+c2*std::log10(distance));
+          } else {
+            return true;
+          }
+        } else {
+          return false;
+        }
+      }), vec.end());
+
+    return event_list<T>(vec);
   }
     
   /// @brief Replace earthquake sequences with individual earthquakes.
@@ -555,50 +578,8 @@ public:
         // we have a sequence between the earthquakes at [it, it_end)
         // find the biggest earthquake within the sequence (max_it).
 #ifdef DEBUG
-        std::cout<<"\n[DEBUG] Earthquake sequence detected! The following earthquake events:";
+        //std::cout<<"\n[DEBUG] Earthquake sequence detected! The following earthquake events:";
 #endif
-        /*
-        double max_mag = 0e0;
-        auto max_it = it;
-        for (auto ij=it; ij!=it_end; ++ij) {
-          if (ij->event_type()==ts_event::earthquake) {
-            auto eq = resolve_noa_earthquake_line<T>(ij->info_str().c_str());
-#ifdef DEBUG
-            std::cout<<"\n\t\t* "<<ij->info_str();
-#endif
-            if (eq.magnitude() > max_mag) {
-              max_mag = eq.magnitude();
-              max_it  = ij;
-            }
-          }
-        }
-        // store max earthquake (as an event).
-#ifdef DEBUG
-        std::cout<<"\n\tReplaced with "<<max_it->info_str();
-#endif
-        event<T> max_event {*max_it};
-        // (remove-)erase every earthquake in the sequence.
-        std::size_t elements_removed = 0;
-        auto pte = std::remove_if(it, it_end,
-            [&elements_removed](event<T> e){
-              if (e.event_type() == ts_event::earthquake) {
-                ++elements_removed;
-                return true;
-              }
-                return false;
-            });
-        m_events.erase(pte, pte+elements_removed);
-        // (sorted) insert the max earthquake (to replace the sequence).
-        this->sorted_insert(max_event);
-        // re-establish the iterator.
-        it  = m_events.begin()+pos;
-#ifdef DEBUG
-        auto it__ = std::find_if(m_events.begin()+pos, m_events.end(),
-            [](const event<T>& e)
-          {return (e.event_type() == ts_event::earthquake);});
-        assert(it==it__);
-#endif
-        */
         it = replace_sequence_with_largest(it, it_end);
       } // (else)
     } // (while)
@@ -624,6 +605,10 @@ public:
       throw std::runtime_error("[ERROR] Not event at that time");
     }
   }
+  
+  std::vector<event<T>>&
+  get_the_vector() noexcept
+  { return this->m_events; }
 
 private:
 

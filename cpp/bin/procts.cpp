@@ -193,7 +193,14 @@ main(int argc, char* argv[])
   // Note that the residuals of this estimation are stored at res_ts, which
   // is a new time-series.
   std::cout<<"\nPerforming initial modeling (no harmonics modeled but all events considered).";
-  ngpt::ts_model<ngpt::milliseconds> xmodel { ts.events() };
+  double xsta = std::get<0>(mean_crd_xyz), 
+         ysta = std::get<1>(mean_crd_xyz), 
+         zsta = std::get<2>(mean_crd_xyz);
+  auto big_events = ts.events().filter_earthquakes(xsta, ysta, zsta);
+  std::cout<<"\nSmall earthquake sequences removed; Number of events: "
+    << big_events.size();
+  // ngpt::ts_model<ngpt::milliseconds> xmodel { ts.events() };
+  ngpt::ts_model<ngpt::milliseconds> xmodel { big_events };
   xmodel.mean_epoch() = ts.mean_epoch();
   auto ymodel {xmodel},
        zmodel {xmodel};
@@ -216,7 +223,6 @@ main(int argc, char* argv[])
     
   // Re-apply the models, now containing (maybe) harmonic signals.
   ts.qr_fit(xmodel, ymodel, zmodel);
-
   auto mdl_n = ngpt::filter_earthquakes(ts.x_component(), xmodel, 1e-3);
   auto mdl_e = ngpt::filter_earthquakes(ts.y_component(), ymodel, 1e-3);
   auto mdl_u = ngpt::filter_earthquakes(ts.z_component(), zmodel, 1e-3);
@@ -224,6 +230,7 @@ main(int argc, char* argv[])
   xmodel = mdl_n;
   ymodel = mdl_e;
   zmodel = mdl_u;
+  xmodel.dump(std::cout);
   if (automatic_harmonic_analysis) {
     double Ut = 1e-2;
     double min_ampl = 1e-3;
@@ -286,14 +293,21 @@ main(int argc, char* argv[])
             tmp_model = &zmodel;
           tmp_model->add_period(1e0/px[jmax]);
           std::cout<<"\nAdded period "<<1e0/px[jmax]<<" to the model.";
+          tmp_model->dump(std::cout);
           double post_stddev;
           tts = tts.qr_ls_solve(*tmp_model, post_stddev, 1e-3, false, true); 
+          tmp_model->dump(std::cout);
         }
         delete[] mempool;
       }
       ++cit;
     }
   }
+  xmodel.dump(std::cout);
+  // copy harmonics
+  mdl_n.harmonics() = xmodel.harmonics();
+  mdl_e = ymodel;
+  mdl_u = zmodel;
 
   if (test_earthquake_psd) {
     mdl_n = ngpt::try_earthquakes(ts.x_component(), xmodel, 5.1e0, &ts.events(), 1e-3);
@@ -316,6 +330,13 @@ main(int argc, char* argv[])
   fout<<"\n";
   mdl_u.dump(fout);
   fout.close();
+  
+  // dump events to file
+  std::cout<<"\nDumping events to file: \'" 
+    << std::string(sname + std::string(".evn")) <<"\'.";
+  std::ofstream fout_evn { sname + std::string(".evn") };
+  ts.dump_event_list(fout_evn);
+  fout_evn.close();
 
   std::cout<<"\nModeling done; exiting!\n";
   return 0;
