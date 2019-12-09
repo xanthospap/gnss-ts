@@ -940,7 +940,7 @@ public:
     
     /// Return a copy of the harmonics vector of the model.
     std::vector<md_harmonics<T>>&
-    harmonics() const noexcept
+    harmonics() noexcept
     { return m_harmonics; }
 
     /// Return a copy of the earthquake events vector of the model.

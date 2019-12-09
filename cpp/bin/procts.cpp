@@ -39,6 +39,7 @@ help()
   std::cout<<"\n    of earthquakes happens within EARTHQUAKE_LAG days, then they";
   std::cout<<"\n    will be replaced by **one** earthquake, which will be the";
   std::cout<<"\n    largest in magnitude. Default value is "<<DAYS_APART<<" days";
+  std::cout<<"\n-t  Test eqrthquakes for fitting a PSD model";
   std::cout<<"\nNote on switches m, c1 and c2: When reading through an earthquake";
   std::cout<<"\ncatalogue file, the program will search through the events and";
   std::cout<<"\nonly consider the earthquakes wich satisfy the following condition:";
@@ -209,7 +210,10 @@ main(int argc, char* argv[])
     << "\'original.ts\'";
   std::ofstream f1 {"original.ts"};
   ts.dump(f1, true, false);
+  // std::ofstream fres {"res.ts"};
+  // res_ts.dump(fres, true, false);
   f1.close();
+  // fres.close();
 
   // Treat each component individualy (for harmonic analysis). Make a vector
   // of components so we can easily iterate through.
@@ -230,7 +234,6 @@ main(int argc, char* argv[])
   xmodel = mdl_n;
   ymodel = mdl_e;
   zmodel = mdl_u;
-  xmodel.dump(std::cout);
   if (automatic_harmonic_analysis) {
     double Ut = 1e-2;
     double min_ampl = 1e-3;
@@ -293,26 +296,23 @@ main(int argc, char* argv[])
             tmp_model = &zmodel;
           tmp_model->add_period(1e0/px[jmax]);
           std::cout<<"\nAdded period "<<1e0/px[jmax]<<" to the model.";
-          tmp_model->dump(std::cout);
           double post_stddev;
           tts = tts.qr_ls_solve(*tmp_model, post_stddev, 1e-3, false, true); 
-          tmp_model->dump(std::cout);
         }
         delete[] mempool;
       }
       ++cit;
     }
   }
-  xmodel.dump(std::cout);
   // copy harmonics
   mdl_n.harmonics() = xmodel.harmonics();
-  mdl_e = ymodel;
-  mdl_u = zmodel;
+  mdl_e.harmonics() = ymodel.harmonics();
+  mdl_u.harmonics() = zmodel.harmonics();
 
   if (test_earthquake_psd) {
-    mdl_n = ngpt::try_earthquakes(ts.x_component(), xmodel, 5.1e0, &ts.events(), 1e-3);
-    mdl_e = ngpt::try_earthquakes(ts.y_component(), ymodel, 5.1e0, &ts.events(), 1e-3);
-    mdl_u = ngpt::try_earthquakes(ts.z_component(), zmodel, 5.1e0, &ts.events(), 1e-3);
+    mdl_n = ngpt::try_earthquakes(ts.x_component(), xmodel, 5.1e0, /*&ts.events(),*/ 1e-3);
+    mdl_e = ngpt::try_earthquakes(ts.y_component(), ymodel, 5.1e0, /*&ts.events(),*/ 1e-3);
+    mdl_u = ngpt::try_earthquakes(ts.z_component(), zmodel, 5.1e0, /*&ts.events(),*/ 1e-3);
   }
 
   // dump models to file

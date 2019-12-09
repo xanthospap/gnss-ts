@@ -360,9 +360,12 @@ main(int argc, char* argv[])
     }
     
     if (test_earthquake_psd) {
+      /*
         mdl_n = ngpt::try_earthquakes(ts.x_component(), xmodel, 5.1e0, &ts.events(), 1e-3);
         mdl_e = ngpt::try_earthquakes(ts.y_component(), ymodel, 5.1e0, &ts.events(), 1e-3);
         mdl_u = ngpt::try_earthquakes(ts.z_component(), zmodel, 5.1e0, &ts.events(), 1e-3);
+        */
+      std::cout<<"\nSkipping test for PSD";
     }
 
     // dump models to file

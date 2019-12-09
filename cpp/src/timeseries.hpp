@@ -696,7 +696,7 @@ public:
         // Note that at this point the residuals are scaled according to each
         // data points weight! (We actualy solved not Ax=b but QAx=Qb)
         Eigen::VectorXd u = Eigen::VectorXd(observations);
-        u = A * x - b;
+        u = b - A *x; //A * x - b;
     
         // assign solution vector to the model.
         model.assign_solution_vector(x);
