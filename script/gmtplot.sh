@@ -91,6 +91,8 @@ echo "[DEBUG] Here are the limits: ${wesn[0]} and ${wesn[1]}"
 this_year=$(echo ${wesn[1]} | awk -F"-" '{print $1}')
 next_year=$(echo ${wesn[1]} | awk -F"-" '{print $1+1}')
 wesn[1]="${next_year}-Jan-01T00:00:00"
+#wesn[0]="2020-Feb-01T00:00:00"
+#wesn[1]="2020-Apr-31T00:00:00"
 echo "[DEBUG] Here are the limits: ${wesn[0]} and ${wesn[1]}"
 
 ##  Limits for x,y,z / n,e,u plots

@@ -205,7 +205,7 @@ template<class T>
   std::vector<ngpt::md_earthquake<T>> erthqk_vec {model.earthquakes()};
 
   // no earthquakes; quick return
-  if ( !erthqk_vec.size() ) return model;
+  if (!erthqk_vec.size()) return model;
     
   double stddev_a, // previous std. dev
          stddev_n, // next (this) std. dev
@@ -293,7 +293,7 @@ template<class T>
       nmodel = expmdl;
     }
     factor = stddev_a / stddev_n;
-    if ((factor-1e0) > Ut && ) {
+    if ((factor-1e0) > Ut) {
       amodel = nmodel;
       stddev_a = stddev_n;
       std::cout<<"\n\t[DEBUG] Earthquake at "<<ngpt::strftime_ymd_hms(it->start())

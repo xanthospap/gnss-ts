@@ -307,8 +307,8 @@ public:
     double sinl { std::sin(lon) };
     double cosl { std::cos(lon) };
 
-    ngpt::detail::car2top_matrix(sinf, sinl, cosf, cosl, cf);
-    ngpt::detail::car2top_cov_matrix(sinf*sinf, sinl*sinl, cosf*cosf, cosl*cosl, cf_s);
+    ngpt::core::car2top_matrix(sinf, sinl, cosf, cosl, cf);
+    ngpt::core::car2top_cov_matrix(sinf*sinf, sinl*sinl, cosf*cosf, cosl*cosl, cf_s);
 
 #ifdef DEBUG
     assert( m_x.data_pts() == m_y.data_pts() && m_y.data_pts() == m_z.data_pts() && m_x.data_pts() == size() );

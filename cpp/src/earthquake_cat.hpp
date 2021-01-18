@@ -17,6 +17,7 @@
 #include "ggeodesy/ellipsoid.hpp"
 #include "ggeodesy/geodesy.hpp"
 #include "ggeodesy/vincenty.hpp"
+#include "ggeodesy/units.hpp"
 
 namespace ngpt
 {
@@ -199,8 +200,8 @@ template<class T,
     using ngpt::_i2s_;
 
     std::string evnt_str = earthquake_catalogue_detail::strfdt_as_noa(m_epoch);
-    evnt_str += "   " + _d2s_(rad2deg(m_lat), 2);
-    evnt_str += "   " + _d2s_(rad2deg(m_lon), 2);
+    evnt_str += "   " + _d2s_(ngpt::rad2deg<double>(m_lat), 2);
+    evnt_str += "   " + _d2s_(ngpt::rad2deg<double>(m_lon), 2);
     evnt_str += "   " + _i2s_((static_cast<int>(m_depth/1e3)), 3);
     evnt_str += "   " + _d2s_(m_magnitude, 1);
     return evnt_str;
@@ -240,8 +241,14 @@ resolve_noa_earthquake_line(const char* line)
   float info[4];
   const char *start(line);
   char *end;
-  //datetime<T> eph = ngpt::strptime_yod_hms<T>(line, &start);
-  datetime<T> eph = ngpt::strptime_yod_hms<T>(line, &end);
+  datetime<T> eph;
+  try {
+    eph = ngpt::strptime_yod_hms<T>(line, &end);
+  } catch (std::invalid_argument& e) {
+    std::cerr<<"\n[ERROR]@resolve_noa_earthquake_line() : "<<e.what();
+    std::cerr<<"\n[ERROR] Invalid date format at line: \""<<line<<"\"\n";
+    throw e;
+  }
   start = end;
 
   for (int i=0; i<4; ++i) {
@@ -255,7 +262,7 @@ resolve_noa_earthquake_line(const char* line)
     start = end;
   }
 
-  earthquake<T> eqt {eph, deg2rad(info[0]), deg2rad(info[1]), info[2]/1000e0, info[3]};
+  earthquake<T> eqt {eph, ngpt::deg2rad<double>(info[0]), deg2rad<double>(info[1]), info[2]/1000e0, info[3]};
   return eqt;
 }
 

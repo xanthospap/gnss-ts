@@ -317,9 +317,16 @@ public:
 
     while (fin.getline(line, 256)) {
       // if not comment line, empty line, or header ...
-      if ( *line != '#' && *line != 'Y' && *line != ' ' ) { 
+      if (*line != '#' && *line != 'Y' && *line != ' ') { 
         cbegin = line;
-        t = ngpt::strptime_ymd_hms<T>(line, &cbegin);
+        try {
+          t = ngpt::strptime_ymd_hms<T>(line, &cbegin);
+        } catch (std::invalid_argument& e) {
+          std::cerr<<"\n[ERROR]@apply_event_list_file() :"<<e.what();
+          std::cerr<<"\n[ERROR] Failed to resolve event list file line: \""<<line<<"\"";
+          std::cerr<<"\n[ERROR] Input file: \""<<evn_file<<"\"";
+          throw e;
+        }
         bool resolved = false;
         for (int i=0; i<14 && !resolved; ++i) {
           if (*cbegin != ' ') {
@@ -455,6 +462,7 @@ public:
   replace_sequence_with_largest(typename std::vector<event<T>>::iterator start,
     typename std::vector<event<T>>::iterator stop)
   {
+    std::cout<<"\n[DEBUG] calling function replace_sequence_with_largest()";
     auto end = m_events.end();
     if (start==end) return m_events.end();
 
@@ -504,6 +512,7 @@ public:
   filter_earthquakes(double stax, double stay, double staz, double min_mag=5e0,
     double c1=-5e0, double c2=5.55) const
   {
+    std::cout<<"\n[DEBUG] calling function filter_earthquakes()";
     if (!m_events.size()) return event_list<T>(*this);
 
     std::vector<event<T>> vec = this->m_events;

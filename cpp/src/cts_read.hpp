@@ -172,7 +172,7 @@ template<class T,
     constexpr std::size_t MAX_CHARS {256};
 
     std::ifstream ifs (cts_file.c_str(), std::ifstream::in);
-    if ( !ifs.is_open() ) {
+    if (!ifs.is_open()) {
         throw std::invalid_argument("[ERROR] Cannot find file \""+cts_file+"\"");
     }
 
@@ -185,11 +185,18 @@ template<class T,
     crdts<T> ts {ts_name};
     std::size_t line_counter = 0;
 
-    while ( ifs.getline(line, MAX_CHARS) ) {
-        if ( *line != '#' ) {
+    while (ifs.getline(line, MAX_CHARS)) {
+        if (*line != '#') {
+          try {
             epoch = ngpt::strptime_ymd_hms<T>(line, &cptr);
+          } catch (std::invalid_argument& e) {
+            std::cerr<<"\n[ERROR]@cts_read() : "<<e.what();
+            std::cerr<<"\n[ERROR] Invalid date format at line: \""<<line<<"\"";
+            std::cerr<<"\n[ERROR] Input file: \""<<cts_file<<"\"";
+            throw e;
+          }
             ++cptr;
-            for (int i = 0; i < 6; ++i) {
+            for (int i=0; i<6; ++i) {
                 data[i] = std::strtod(cptr, &end);
                 if (errno == ERANGE) {
                     errno = 0;
