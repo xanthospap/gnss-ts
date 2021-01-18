@@ -1,7 +1,7 @@
 #include "tsflag.hpp"
 
-using ngpt::ts_event;
 using ngpt::pt_marker;
+using ngpt::ts_event;
 
 /// Convert a ts_event to its identifing character.
 ///
@@ -13,16 +13,17 @@ using ngpt::pt_marker;
 ///
 /// @warning Make sure all possible enum types (of ts_event class) are treated
 ///          here.
-char
-ngpt::event2char(ts_event event) noexcept
-{
-    switch (event)
-    {
-        case ts_event::jump:            return 'j';
-        case ts_event::earthquake:      return 'e';
-        case ts_event::velocity_change: return 'v';
-        default: return 'x';
-    }
+char ngpt::event2char(ts_event event) noexcept {
+  switch (event) {
+  case ts_event::jump:
+    return 'j';
+  case ts_event::earthquake:
+    return 'e';
+  case ts_event::velocity_change:
+    return 'v';
+  default:
+    return 'x';
+  }
 }
 
 /// For any enumeration type that can be wrapped around the flag (template)
@@ -38,10 +39,8 @@ ngpt::event2char(ts_event event) noexcept
 ///
 /// @note  The function implementation actually uses the function flag::is_clean
 ///        for checking.
-bool
-ngpt::__skip__(ngpt::flag<pt_marker> p) noexcept
-{
-    return /* p.check(pt_marker::outlier) || p.check(pt_marker::skip);
-              or more simply ... */
-           !p.is_clean();
+bool ngpt::__skip__(ngpt::flag<pt_marker> p) noexcept {
+  return /* p.check(pt_marker::outlier) || p.check(pt_marker::skip);
+            or more simply ... */
+      !p.is_clean();
 }

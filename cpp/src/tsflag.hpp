@@ -8,29 +8,25 @@
 ///        for the timeseries and crdts classes.
 ///
 
-#include <iostream>
 #include "genflags.hpp"
+#include <iostream>
 
-namespace ngpt
-{
+namespace ngpt {
 
 /// @enum pt_marker
 ///
-/// An enumeration type, to hold possible flags for (coordinate) time-series 
+/// An enumeration type, to hold possible flags for (coordinate) time-series
 /// data points.
 ///
 /// @warning If a new pt_marker enum is added (or removed), most of the
 ///          functions in this file should change!
-enum class pt_marker
-: int
-{
-    outlier = 1, ///< Signify an outlier
-    skip    = 2  ///< Signify a data-point that must be skipped
+enum class pt_marker : int {
+  outlier = 1, ///< Signify an outlier
+  skip = 2     ///< Signify a data-point that must be skipped
 };
 
 /// Check if a data-point with a certain flag should be ignored (i.e. skipped).
-bool
-__skip__(flag<pt_marker> p) noexcept;
+bool __skip__(flag<pt_marker> p) noexcept;
 
 /// @brief Write a flag<pt_marker> instance.
 ///
@@ -47,13 +43,13 @@ __skip__(flag<pt_marker> p) noexcept;
 /// @param[in] os      The stream to write the instance at.
 /// @param[in] marker  The flag<pt_marker> to write.
 /// @return            The output stream (after writting)
-std::ostream&
-operator<<(std::ostream& os, const flag<pt_marker>& marker)
-{
-    if ( marker.check(pt_marker::outlier) ) os << 'o';
-    if ( marker.check(pt_marker::skip) ) os << 's';
+std::ostream &operator<<(std::ostream &os, const flag<pt_marker> &marker) {
+  if (marker.check(pt_marker::outlier))
+    os << 'o';
+  if (marker.check(pt_marker::skip))
+    os << 's';
 
-    return os;
+  return os;
 }
 
 /// @enum ts_event
@@ -63,17 +59,14 @@ operator<<(std::ostream& os, const flag<pt_marker>& marker)
 ///
 /// @warning Any changes here (e.g. adding a new ts_event, will affect a big
 /// part of the rest of the code (e.g. event, event_list, etc).
-enum class ts_event
-: int
-{
-    jump               = 1, ///< A jump in the time-series (i.e. offset)
-    earthquake         = 2, ///< An earthquake
-    velocity_change    = 4  ///< A velocity change
+enum class ts_event : int {
+  jump = 1,           ///< A jump in the time-series (i.e. offset)
+  earthquake = 2,     ///< An earthquake
+  velocity_change = 4 ///< A velocity change
 };
 
 /// @brief Convert a ts_event to its identifing character.
-char
-event2char(ts_event event) noexcept;
+char event2char(ts_event event) noexcept;
 
 } // namespace ngpt
 
