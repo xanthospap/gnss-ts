@@ -7,6 +7,8 @@ noinst_PROGRAMS = \
                 synthetic \
 		stalogrd
 
+check_PROGRAMS = testTsFlag
+
 MCXXFLAGS = \
 	-std=c++17 \
 	-g \
@@ -26,6 +28,10 @@ AM_LDFLAGS = -lggeodesy -lggdatetime
 test_ts_SOURCES   = test_ts.cpp
 test_ts_CXXFLAGS  = $(MCXXFLAGS) -I$(top_srcdir)/src -L$(top_srcdir)/src
 test_ts_LDADD     = $(top_srcdir)/src/libgtms.la
+
+testTsFlag_SOURCES   = test_ts_flag.cc
+testTsFlag_CXXFLAGS  = $(MCXXFLAGS) -I$(top_srcdir)/src -L$(top_srcdir)/src
+testTsFlag_LDADD     = $(top_srcdir)/src/libgtms.la
 
 lomb_scargle_SOURCES   = lomb_scargle.cpp
 lomb_scargle_CXXFLAGS  = $(MCXXFLAGS) -I$(top_srcdir)/src -L$(top_srcdir)/src

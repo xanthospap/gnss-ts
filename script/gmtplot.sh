@@ -75,7 +75,7 @@ then
     gmt set FORMAT_DATE_IN yyyy-mm-dd
     gmt set FORMAT_DATE_MAP o
     gmt set FORMAT_TIME_PRIMARY_MAP abbreviated
-    gmt set FORMAT_DATE_OUT yyyy-o-dd
+    gmt set FORMAT_DATE_OUT yyyy-mm-dd
     if ! ./mjd2ymdhms.py -f ${cts_file} -s 1 -d ',' > ${cts_file}.tmp
     then
         echoerr "[ERROR] Failed to transform dates in input file."
@@ -90,7 +90,7 @@ fi
 echo "[DEBUG] Here are the limits: ${wesn[0]} and ${wesn[1]}"
 this_year=$(echo ${wesn[1]} | awk -F"-" '{print $1}')
 next_year=$(echo ${wesn[1]} | awk -F"-" '{print $1+1}')
-wesn[1]="${next_year}-Jan-01T00:00:00"
+#wesn[1]="${next_year}-Jan-01T00:00:00"
 #wesn[0]="2020-Feb-01T00:00:00"
 #wesn[1]="2020-Apr-31T00:00:00"
 echo "[DEBUG] Here are the limits: ${wesn[0]} and ${wesn[1]}"
@@ -173,7 +173,7 @@ do
     then
         echo "R option=${R[$it]}"
         gmt psbasemap "${R[$it]}" -JX10i/2i -K ${Osw} \
-            -Bsx1Y -Bpxa${osw}Of1o \
+            -Bsxpa7Rf1d -Bpxa1OS \
             -Bpy"${YAI[$it]}"+l${comp} -B"${XAT[$it]}"+t"Time Series"+glightgreen \
             ${Ysh} >> $ps
     else
@@ -228,7 +228,7 @@ do
     cat ${cts_file} | \
         awk -F "," -v y=$ycol '{print $1,$y}' | \
         gmt psxy "${R[$it]}" -J \
-        -Wthin,red  -Gblack -Sc.05 \
+        -Wthin,red  -Gblack -Sc.13 \
         -h --IO_N_HEADER_RECS=1 -O -K >> $ps
 
     if test "${PLOT_MODEL}" -eq 1

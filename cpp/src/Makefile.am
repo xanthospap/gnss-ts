@@ -23,6 +23,7 @@ dist_include_HEADERS = \
         cfft.hpp \
 	genflags.hpp \
 	tsflag.hpp \
+	ts_flag.hpp \
 	timeseries.hpp \
 	period.hpp \
 	cts_read.hpp \

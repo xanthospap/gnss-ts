@@ -10,6 +10,7 @@
 
 #include "genflags.hpp"
 #include <iostream>
+#include <cstdint>
 
 namespace ngpt {
 
@@ -20,7 +21,7 @@ namespace ngpt {
 ///
 /// @warning If a new pt_marker enum is added (or removed), most of the
 ///          functions in this file should change!
-enum class pt_marker : int {
+enum class pt_marker : uint_fast8_t {
   outlier = 1, ///< Signify an outlier
   skip = 2     ///< Signify a data-point that must be skipped
 };
@@ -59,7 +60,7 @@ std::ostream &operator<<(std::ostream &os, const flag<pt_marker> &marker) {
 ///
 /// @warning Any changes here (e.g. adding a new ts_event, will affect a big
 /// part of the rest of the code (e.g. event, event_list, etc).
-enum class ts_event : int {
+enum class ts_event : uint_fast8_t {
   jump = 1,           ///< A jump in the time-series (i.e. offset)
   earthquake = 2,     ///< An earthquake
   velocity_change = 4 ///< A velocity change
