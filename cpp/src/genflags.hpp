@@ -1,5 +1,5 @@
-#ifndef __GENERIC_NGPT_FLAGS__
-#define __GENERIC_NGPT_FLAGS__
+#ifndef __GENERIC_NGPT_FLAGS_HPP__
+#define __GENERIC_NGPT_FLAGS_HPP__
 
 ///
 /// @file genflags.hpp
@@ -100,6 +100,6 @@ public:
 
 }; // flag<FlagEnum>
 
-} // ngpt
+} // namespace ngpt
 
 #endif

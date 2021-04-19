@@ -1,22 +1,15 @@
-#ifndef __NGPT_NOA_EARTHQUAKE_CATALOGUE2_HPP__
-#define __NGPT_NOA_EARTHQUAKE_CATALOGUE2_HPP__
+#ifndef __NGPT_NOA_EARTHQUAKE_CATALOGUE_HPP__
+#define __NGPT_NOA_EARTHQUAKE_CATALOGUE_HPP__
 
 ///
 /// @brief This file defines classes and functions to treat earthquake events
 ///
 
 #include "earthquake.hpp"
-#include "ggdatetime/datetime_read.hpp"
-#include "ggdatetime/datetime_write.hpp"
 #include "ggdatetime/dtcalendar.hpp"
 #include "ggdatetime/dtfund.hpp"
-#include "ggeodesy/ellipsoid.hpp"
-#include "ggeodesy/geodesy.hpp"
-#include "ggeodesy/units.hpp"
-#include "ggeodesy/vincenty.hpp"
 #include <cstring>
 #include <fstream>
-#include <stdexcept>
 
 namespace ngpt {
 

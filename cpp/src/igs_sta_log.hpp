@@ -1,7 +1,6 @@
 #ifndef __NGPT_IGS_LOG_FILE_HPP__
-#define __NGPT_IGS_LOG_FILE_HPP_
+#define __NGPT_IGS_LOG_FILE_HPP__
 
-#include <cassert>
 #include <fstream>
 #include <ggdatetime/dtcalendar.hpp>
 #include <string>

@@ -5,9 +5,7 @@
 #include <cfenv>
 #include <cstdlib>
 #endif
-
 #include "event_list.hpp"
-// ggdatetime headers
 #include "ggdatetime/dtcalendar.hpp"
 
 namespace ngpt {
@@ -37,10 +35,9 @@ int _psd2int_(psd_model x) noexcept {
   }
 }
 
-template <class T, typename = std::enable_if_t<T::is_of_sec_type>>
 class md_earthquake {
 public:
-  explicit md_earthquake(ngpt::datetime<T> t, psd_model md, double a1 = 0e0,
+  explicit md_earthquake(ngpt::datetime<ngpt::milliseconds> t, psd_model md, double a1 = 0e0,
                          double t1 = 1.0e0, double a2 = 0e0,
                          double t2 = 1.0e0) noexcept
       : m_model{md}, m_start{t}, m_a1{a1}, m_t1{t1}, m_a2{a2}, m_t2{t2} {}
@@ -57,7 +54,7 @@ public:
 
   double &t2() noexcept { return m_t2; }
 
-  ngpt::datetime<T> &start() noexcept { return m_start; }
+  ngpt::datetime<ngpt::milliseconds> &start() noexcept { return m_start; }
 
   double a1() const noexcept { return m_a1; }
 
@@ -67,7 +64,7 @@ public:
 
   double t2() const noexcept { return m_t2; }
 
-  ngpt::datetime<T> start() const noexcept { return m_start; }
+  ngpt::datetime<ngpt::milliseconds> start() const noexcept { return m_start; }
 
   std::size_t parameters() const noexcept {
     switch (m_model) {
@@ -117,7 +114,7 @@ public:
     return 0;
   }
 
-  double value_at(const ngpt::datetime<T> &t) const {
+  double value_at(const ngpt::datetime<ngpt::milliseconds> &t) const {
     if (t <= this->start())
       return 0e0;
 
@@ -154,7 +151,7 @@ public:
     return d;
   }
 
-  void diriv_at(const ngpt::datetime<T> &t, double &da1, double &dt1,
+  void diriv_at(const ngpt::datetime<ngpt::milliseconds> &t, double &da1, double &dt1,
                 double &da2, double &dt2) const {
     auto dt_intvr = ngpt::delta_date(t, this->start());
     double dtq = dt_intvr.as_mjd() / 365.25e0;
@@ -215,10 +212,10 @@ public:
 
 private:
   psd_model m_model;
-  ngpt::datetime<T> m_start;
+  ngpt::datetime<ngpt::milliseconds> m_start;
   double m_a1, m_t1, m_a2, m_t2;
 }; // md_earthquake
 
-} // namespace ngpt
+} // ngpt
 
 #endif

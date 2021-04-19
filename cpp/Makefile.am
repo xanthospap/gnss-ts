@@ -1,1 +1,1 @@
-SUBDIRS = src test bin
+SUBDIRS = src test

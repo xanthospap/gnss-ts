@@ -1,8 +1,7 @@
 #include "earthquake.hpp"
 #include "ggdatetime/datetime_read.hpp"
 #include "ggdatetime/datetime_write.hpp"
-#include "ggdatetime/dtcalendar.hpp"
-#include "ggdatetime/dtfund.hpp"
+#include "ggeodesy/units.hpp"
 #include <cstring>
 #include <fstream>
 #include <stdexcept>

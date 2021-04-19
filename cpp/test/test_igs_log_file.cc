@@ -10,7 +10,7 @@ int main(int argc, char* argv[]) {
     return 1;
   }
 
-  int status;
+  // int status;
 
   // create an igs_log instance
   igs_log log{std::string(argv[1])};

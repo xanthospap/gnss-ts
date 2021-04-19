@@ -1,5 +1,5 @@
-#ifndef __NGPT_EARTHQUAKE_CATALOGUE2_HPP__
-#define __NGPT_EARTHQUAKE_CATALOGUE2_HPP__
+#ifndef __NGPT_EARTHQUAKE_HPP__
+#define __NGPT_EARTHQUAKE_HPP__
 
 ///
 /// @brief This file defines classes and functions to treat earthquake events
@@ -7,12 +7,8 @@
 
 #include "ggdatetime/dtcalendar.hpp"
 #include "ggeodesy/ellipsoid.hpp"
-#include "ggeodesy/geodesy.hpp"
-#include "ggeodesy/units.hpp"
 #include "ggeodesy/vincenty.hpp"
-#include <cstring>
 #include <fstream>
-#include <stdexcept>
 
 namespace ngpt {
 

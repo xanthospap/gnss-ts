@@ -1,0 +1,4 @@
+YYYY MM DD HH MM SS EVENT COMMENT
+2014 05 30 12 00 00   j
+2014 05 30 12 07 59   v   Can have two events on the same date, with different type
+2014 05 30 12 07 59   e   

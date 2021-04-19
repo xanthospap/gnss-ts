@@ -1,6 +1,7 @@
 #include "earthquake_catalogue.hpp"
+#include "ggdatetime/datetime_read.hpp"
+#include "ggeodesy/units.hpp"
 #include <exception>
-#include <ggdatetime/dtfund.hpp>
 
 /// @brief Constructor using a filename.
 ngpt::earthquake_catalogue::earthquake_catalogue(const std::string &filename)
@@ -74,9 +75,6 @@ int ngpt::earthquake_catalogue::read_next_earthquake(earthquake &eq) noexcept {
 
   if (!m_ifs.getline(line, earthquake_catalogue_detail::MAX_CHARS_IN_LINE)) {
     if (!m_ifs.eof()) {
-      /*throw std::invalid_argument("read_next_earthquake: Error reading "
-                                  "earthquake catalogue file: \"" +
-                                  m_filename + "\".");*/
       return -1;
     }
     return 1;

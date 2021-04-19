@@ -2,13 +2,13 @@
 #include "ggdatetime/datetime_read.hpp"
 #include "ggdatetime/datetime_write.hpp"
 #include <cassert>
-#include <ggdatetime/dtfund.hpp>
+#include <exception>
 
 /// Check if a string is empty (aka full of whitespace chars).
 ///
 /// @param[in] str A C-string
 /// @return    true if string is empty, false otherwise.
-int str_is_empty(const char *str) noexcept {
+bool str_is_empty(const char *str) noexcept {
   while (*str) {
     if (!isspace((unsigned char)*str))
       return false;

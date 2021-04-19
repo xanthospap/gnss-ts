@@ -13,7 +13,7 @@ AM_INIT_AUTOMAKE
 
 AC_LANG(C++)
 
-AC_CONFIG_SRCDIR([src/crdts.hpp])
+AC_CONFIG_SRCDIR([src/ts_flag.hpp])
 AC_CONFIG_HEADERS([config.h])
 
 # Libtool

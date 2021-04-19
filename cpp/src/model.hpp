@@ -1,16 +1,13 @@
-#ifndef __NGPT_TS_MODEL__
-#define __NGPT_TS_MODEL__
+#ifndef __NGPT_TS_MODEL_HPP__
+#define __NGPT_TS_MODEL_HPP__
 
 #include <iostream>
 #ifdef DEBUG
 #include <cfenv>
 #include <cstdlib>
 #endif
-// Eigen headers
 #include "eigen3/Eigen/Core"
-// ggdatetime headers
 #include "ggdatetime/dtcalendar.hpp"
-// gtms headers
 #include "event_list.hpp"
 #include "psd.hpp"
 
@@ -23,33 +20,15 @@ namespace ngpt {
 ///           which is_of_sec_type is true. This means that T could be e.g.
 ///           ngpt::seconds, ngpt::milliseconds, etc. The individual epochs
 ///           (time points) will have a time-stamp of type ngpt::datetime<T>.
-template <class T, typename = std::enable_if_t<T::is_of_sec_type>>
-class md_jump {
-public:
+struct md_jump {
   /// Constructor.
   /// @param[in] start  The epoch the jump happened.
   /// @param[in] offset The value of the offset (default is 0).
-  explicit md_jump(ngpt::datetime<T> start, double offset = 0e0,
+  explicit md_jump(ngpt::datetime<ngpt::milliseconds> start, double offset = 0e0,
                    double stdd = 0e0) noexcept
       : m_start{start}, m_offset{offset}, m_stddev{stdd} {};
 
-  /// Get the epoch the jump happened at (const).
-  datetime<T> start() const noexcept { return m_start; }
-
-  /// Get the value of the offset (const).
-  double value() const noexcept { return m_offset; }
-
-  /// Get the value of the offset (non-const).
-  double &value() noexcept { return m_offset; }
-
-  /// Get the std. deviation value of the offset (const).
-  double stddev() const noexcept { return m_stddev; }
-
-  /// Get the value of the offset (non-const).
-  double &stddev() noexcept { return m_stddev; }
-
-private:
-  ngpt::datetime<T> m_start; ///< When the "jump" occured.
+  ngpt::datetime<ngpt::milliseconds> m_start; ///< When the "jump" occured.
   double m_offset;           ///< Value (i.e. offset amplitude).
   double m_stddev;           ///< Std. deviation of the estimated value.
 
@@ -63,9 +42,7 @@ private:
 ///           ngpt::seconds, ngpt::milliseconds, etc. The individual epochs
 ///           (time points) will have a time-stamp of type ngpt::datetime<T>.
 ///@note      Angular frequency (i.e. ω) is given by: ω = 2πf = ω = 2π/T
-template <class T, typename = std::enable_if_t<T::is_of_sec_type>>
-class md_harmonics {
-public:
+struct md_harmonics {
   /// Constructor.
   /// @param[in] period    The period of the harmonic.
   /// @param[in] start     Start of the validity interval (default value
@@ -76,8 +53,8 @@ public:
   /// @param[in] out_phase Amplitude of the out-of-phase component.
   //
   explicit md_harmonics(double period,
-                        ngpt::datetime<T> start = ngpt::datetime<T>::min(),
-                        ngpt::datetime<T> stop = ngpt::datetime<T>::max(),
+                        ngpt::datetime<ngpt::milliseconds> start = ngpt::datetime<ngpt::milliseconds>::min(),
+                        ngpt::datetime<ngpt::milliseconds> stop = ngpt::datetime<ngpt::milliseconds>::max(),
                         double in_phase = 0e0, double out_phase = 0e0,
                         double in_phase_stddev = 0e0,
                         double out_phase_stddev = 0e0) noexcept
@@ -85,41 +62,11 @@ public:
         m_in_phase{in_phase}, m_in_stddev{in_phase_stddev},
         m_out_phase{out_phase}, m_out_stddev{out_phase_stddev} {};
 
-  /// Get the starting epoch (of the validity interval).
-  ngpt::datetime<T> start() const noexcept { return m_start; }
-
-  /// Get the ending epoch (of the validity interval).
-  ngpt::datetime<T> stop() const noexcept { return m_stop; }
-
   /// Get the angular frequency (ω = 2πf).
   double angular_frequency() const noexcept { return m_afreq; }
 
   /// Get the period (i.e. T = 2π/ω).
   double period() const noexcept { return D2PI / m_afreq; }
-
-  /// Get the in-phase component amplitude (const version).
-  double in_phase() const noexcept { return m_in_phase; }
-
-  /// Get the out-of-phase component amplitude (const version).
-  double out_of_phase() const noexcept { return m_out_phase; }
-
-  /// Get the in-phase component amplitude (non-const version).
-  double &in_phase() noexcept { return m_in_phase; }
-
-  /// Get the out-of-phase component amplitude (non-const version).
-  double &out_of_phase() noexcept { return m_out_phase; }
-
-  /// Get the in-phase component std. deviation (const version).
-  double in_phase_stddev() const noexcept { return m_in_stddev; }
-
-  /// Get the out-of-phase component std. deviation (const version).
-  double out_phase_stddev() const noexcept { return m_out_stddev; }
-
-  /// Get the in-phase component std. deviation (non-const version).
-  double &in_phase_stddev() noexcept { return m_in_stddev; }
-
-  /// Get the out-of-phase component std. deviation (non-const version).
-  double &out_phase_stddev() noexcept { return m_out_stddev; }
 
   /// Get the amplitude of the harmonic signal, i.e. if the harmonic is:
   /// A*sin(ωt) + B*cos(ωt), then its aplitude is sqrt(A^2 + B^2).
@@ -128,7 +75,7 @@ public:
   }
 
 private:
-  ngpt::datetime<T> m_start, ///< Starting epoch of the harmonic
+  ngpt::datetime<ngpt::milliseconds> m_start, ///< Starting epoch of the harmonic
       m_stop;                ///< Ending epoch of the harmonic
   double m_afreq,            ///< Angular frequency (i.e. ω)
       m_in_phase,            ///< In-Phase component (amplitude)
@@ -144,43 +91,24 @@ private:
 /// @tparam T The time precision; this can be any class (of ggdatetime), for
 ///           which is_of_sec_type is true. This means that T could be e.g.
 ///           ngpt::seconds, ngpt::milliseconds, etc. The individual epochs
-///           (time points) will have a time-stamp of type ngpt::datetime<T>.
-template <class T, typename = std::enable_if_t<T::is_of_sec_type>>
-class md_velocity_change {
-public:
-  /// Constructor. The stop date defaults to ngpt::datetime<T>::max().
+///           (time points) will have a time-stamp of type ngpt::datetime<ngpt::milliseconds>.
+struct md_velocity_change {
+  
+  /// Constructor. The stop date defaults to ngpt::datetime<ngpt::milliseconds>::max().
   /// @param[in] start   The starting epoch of this velocity change.
   /// @param[in] stop    The end epoch of this velocity change; default is
-  ///                    ngpt::datetime<T>::max(), i.e. this velocity change
+  ///                    ngpt::datetime<ngpt::milliseconds>::max(), i.e. this velocity change
   ///                    starts at epoch start and never stops.
   /// @param[in] new_vel The magnitude of the velocity change.
-  explicit md_velocity_change(ngpt::datetime<T> start,
-                              ngpt::datetime<T> stop = ngpt::datetime<T>::max(),
+  explicit md_velocity_change(ngpt::datetime<ngpt::milliseconds> start,
+                              ngpt::datetime<ngpt::milliseconds> stop = ngpt::datetime<ngpt::milliseconds>::max(),
                               double new_vel = 0e0,
                               double new_vel_stddev = 0e0) noexcept
       : m_start{start}, m_stop{stop}, m_newvel{new_vel}, m_newvel_stddev{
                                                              new_vel_stddev} {};
 
-  /// Get the start date (start of validity interval), const version.
-  ngpt::datetime<T> start() const noexcept { return m_start; }
-
-  /// Get the stop date (end of validity interval), const version.
-  ngpt::datetime<T> stop() const noexcept { return m_stop; }
-
-  /// Get the velocity change magnitude (const version).
-  double value() const noexcept { return m_newvel; }
-
-  /// Get the velocity change magnitude (non-const version).
-  double &value() noexcept { return m_newvel; }
-
-  /// Get the velocity change std. deviation (const version).
-  double stddev() const noexcept { return m_newvel_stddev; }
-
-  /// Get the velocity change std. deviation (non-const version).
-  double &stddev() noexcept { return m_newvel_stddev; }
-
 private:
-  ngpt::datetime<T> m_start, ///< Start of validity niterval.
+  ngpt::datetime<ngpt::milliseconds> m_start, ///< Start of validity niterval.
       m_stop;                ///< End of validity interval.
   double m_newvel,           ///< Magnitude of velocity change.
       m_newvel_stddev;       ///< Velocity change std. deviation.
@@ -197,9 +125,9 @@ private:
 /// md_velocity_change, plus a simple linear model (i.e. x0 and Vx0 parameters);
 /// so if no md_jump, md_harmonics or md_velocity_change are added, then the
 /// model defaults to a linear one.
-/// Every instance also hold am epoch (i.e. datetime<T>) member variable,
+/// Every instance also hold am epoch (i.e. datetime<ngpt::milliseconds>) member variable,
 /// which is the central epoch of computation/estimation.
-template <class T> class ts_model {
+class ts_model {
 public:
   /// Constructor; this default to a linear model.
   ts_model() noexcept : m_x0{0e0}, m_vx{0e0} {};
@@ -221,24 +149,11 @@ public:
   ///                   - jumps
   ///                   - velocity changes
   ///                   - earthquakes
-  explicit ts_model(const event_list<T> &events) noexcept
-      : m_x0{0e0}, m_vx{0e0} {
-    for (auto it = events.it_cbegin(); it != events.it_cend(); ++it) {
-      if (it->event_type() == ts_event::jump) {
-        m_jumps.emplace_back(it->epoch());
-      } else if (it->event_type() == ts_event::velocity_change) {
-        m_vel_changes.emplace_back(it->epoch());
-      } else if (it->event_type() == ts_event::earthquake) {
-        m_earthqs.emplace_back(it->epoch(), psd_model::pwl);
-      }
-    }
-    ngpt::datetime<T> t0{modified_julian_day{0}, T{0}};
-    m_mean_epoch = t0;
-  }
+  explicit ts_model(const event_list &events) noexcept;
 
-  /// Given a vector of epochs (aka datetime<T> instances), compute the model
+  /// Given a vector of epochs (aka datetime<ngpt::milliseconds> instances), compute the model
   /// values at the corresponding datetimes.
-  /// @param[in] epochs A (reference to) vector of epochs (aka datetime<T>)
+  /// @param[in] epochs A (reference to) vector of epochs (aka datetime<ngpt::milliseconds>)
   /// @return    A vector of doubles, where each entry i is the corresponding
   ///            model value at epochs[i].
   /// @note
@@ -248,8 +163,11 @@ public:
   ///            epoch from the mean epoch as mjd (aka difference is in days)
   /// @todo    I do not like the fact that the velocity model parameters are
   ///          set to annual.
-  std::vector<double> make_model(const std::vector<datetime<T>> &epochs) const {
-    assert(epochs.size());
+  std::vector<double> make_model(const std::vector<datetime<ngpt::milliseconds>> &epochs) const {
+    if (!epochs.size()) {
+      return std::vector<double>{};
+    }
+
     double value = 0e0, mean_mjd = m_mean_epoch.as_mjd(), dt = 0e0;
     std::vector<double> vals;
     vals.reserve(epochs.size());
@@ -341,7 +259,7 @@ public:
   ///                      in the range, i.e. the range is [start, stop)
   /// @param[in] tinterval The step size to construct epochs in the range
   ///                      [start, stop)
-  /// @param[in] epoch_vec Pointer to a vector of epochs (aka datetime<T>).
+  /// @param[in] epoch_vec Pointer to a vector of epochs (aka datetime<ngpt::milliseconds>).
   ///                      If not provided (defaults to nullptr), then it is
   ///                      not used; else, it is cleared and filled in with
   ///                      the time points for which the model value was
@@ -353,9 +271,9 @@ public:
   ///                      [start, stop). I.e. result[i] is the model value
   ///                      for time t = start + i*tinterval.
   std::vector<double>
-  make_model(datetime<T> start, datetime<T> stop,
+  make_model(datetime<ngpt::milliseconds> start, datetime<ngpt::milliseconds> stop,
              datetime_interval<T> tinterval,
-             std::vector<datetime<T>> *epoch_vec = nullptr) const {
+             std::vector<datetime<ngpt::milliseconds>> *epoch_vec = nullptr) const {
     assert(start < stop);
     assert(tinterval.as_mjd() > 0e0);
 
@@ -365,8 +283,8 @@ public:
         1;
 
     // construct vector of epochs or fill in the one passed in
-    std::vector<datetime<T>> *tvec;
-    std::vector<datetime<T>> epochs;
+    std::vector<datetime<ngpt::milliseconds>> *tvec;
+    std::vector<datetime<ngpt::milliseconds>> epochs;
     if (epoch_vec) {
       epoch_vec->clear();
       if (epoch_vec->capacity() < size_hint)
@@ -376,7 +294,7 @@ public:
       epochs.reserve(size_hint);
       tvec = &epochs;
     }
-    datetime<T> t = start;
+    datetime<ngpt::milliseconds> t = start;
     while (t < stop) {
       tvec->emplace_back(t);
       t += tinterval;
@@ -484,11 +402,11 @@ public:
     for (auto j = m_harmonics.begin(); j != m_harmonics.end(); ++j) {
       os << "\n\t" << j->in_phase() << " (in-phase)   ";
       os << "From: "
-         << (j->start() == datetime<T>::min()
+         << (j->start() == datetime<ngpt::milliseconds>::min()
                  ? "start"
                  : strftime_ymd_hms<T>(j->start()));
       os << " To: "
-         << (j->stop() == datetime<T>::max() ? "end"
+         << (j->stop() == datetime<ngpt::milliseconds>::max() ? "end"
                                              : strftime_ymd_hms<T>(j->stop()));
       os << " Period: " << j->period();
       os << "\n\t" << j->out_of_phase() << " (out-of-pase)";
@@ -507,11 +425,11 @@ public:
     for (auto j = m_vel_changes.begin(); j != m_vel_changes.end(); ++j) {
       os << "\n\t" << j->value();
       os << " From: "
-         << (j->start() == datetime<T>::min()
+         << (j->start() == datetime<ngpt::milliseconds>::min()
                  ? "start"
                  : strftime_ymd_hms<T>(j->start()));
       os << " To: "
-         << (j->stop() == datetime<T>::max() ? "end"
+         << (j->stop() == datetime<ngpt::milliseconds>::max() ? "end"
                                              : strftime_ymd_hms<T>(j->stop()));
     }
 
@@ -579,8 +497,8 @@ public:
 
   /// @todo this needs documentation
   void dump_as_json(std::ostream &os) const {
-    double min_mjd = datetime<T>::min().as_mjd();
-    double max_mjd = datetime<T>::max().as_mjd();
+    double min_mjd = datetime<ngpt::milliseconds>::min().as_mjd();
+    double max_mjd = datetime<ngpt::milliseconds>::max().as_mjd();
 
     os << "{\n";
 
@@ -597,10 +515,10 @@ public:
       for (auto j = m_harmonics.begin(); j != m_harmonics.end(); ++j) {
         os << "\n{\"in_phase\":" << j->in_phase();
         os << ",\n\"from\":"
-           << (j->start() == datetime<T>::min() ? min_mjd
+           << (j->start() == datetime<ngpt::milliseconds>::min() ? min_mjd
                                                 : (j->start().as_mjd()));
         os << ",\n\"to\":"
-           << (j->stop() == datetime<T>::max() ? max_mjd
+           << (j->stop() == datetime<ngpt::milliseconds>::max() ? max_mjd
                                                : (j->stop().as_mjd()));
         os << ",\n\"period\":" << j->period();
         os << ",\n\"out_of_phase\":" << j->out_of_phase() << "}";
@@ -626,10 +544,10 @@ public:
       for (auto j = m_vel_changes.begin(); j != m_vel_changes.end(); ++j) {
         os << "\n{\"value\":" << j->value() << ",";
         os << ",\n\"from\":"
-           << (j->start() == datetime<T>::min() ? min_mjd
+           << (j->start() == datetime<ngpt::milliseconds>::min() ? min_mjd
                                                 : j->start().as_mjd());
         os << ",\n\"to\":"
-           << (j->stop() == datetime<T>::max() ? max_mjd : j->stop().as_mjd())
+           << (j->stop() == datetime<ngpt::milliseconds>::max() ? max_mjd : j->stop().as_mjd())
            << "}";
         if (j != m_vel_changes.end() - 1)
           os << ",";
@@ -661,13 +579,13 @@ public:
   /// @param[in] in_phase  Amplitude of the in-phase component.
   /// @param[in] out_phase Amplitude of the out-of-phase component.
   /// @param[in] start     Start of the validity interval (default value
-  ///                      datetime<T>::min()).
+  ///                      datetime<ngpt::milliseconds>::min()).
   /// @param[in] stop      End of the validity interval (default value
-  ///                      datetime<T>::max()).
+  ///                      datetime<ngpt::milliseconds>::max()).
   void add_period(double period, double in_phase = 0e0,
                   double out_of_phase = 0e0,
-                  datetime<T> start = datetime<T>::min(),
-                  datetime<T> stop = datetime<T>::max()) noexcept {
+                  datetime<ngpt::milliseconds> start = datetime<ngpt::milliseconds>::min(),
+                  datetime<ngpt::milliseconds> stop = datetime<ngpt::milliseconds>::max()) noexcept {
     m_harmonics.emplace_back(period, start, stop, in_phase, out_of_phase);
   }
 
@@ -676,7 +594,7 @@ public:
   /// to this md_model.
   /// @param[in] at  The epoch the jump happened.
   /// @param[in] val The value of the offset (default is 0).
-  void add_jump(datetime<T> at, double val = 0e0) noexcept {
+  void add_jump(datetime<ngpt::milliseconds> at, double val = 0e0) noexcept {
     m_jumps.emplace_back(at, val);
   }
 
@@ -686,15 +604,15 @@ public:
   /// @param[in] start   The starting epoch of this velocity change.
   /// @param[in] val     The magnitude of the velocity change.
   /// @param[in] stop    The end epoch of this velocity change; default is
-  ///                    ngpt::datetime<T>::max(), i.e. this velocity change
+  ///                    ngpt::datetime<ngpt::milliseconds>::max(), i.e. this velocity change
   ///                    starts at epoch start and never stops.
   void add_velocity_change(
-      datetime<T> start, double val = 0e0,
-      ngpt::datetime<T> stop = ngpt::datetime<T>::max()) noexcept {
+      datetime<ngpt::milliseconds> start, double val = 0e0,
+      ngpt::datetime<ngpt::milliseconds> stop = ngpt::datetime<ngpt::milliseconds>::max()) noexcept {
     m_vel_changes.emplace_back(start, stop, val);
   }
 
-  void add_earthquake(datetime<T> start, psd_model m, double a1 = 1e-3,
+  void add_earthquake(datetime<ngpt::milliseconds> start, psd_model m, double a1 = 1e-3,
                       double t1 = 1e-1, double a2 = 1e-3,
                       double t2 = 1e-1) noexcept {
     m_earthqs.emplace_back(start, m, a1, t1, a2, t2);
@@ -707,7 +625,7 @@ public:
   /// Remove an earthquake from the earthquake events vector, given a date.
   /// The function will search for an earthquake that has happened at this
   /// date and if found, it will remove it from the model.
-  void erase_earthquake_at(const datetime<T> &t) noexcept {
+  void erase_earthquake_at(const datetime<ngpt::milliseconds> &t) noexcept {
     for (auto it = m_earthqs.begin(); it != m_earthqs.end(); ++it) {
       if (it->start() == t) {
         m_earthqs.erase(it);
@@ -721,7 +639,7 @@ public:
      */
   };
 
-  void change_earthquake_at(const datetime<T> &t, psd_model md, double a1 = 0e0,
+  void change_earthquake_at(const datetime<ngpt::milliseconds> &t, psd_model md, double a1 = 0e0,
                             double t1 = 1.0e0, double a2 = 0e0,
                             double t2 = 1.0e0) noexcept {
     for (auto it = m_earthqs.begin(); it != m_earthqs.end(); ++it) {
@@ -785,7 +703,7 @@ public:
   ///
   /// @todo The delta-times are scaled by year. I need to do something
   ///       different with this ... e.g. introduce a scale factor.
-  void assign_row(Eigen::MatrixXd &A, Eigen::VectorXd &b, const datetime<T> &t,
+  void assign_row(Eigen::MatrixXd &A, Eigen::VectorXd &b, const datetime<ngpt::milliseconds> &t,
                   double w, double dt, double y, std::size_t row) const {
     std::size_t col{0};
     //  the observation model value based on approximate values; this is
@@ -868,11 +786,11 @@ public:
 
   /// Get the mean epoch of the model (aka the central epoch of computation).
   /// Const version.
-  datetime<T> mean_epoch() const noexcept { return m_mean_epoch; }
+  datetime<ngpt::milliseconds> mean_epoch() const noexcept { return m_mean_epoch; }
 
   /// Get the mean epoch of the model (akak the central epoch of computation).
   /// Non-Const version.
-  datetime<T> &mean_epoch() noexcept { return m_mean_epoch; }
+  datetime<ngpt::milliseconds> &mean_epoch() noexcept { return m_mean_epoch; }
 
   /// Get the constant linear term (const version).
   double x0() const noexcept { return m_x0; }
@@ -925,12 +843,12 @@ private:
   double m_x0, ///< const linear term.
       m_vx,    ///< linear velocity
       m_x0_stddev, m_vx_stddev;
-  std::vector<md_jump<T>> m_jumps;          ///< vector of jumps
-  std::vector<md_harmonics<T>> m_harmonics; ///< vector of harmonics
-  std::vector<md_velocity_change<T>>
+  std::vector<md_jump> m_jumps;          ///< vector of jumps
+  std::vector<md_harmonics> m_harmonics; ///< vector of harmonics
+  std::vector<md_velocity_change>
       m_vel_changes;                       ///< vector of velocity changes
-  std::vector<md_earthquake<T>> m_earthqs; ///< vector of earthquakes
-  datetime<T> m_mean_epoch; ///< mean epoch (aka central computation epoch)
+  std::vector<md_earthquake> m_earthqs; ///< vector of earthquakes
+  datetime<ngpt::milliseconds> m_mean_epoch; ///< mean epoch (aka central computation epoch)
 
   void add_solution_vector(const Eigen::VectorXd &x_estim) {
     assert(x_estim.size() >= 2 &&
