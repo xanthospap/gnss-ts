@@ -1,12 +1,15 @@
 #include "ts_flag.hpp"
+#include "genflags.hpp"
 #include <cassert>
 
-using ngpt::data_flag;
 
 int main() {
 
+  using pt_marker_flag = ngpt::flag<ngpt::pt_marker>;
+
   // construct an instance; should be clean
-  data_flag f;
+  // ngpt::flag<ngpt::pt_marker> f;
+  pt_marker_flag f;
   assert(f.is_clean());
 
   // set it to an outlier
@@ -26,13 +29,13 @@ int main() {
   assert(!f.is_set(ngpt::pt_marker::outlier) && !f.is_set(ngpt::pt_marker::skip) && f.is_clean());
 
   // by now we should have un-set everything
-  assert(f == data_flag{});
+  assert(f == ngpt::flag<ngpt::pt_marker>{});
   
   // set all, and clear
   f.clear(ngpt::pt_marker::outlier);
   f.set(ngpt::pt_marker::skip);
   f.clear();
-  assert(f == data_flag{});
+  assert(f == ngpt::flag<ngpt::pt_marker>{});
 
   return 0;
 }

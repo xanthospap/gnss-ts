@@ -5,25 +5,26 @@
 /// @brief This file defines classes and functions to treat earthquake events
 ///
 
-#include <cstring>
-#include <fstream>
-#include <stdexcept>
 #include "ggdatetime/dtcalendar.hpp"
 #include "ggeodesy/ellipsoid.hpp"
 #include "ggeodesy/geodesy.hpp"
 #include "ggeodesy/units.hpp"
 #include "ggeodesy/vincenty.hpp"
+#include <cstring>
+#include <fstream>
+#include <stdexcept>
 
 namespace ngpt {
+
 /// @struct earthquake
 ///
 /// @brief A simple class to hold an earthquake event.
 struct earthquake {
   ngpt::datetime<ngpt::milliseconds> m_epoch; ///< The datetime it happened
-  double m_lon;        ///< Epicenter longtitude (radians)
-  double m_lat;        ///< Epicenter latitude (radians)
-  double m_depth;      ///< Depth (meters)
-  double m_magnitude;  ///< The magnitude in (??)
+  double m_lon;       ///< Epicenter longtitude (radians)
+  double m_lat;       ///< Epicenter latitude (radians)
+  double m_depth;     ///< Depth (meters)
+  double m_magnitude; ///< The magnitude in (??)
 
   /// @brief Return the distance of a point on the ellipsoid from the epcenter.
   ///
@@ -46,7 +47,7 @@ struct earthquake {
                             double &bkw_az) const {
     return inverse_vincenty<E>(m_lat, m_lon, lat, lon, frw_az, bkw_az, 1e-12);
   }
-  
+
   /// @brief Concatenate the earthquake elements to  a string.
   ///
   /// The elements (aka instance variables) are joined to a string; the
@@ -59,8 +60,19 @@ struct earthquake {
   /// 1964 FEB 24   23 30 25.0   38.90   23.90   10         5.3
   std::string to_string() const noexcept;
 
-};// earthquake
+}; // earthquake
 
-}//ngpt
+/// @brief Format a datetime<T> instance based on the NOA catalogue files.
+///
+/// Given a datetime<T> instance, format it as a string of type:
+/// YYYY OOO DD  HH MM SS.S
+/// Where 'OOO' is the 3 first chars of the month, in uppercase.
+/// @tparam    T  datetime instance resolution
+/// @param[in] t  datetime<T> instance to be transformed to string
+/// @return       string; the input datetime instance formated as:
+///               'YYYY OOO DD HH MM SS.S'
+std::string strfdt_as_noa(const ngpt::datetime<ngpt::milliseconds> &t);
+
+} // namespace ngpt
 
 #endif

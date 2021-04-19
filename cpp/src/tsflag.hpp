@@ -9,8 +9,8 @@
 ///
 
 #include "genflags.hpp"
-#include <iostream>
 #include <cstdint>
+#include <iostream>
 
 namespace ngpt {
 

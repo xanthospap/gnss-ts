@@ -23,6 +23,20 @@ enum class pt_marker : uint_fast8_t {
   skip = 0x0002     ///< Signify a data-point that must be skipped
 };
 
+/// @enum ts_event
+///
+/// A (strongly typed) enumeration type to hold possible events for coordinate
+/// time-series.
+///
+/// @warning Any changes here (e.g. adding a new ts_event, will affect a big
+/// part of the rest of the code (e.g. event, event_list, etc).
+enum class ts_event : uint_fast8_t {
+  jump = 1,           ///< A jump in the time-series (i.e. offset)
+  earthquake = 2,     ///< An earthquake
+  velocity_change = 4 ///< A velocity change
+};
+
+/*
 struct data_flag {
   uint_fast8_t bitflag{0};
 
@@ -63,6 +77,7 @@ struct data_flag {
   bool operator!=(data_flag f) const noexcept { return !(this->operator==(f)); }
 
 }; // data_flag
+*/
 
 } // namespace ngpt
 

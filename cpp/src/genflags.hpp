@@ -78,7 +78,9 @@ public:
   /// Check if a FlagEnum is set (i.e. on).
   /// @param[in] f  Check if this FlagEnum is "switched on".
   /// @return true if FlagEnum f is set; false otherwise.
-  bool check(FlagEnum f) const noexcept { return _f & static_cast<ft>(f); }
+  bool is_set(FlagEnum f) const noexcept { return _f & static_cast<ft>(f); }
+  /* TODO the following is obsolete */
+  bool check(FlagEnum f) const noexcept { return this->is_set(f); }
 
   /// Check if a flag is clean (nothing is set).
   /// @return true if instance has no FlagEnum set; false otherwise.
@@ -96,8 +98,8 @@ public:
   ///         else true.
   bool operator!=(flag f) const noexcept { return !(this->operator==(f)); }
 
-}; // class flag<FlagEnum>
+}; // flag<FlagEnum>
 
-} // namespace ngpt
+} // ngpt
 
 #endif

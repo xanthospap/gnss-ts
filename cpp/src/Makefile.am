@@ -28,14 +28,20 @@ dist_include_HEADERS = \
 	period.hpp \
 	cts_read.hpp \
 	earthquake_cat.hpp \
+	earthquake.hpp \
+	earthquake_catalogue.hpp \
 	event_list.hpp \
 	psd.hpp \
 	model.hpp \
 	crdts.hpp \
 	artificial.hpp \
 	stalogrd.hpp \
+        igs_sta_log.hpp \
 	procalgo.hpp
 
 dist_libgtms_la_SOURCES = \
 	tsflag.cpp \
-        cfft.cpp
+        cfft.cpp \
+	earthquake.cpp \
+	earthquake_catalogue.cpp \
+        igs_sta_log.cpp
