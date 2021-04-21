@@ -1,19 +1,12 @@
 #ifndef __NGPT_TIMESERIES_HPP__
 #define __NGPT_TIMESERIES_HPP__
 
-#include <algorithm>
-#include <ggdatetime/dtfund.hpp>
-#include <iterator>
-#include <tuple>
 #include <vector>
 #ifdef DEBUG
 #include <cstdio>
 #include <iomanip>
 #include <iostream>
 #endif
-#include "eigen3/Eigen/Core"
-#include "eigen3/Eigen/Dense"
-#include "eigen3/Eigen/QR"
 #include "ggdatetime/dtcalendar.hpp"
 // #include "model.hpp"
 #include "genflags.hpp"
@@ -71,7 +64,7 @@ struct data_point {
     return (m_value == other.m_value && m_sigma == other.m_sigma) &&
            (m_flag == other.m_flag);
   }
-  bool operator!=(const data_point& other) const noexcept {
+  bool operator!=(const data_point &other) const noexcept {
     return !(*this == other);
   }
 
@@ -152,7 +145,8 @@ public:
   /// timeseries<...> ts1 { ... };
   /// timeseries<...> ts2{ts1, 10, 100} will copy to ts2 all ts2 values
   /// between indexes [10,...,99]
-  timeseries(const timeseries &ts, std::size_t start = 0, std::size_t end = 0);
+  timeseries(const timeseries &ts) noexcept
+      : m_epochs(ts.m_epochs), m_data(ts.m_data){};
 
   /// Move constructor.
   /// @note The resluting time-serie's epoch vector (pointer), will be set to
@@ -181,10 +175,10 @@ public:
     return *this;
   }
 
-  bool operator==(const timeseries& other) const noexcept {
+  bool operator==(const timeseries &other) const noexcept {
     return m_epochs == other.m_epochs && m_data == other.m_data;
   }
-  bool operator!=(const timeseries& other) const noexcept {
+  bool operator!=(const timeseries &other) const noexcept {
     return !this->operator==(other);
   }
 
@@ -194,40 +188,83 @@ public:
   /// @return A tuple (pair) containing the two new time-series.
   ///
   /// @todo   What the fuck should i do with the epochs of each sub-timeseries??
+  /*
   auto split(std::size_t idx) const {
     timeseries left(*this, 0, idx);
     timeseries right(*this, idx);
     return std::make_tuple(std::move(left), std::move(right));
   }
+  */
 
   /// Add a data point; returns the new mean value.
   /// @note   The instance's mean value is updated; so is the number of
   ///         skipped data points (if needed).
   /// @return The updated time-series mean value.
   void add_point(double val, double sigma = 1e-3,
-                   dp_flag f = dp_flag{}) noexcept {
+                 dp_flag f = dp_flag{}) noexcept {
     m_data.emplace_back(data_point{val, sigma, f});
   }
 
-  std::size_t mark(ngpt::pt_marker type, ngpt::datetime<ngpt::milliseconds> start = ngpt::datetime<ngpt::milliseconds>::min(), ngpt::datetime<ngpt::milliseconds> end=ngpt::datetime<ngpt::milliseconds>::max()) noexcept;
+  /// Mark all data_points in the m_data vector as type, for the range
+  /// [start, end).
+  /// parameter[in] start Start of data range (inclusive)
+  /// parameter[in] end   Stop marking at this date (non-inclusive)
+  /// parameter[in] type  ngpt::pt_marker to set for the data points in the
+  ///                     range
+  /// @return Number of data points that were marked
+  std::size_t mark(ngpt::pt_marker type,
+                   ngpt::datetime<ngpt::milliseconds> start =
+                       ngpt::datetime<ngpt::milliseconds>::min(),
+                   ngpt::datetime<ngpt::milliseconds> end =
+                       ngpt::datetime<ngpt::milliseconds>::max()) noexcept;
 
   /// Compute the mean (i.e. central epoch). This version uses the very
   /// first and last epochs to compute the mean, regardless if they are
   /// marked as unused. The mean epoch is obviously half the distance
   /// between the first and last epochs.
-  /*
-  ngpt::datetime<ngpt::milliseconds> central_epoch() const noexcept {
-    auto delta_dt = ngpt::delta_date(last_epoch(), first_epoch());
-    auto central_epoch{first_epoch()};
-    central_epoch += (delta_dt / 2);
-    return central_epoch;
-  }*/
+  ngpt::datetime<ngpt::milliseconds> central_epoch() const noexcept;
+
+  /// Cut (in-place) the m_data vector to fit the interval [start, end). The
+  /// m_epochs vector WILL NOT BE AFFECTED!. If you want to also cut the epochs
+  /// vector, make a copy and pass it in via the epoch_vec parameter.
+  /// Example usage:
+  /// timeseries ts1( ... ); // some timeseries instance
+  /// auto t1 = ngpt::datetime( ... );
+  /// auto t2 = ngpt::datetime( ... );
+  /// auto ts2 = ts1; // deep copy m_data and shallow copy m_epochs
+  /// vector<data_point> copy = ts1.epochs_vec(); // copy the ts1 m_epochs
+  /// vector auto sz = ts2.cut(t1, t2, &copy); ts2.set_epoch_vec(&copy); //
+  /// don't forget to set a valid epochs vector
+  /// @see test/test_timeseries_1.cc
+  ///
+  /// @param[in] start First date to include in the new timeseries
+  /// @param[in] end   Date limit; no date >= to end will be included (aka this
+  ///                  is a non-inclusive limit).
+  /// @param[in] epoch_vec A (deep) copy of the instance's m_epochs vector;
+  ///                  this vector will be cut to only hold dates included in
+  ///                  the [start, end) range.
+  /// @return The size of the new m_data vector; if something goes wrong a
+  ///         negative integer is returned.
+  long cut(ngpt::datetime<ngpt::milliseconds> start,
+           ngpt::datetime<ngpt::milliseconds> end,
+           std::vector<ngpt::datetime<ngpt::milliseconds>> *epoch_vec =
+               nullptr) noexcept;
+
+  void
+  set_epoch_vec(std::vector<ngpt::datetime<ngpt::milliseconds>> *e) noexcept {
+    m_epochs = e;
+  }
 
 #ifdef DEBUG
   std::size_t size() const noexcept { return m_data.size(); }
-  const std::vector<data_point>& data_points_vec() const noexcept { return m_data; }
-  std::vector<data_point>& data_points_vec() noexcept { return m_data; }
-  const std::vector<ngpt::datetime<ngpt::milliseconds>>& epochs_vec() const noexcept { return *m_epochs; }
+  const std::vector<data_point> &data_points_vec() const noexcept {
+    return m_data;
+  }
+  std::vector<data_point> &data_points_vec() noexcept { return m_data; }
+  const std::vector<ngpt::datetime<ngpt::milliseconds>> &
+  epochs_vec() const noexcept {
+    return *m_epochs;
+  }
 #endif
 
 private:
@@ -238,6 +275,6 @@ private:
 
 }; // timeseries
 
-} //ngpt
+} // namespace ngpt
 
 #endif

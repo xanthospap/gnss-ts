@@ -1,9 +1,9 @@
 #include "event_list.hpp"
 #include <cassert>
 
-bool validate_event_list(const ngpt::event_list& e) {
-  auto it_prev = e.it_cbegin(), it_next = e.it_cbegin()+1;
-  while (it_next!=e.it_cend()) {
+bool validate_event_list(const ngpt::event_list &e) {
+  auto it_prev = e.it_cbegin(), it_next = e.it_cbegin() + 1;
+  while (it_next != e.it_cend()) {
     assert(it_prev->epoch() <= it_next->epoch());
     if (it_prev->epoch() == it_next->epoch()) {
       assert(it_prev->event_type() != it_next->event_type());
@@ -16,7 +16,7 @@ bool validate_event_list(const ngpt::event_list& e) {
 
 int main(int argc, char *argv[]) {
   if (argc != 3) {
-    std::cerr<<"Usage: "<<argv[0]<<" <event list file> <igs log file>\n";
+    std::cerr << "Usage: " << argv[0] << " <event list file> <igs log file>\n";
     return 1;
   }
 
@@ -35,6 +35,6 @@ int main(int argc, char *argv[]) {
   // validate instance
   assert(validate_event_list(list));
 
-  std::cout<<"\n";
+  std::cout << "\n";
   return 0;
 }

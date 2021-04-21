@@ -1,12 +1,12 @@
-#include "igs_sta_log.hpp"
 #include "ggdatetime/datetime_write.hpp"
+#include "igs_sta_log.hpp"
 #include <iostream>
 
 using namespace ngpt;
 
-int main(int argc, char* argv[]) {
+int main(int argc, char *argv[]) {
   if (argc != 2) {
-    std::cerr<< "usage: $>"<<argv[0]<<" <igs_log_file>\n";
+    std::cerr << "usage: $>" << argv[0] << " <igs_log_file>\n";
     return 1;
   }
 
@@ -17,14 +17,16 @@ int main(int argc, char* argv[]) {
 
   // get receiver changes
   auto recvec = log.receiver_changes();
-  std::cout<<"Receiver Changes: \n";
-  for (const auto& d : recvec) std::cout<<"\t->"<<strftime_ymd_hmfs(d)<<"\n";
+  std::cout << "Receiver Changes: \n";
+  for (const auto &d : recvec)
+    std::cout << "\t->" << strftime_ymd_hmfs(d) << "\n";
 
   // get antenna changes
   auto antvec = log.antenna_changes();
-  std::cout<<"Antenna Changes: \n";
-  for (const auto& d : antvec) std::cout<<"\t->"<<strftime_ymd_hmfs(d)<<"\n";
+  std::cout << "Antenna Changes: \n";
+  for (const auto &d : antvec)
+    std::cout << "\t->" << strftime_ymd_hmfs(d) << "\n";
 
-  std::cout<<"\n";
+  std::cout << "\n";
   return 0;
 }

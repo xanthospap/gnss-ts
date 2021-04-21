@@ -11,7 +11,7 @@
 #include "ggdatetime/dtcalendar.hpp"
 #include "md_harmonics.hpp"
 #include "md_jump.hpp"
-#Include "md_velocity_change.hpp"
+#include "md_velocity_change.hpp"
 // #include "psd.hpp"
 
 namespace ngpt {
@@ -40,7 +40,7 @@ public:
   ///                   - jumps
   ///                   - velocity changes
   ///                   - earthquakes
-  explicit ts_model(const event_list &events) noexcept;
+  // explicit ts_model(const event_list &events) noexcept;
 
   /// This function adds new md_harmonics instances to this (model)
   /// instance. The new md_harmonics added, are constructed using only
@@ -50,10 +50,12 @@ public:
   /// @note If you wish to add a harmonic signal in the model, using more info
   /// (e.g. include in- and out-of-phase amplitudes, see the function
   /// add_period).
+  /*
   void add_periods(const std::vector<double> &periods) noexcept {
     for (auto i : periods)
       m_harmonics.emplace_back(i);
   }
+  */
 
   /// This function adds a new md_harmonics instance to this (model) instance.
   /// The new harmonic to be added, can be fully specified.
@@ -64,6 +66,7 @@ public:
   ///                      datetime<ngpt::milliseconds>::min()).
   /// @param[in] stop      End of the validity interval (default value
   ///                      datetime<ngpt::milliseconds>::max()).
+  /*
   void add_period(
       double period, double in_phase = 0e0, double out_of_phase = 0e0,
       datetime<ngpt::milliseconds> start = datetime<ngpt::milliseconds>::min(),
@@ -71,6 +74,7 @@ public:
           datetime<ngpt::milliseconds>::max()) noexcept {
     m_harmonics.emplace_back(period, start, stop, in_phase, out_of_phase);
   }
+  */
 
   /// Add a jump (i.e. offset) in this model instance. This function will
   /// create a new md_jump instance based on the input parametrs and add it
@@ -96,37 +100,8 @@ public:
     m_vel_changes.emplace_back(start, stop, val);
   }
 
-  void add_earthquake(datetime<ngpt::milliseconds> start, psd_model m,
-                      double a1 = 1e-3, double t1 = 1e-1, double a2 = 1e-3,
-                      double t2 = 1e-1) noexcept {
-    m_earthqs.emplace_back(start, m, a1, t1, a2, t2);
-  }
-
-  void add_earthquake(const md_earthquake<T> &e) noexcept {
-    m_earthqs.emplace_back(e);
-  }
-
-  /// Get the mean epoch of the model (aka the central epoch of computation).
-  /// Const version.
-  datetime<ngpt::milliseconds> mean_epoch() const noexcept {
-    return m_mean_epoch;
-  }
-
-  /// Get the mean epoch of the model (akak the central epoch of computation).
-  /// Non-Const version.
-  datetime<ngpt::milliseconds> &mean_epoch() noexcept { return m_mean_epoch; }
-
-  /// Get the constant linear term (const version).
-  double x0() const noexcept { return m_x0; }
-
-  /// Get the constant linear term (non-const version).
-  double &x0() noexcept { return m_x0; }
-
-  /// Get the velocity (const version).
-  double vx() const noexcept { return m_vx; }
-
-  /// Get the velocity (non-const version).
-  double &vx() noexcept { return m_vx; }
+  std::size_t num_parameters() const noexcept;
+  datetime<ngpt::milliseconds> reference_epoch() const noexcept { return m_reference_epoch; }
 
 private:
   double m_x0, ///< const linear term.
@@ -135,12 +110,11 @@ private:
   std::vector<md_jump> m_jumps;                  ///< vector of jumps
   std::vector<md_harmonics> m_harmonics;         ///< vector of harmonics
   std::vector<md_velocity_change> m_vel_changes; ///< vector of velocity changes
-  std::vector<md_earthquake> m_earthqs;          ///< vector of earthquakes
   datetime<ngpt::milliseconds>
-      m_mean_epoch; ///< mean epoch (aka central computation epoch)
+      m_reference_epoch; ///< mean epoch (aka central computation epoch)
 
 }; // ts_model
 
-} // namespace ngpt
+} // ngpt
 
 #endif
