@@ -3,7 +3,8 @@ noinst_PROGRAMS =
 check_PROGRAMS = testTsFlag \
   testEarthquakeCatalogue \
   testIgsLogFile \
-  testEventList
+  testEventList \
+  testTimeSeries1
 
 MCXXFLAGS = \
 	-std=c++17 \
@@ -40,6 +41,10 @@ testIgsLogFile_LDADD     = $(top_srcdir)/src/libgtms.la
 testEventList_SOURCES   = test_event_list.cc
 testEventList_CXXFLAGS  = $(MCXXFLAGS) -I$(top_srcdir)/src ##-L$(top_srcdir)/src
 testEventList_LDADD     = $(top_srcdir)/src/libgtms.la
+
+testTimeSeries1_SOURCES   = test_timeseries_1.cc
+testTimeSeries1_CXXFLAGS  = $(MCXXFLAGS) -I$(top_srcdir)/src ##-L$(top_srcdir)/src
+testTimeSeries1_LDADD     = $(top_srcdir)/src/libgtms.la
 
 #lomb_scargle_SOURCES   = lomb_scargle.cpp
 #lomb_scargle_CXXFLAGS  = $(MCXXFLAGS) -I$(top_srcdir)/src -L$(top_srcdir)/src

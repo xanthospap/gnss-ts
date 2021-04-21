@@ -25,10 +25,12 @@ dist_include_HEADERS = \
 	earthquake.hpp \
 	earthquake_catalogue.hpp \
         igs_sta_log.hpp \
-	event_list.hpp
+	event_list.hpp \
+        timeseries.hpp
 
 dist_libgtms_la_SOURCES = \
 	earthquake.cpp \
 	earthquake_catalogue.cpp \
         igs_sta_log.cpp \
-	event_list.cpp
+	event_list.cpp \
+        timeseries.cpp

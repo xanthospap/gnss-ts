@@ -20,18 +20,18 @@
 std::string ngpt::event::to_string() const noexcept {
   std::string str = ngpt::strftime_ymd_hms(m_epoch, ' ');
   switch (m_event_type) {
-    case ts_event::jump:
-      str += std::string("   j   ");
-      break;
-    case ts_event::earthquake:
-      str += std::string("   e   ");
-      break;
-    case ts_event::velocity_change:
-      str += std::string("   v   ");
-      break;
-    default:
-      str += std::string("   ?   ");
-      break;
+  case ts_event::jump:
+    str += std::string("   j   ");
+    break;
+  case ts_event::earthquake:
+    str += std::string("   e   ");
+    break;
+  case ts_event::velocity_change:
+    str += std::string("   v   ");
+    break;
+  default:
+    str += std::string("   ?   ");
+    break;
   }
   return str + m_info;
 }

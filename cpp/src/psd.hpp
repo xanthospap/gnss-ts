@@ -37,8 +37,8 @@ int _psd2int_(psd_model x) noexcept {
 
 class md_earthquake {
 public:
-  explicit md_earthquake(ngpt::datetime<ngpt::milliseconds> t, psd_model md, double a1 = 0e0,
-                         double t1 = 1.0e0, double a2 = 0e0,
+  explicit md_earthquake(ngpt::datetime<ngpt::milliseconds> t, psd_model md,
+                         double a1 = 0e0, double t1 = 1.0e0, double a2 = 0e0,
                          double t2 = 1.0e0) noexcept
       : m_model{md}, m_start{t}, m_a1{a1}, m_t1{t1}, m_a2{a2}, m_t2{t2} {}
 
@@ -151,8 +151,8 @@ public:
     return d;
   }
 
-  void diriv_at(const ngpt::datetime<ngpt::milliseconds> &t, double &da1, double &dt1,
-                double &da2, double &dt2) const {
+  void diriv_at(const ngpt::datetime<ngpt::milliseconds> &t, double &da1,
+                double &dt1, double &da2, double &dt2) const {
     auto dt_intvr = ngpt::delta_date(t, this->start());
     double dtq = dt_intvr.as_mjd() / 365.25e0;
 #ifdef DEBUG
@@ -216,6 +216,6 @@ private:
   double m_a1, m_t1, m_a2, m_t2;
 }; // md_earthquake
 
-} // ngpt
+} // namespace ngpt
 
 #endif
