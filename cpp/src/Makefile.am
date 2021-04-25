@@ -26,11 +26,19 @@ dist_include_HEADERS = \
 	earthquake_catalogue.hpp \
         igs_sta_log.hpp \
 	event_list.hpp \
-        timeseries.hpp
+        data_point.hpp \
+        timeseries.hpp \
+        md_jump.hpp \
+        md_harmonics.hpp \
+        md_velocity_change.hpp \
+        model.hpp \
+        kalman.hpp
 
 dist_libgtms_la_SOURCES = \
 	earthquake.cpp \
 	earthquake_catalogue.cpp \
         igs_sta_log.cpp \
 	event_list.cpp \
-        timeseries.cpp
+        timeseries.cpp \
+        model.cpp \
+        kalman.cpp

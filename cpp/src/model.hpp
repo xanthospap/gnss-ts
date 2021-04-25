@@ -6,6 +6,7 @@
 #include <cfenv>
 #include <cstdlib>
 #endif
+#include "data_point.hpp"
 #include "eigen3/Eigen/Core"
 #include "event_list.hpp"
 #include "ggdatetime/dtcalendar.hpp"
@@ -31,7 +32,9 @@ namespace ngpt {
 class ts_model {
 public:
   /// Constructor; this default to a linear model.
-  ts_model() noexcept : m_x0{0e0}, m_vx{0e0} {};
+  ts_model() noexcept
+      : m_x0{0e0}, m_vx{0e0}, m_x0_stddev{10e0}, m_vx_stddev{10e0},
+        m_reference_epoch{ngpt::datetime<ngpt::milliseconds>::min()} {};
 
   /// Constructor using an event_list instance.
   /// @param[in] events An instance of type event_list; all events recorded
@@ -101,7 +104,28 @@ public:
   }
 
   std::size_t num_parameters() const noexcept;
-  datetime<ngpt::milliseconds> reference_epoch() const noexcept { return m_reference_epoch; }
+
+  const std::vector<md_jump> &jumps_vec() const noexcept { return m_jumps; }
+
+  Eigen::MatrixXd weight_matrix(double sigma0) const noexcept;
+  Eigen::VectorXd state_vector() const noexcept;
+
+  std::size_t
+  fill_data_vec(const std::vector<ngpt::datetime<ngpt::milliseconds>> *epochs,
+                std::vector<ngpt::data_point> &data_vec) const noexcept;
+
+  void zero_out_params() noexcept;
+
+  double x0() const noexcept { return m_x0; }
+  double &x0() noexcept { return m_x0; }
+  double vx() const noexcept { return m_vx; }
+  double &vx() noexcept { return m_vx; }
+  datetime<ngpt::milliseconds> reference_epoch() const noexcept {
+    return m_reference_epoch;
+  }
+  datetime<ngpt::milliseconds> &reference_epoch() noexcept {
+    return m_reference_epoch;
+  }
 
 private:
   double m_x0, ///< const linear term.
@@ -115,6 +139,6 @@ private:
 
 }; // ts_model
 
-} // ngpt
+} // namespace ngpt
 
 #endif

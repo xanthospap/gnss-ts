@@ -1,6 +1,27 @@
 #include "timeseries.hpp"
 #include "ggdatetime/dtfund.hpp"
 #include <algorithm>
+#include <random>
+
+ngpt::timeseries::timeseries(
+    const ngpt::ts_model &md,
+    std::vector<ngpt::datetime<ngpt::milliseconds>> *epoch_vec,
+    double wn_stddev) noexcept
+    : m_epochs(epoch_vec) {
+  m_data.reserve(epoch_vec->size());
+  md.fill_data_vec(epoch_vec, m_data);
+  // add white noise with mean=0 and std_dev = wn_stddev
+  if (wn_stddev > 0e0) {
+    std::random_device rd{};
+    std::mt19937 gen{rd()};
+    std::normal_distribution<> d{0e0, wn_stddev};
+    std::transform(m_data.begin(), m_data.end(), m_data.begin(),
+                   [&](data_point p) {
+                     p.m_value += d(gen);
+                     return p;
+                   });
+  }
+}
 
 std::size_t
 ngpt::timeseries::mark(ngpt::pt_marker type,
@@ -60,9 +81,11 @@ long ngpt::timeseries::cut(
   }
   return (long)(end_idx - start_idx);
 }
-  
-ngpt::datetime<ngpt::milliseconds> ngpt::timeseries::central_epoch() const noexcept {
-  auto first_epoch = (*m_epochs)[0], last_epoch = (*m_epochs)[m_epochs->size()-1];
+
+ngpt::datetime<ngpt::milliseconds>
+ngpt::timeseries::central_epoch() const noexcept {
+  auto first_epoch = (*m_epochs)[0],
+       last_epoch = (*m_epochs)[m_epochs->size() - 1];
   auto delta_dt = ngpt::delta_date(last_epoch, first_epoch);
   auto central_epoch{first_epoch};
   central_epoch += (delta_dt / 2);

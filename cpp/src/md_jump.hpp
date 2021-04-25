@@ -12,7 +12,7 @@ public:
   /// @param[in] offset The value of the offset (default is 0)
   /// @param[in] stdd   The std. deviation of the offset value/estimate
   md_jump(ngpt::datetime<ngpt::milliseconds> start, double offset = 0e0,
-          double stdd = 0e0) noexcept
+          double stdd = 10e0) noexcept
       : m_start{start}, m_offset{offset}, m_stddev{stdd} {};
 
   /// Get the epoch the jump happened at (const).

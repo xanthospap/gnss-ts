@@ -1,6 +1,8 @@
 #ifndef __NGPT_HARMONICS_MODEL_HPP__
 #define __NGPT_HARMONICS_MODEL_HPP__
 
+#include "ggeodesy/geoconst.hpp"
+
 namespace ngpt {
 
 /// A class to represent a harmonic signal (in a time-series). The harmonic
@@ -29,7 +31,7 @@ public:
                double in_phase = 0e0, double out_phase = 0e0,
                double in_phase_stddev = 0e0,
                double out_phase_stddev = 0e0) noexcept
-      : m_start{start}, m_stop{stop}, m_afreq{D2PI / period},
+      : m_start{start}, m_stop{stop}, m_afreq{ngpt::D2PI / period},
         m_in_phase{in_phase}, m_in_stddev{in_phase_stddev},
         m_out_phase{out_phase}, m_out_stddev{out_phase_stddev} {};
 
@@ -43,7 +45,7 @@ public:
   double angular_frequency() const noexcept { return m_afreq; }
 
   /// Get the period (i.e. T = 2π/ω).
-  double period() const noexcept { return D2PI / m_afreq; }
+  double period() const noexcept { return ngpt::D2PI / m_afreq; }
 
   /// Get the in-phase component amplitude (const version).
   double in_phase() const noexcept { return m_in_phase; }
