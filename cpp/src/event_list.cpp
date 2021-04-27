@@ -449,7 +449,7 @@ bool ngpt::event_list::sorted_insert(const event &new_event) noexcept {
       m_events.insert(it, new_event);
       return true;
     } else {
-#ifdef DEBUG
+#ifdef TS_DEBUG
       std::cerr << "\n[DEBUG] Event not added to list cause its a duplictate!";
 #endif
     }

@@ -16,8 +16,7 @@ libgtms_la_CXXFLAGS = \
 	-Wshadow \
 	-Winline \
 	-Wdisabled-optimization \
-	-march=native \
-	-DDEBUG
+	-DTS_DEBUG
 
 dist_include_HEADERS = \
 	genflags.hpp \
@@ -32,7 +31,7 @@ dist_include_HEADERS = \
         md_harmonics.hpp \
         md_velocity_change.hpp \
         model.hpp \
-        kalman.hpp
+	kalman.hpp
 
 dist_libgtms_la_SOURCES = \
 	earthquake.cpp \
@@ -41,4 +40,4 @@ dist_libgtms_la_SOURCES = \
 	event_list.cpp \
         timeseries.cpp \
         model.cpp \
-        kalman.cpp
+	kalman.cpp

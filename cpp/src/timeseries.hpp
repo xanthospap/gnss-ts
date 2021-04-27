@@ -2,7 +2,7 @@
 #define __NGPT_TIMESERIES_HPP__
 
 #include <vector>
-#ifdef DEBUG
+#ifdef TS_DEBUG
 #include <cstdio>
 #include <iomanip>
 #include <iostream>
@@ -196,7 +196,7 @@ public:
     m_epochs = e;
   }
 
-#ifdef DEBUG
+#ifdef TS_DEBUG
   std::size_t size() const noexcept { return m_data.size(); }
   const std::vector<data_point> &data_points_vec() const noexcept {
     return m_data;

@@ -1,5 +1,6 @@
 #include "event_list.hpp"
 #include <cassert>
+#include <iostream>
 
 bool validate_event_list(const ngpt::event_list &e) {
   auto it_prev = e.it_cbegin(), it_next = e.it_cbegin() + 1;

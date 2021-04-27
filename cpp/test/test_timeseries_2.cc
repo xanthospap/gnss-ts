@@ -1,3 +1,4 @@
+#include "eigen3/Eigen/Dense"
 #include "eigen3/Eigen/Core"
 #include "kalman.hpp"
 #include "timeseries.hpp"
@@ -47,16 +48,17 @@ int main() {
 
   // create a time-series instance using the epoch vector and the model, adding
   // some white noise with std_dev = 0.01
-  ngpt::timeseries ts(model, &epochs, .01);
+  ngpt::timeseries ts(model, &epochs, .04);
 
-  // make a model estimation
+  // make a model estimation (we want to start with a zero state vector)
   ngpt::ts_model estimated(model);
-  // estimated.zero_out_params();
-  assert(estimated.num_parameters() == 4);
-  std::vector<double> deviations = {1e-3, 1e-2, 1e-1, 1e0, 10e0, 100e0, 1e3};
+  std::vector<double> deviations = {1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1e0, 10e0, 100e0, 1e3};
+  Eigen::VectorXd x = model.state_vector();
   for (auto dev : deviations) {
-    auto x = ngpt::kalman(ts, estimated, dev);
-    std::cout << "\nRMS: " << std::sqrt(x.dot(model.state_vector()));
+      auto state = ngpt::kalman(ts, estimated, dev);
+      std::cout<<"\nSigma0 = "<<dev;
+      for (int i=0; i<x.rows(); i++) std::cout<<"\n"<<std::abs(x(i)-state(i));
+      std::cout<<"\n\tRMS for sigma0="<<dev<<" is: "<<std::sqrt(x.dot(state));
   }
 
   // print

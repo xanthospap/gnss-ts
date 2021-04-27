@@ -1,6 +1,8 @@
 #include "model.hpp"
-#ifdef DEBUG
+#ifdef TS_DEBUG
 #include <ggdatetime/datetime_write.hpp>
+#include <cassert>
+#include <iostream>
 #endif
 
 std::size_t ngpt::ts_model::num_parameters() const noexcept {
@@ -38,29 +40,36 @@ void ngpt::ts_model::zero_out_params() noexcept {
   return;
 }
 
-Eigen::MatrixXd ngpt::ts_model::weight_matrix(double sigma0) const noexcept {
+Eigen::MatrixXd ngpt::ts_model::covariance_matrix(double sigma0) const noexcept {
   auto num_parameters = this->num_parameters();
+  assert(num_parameters==4);
   Eigen::MatrixXd P = Eigen::MatrixXd::Identity(num_parameters, num_parameters);
   std::size_t idx = 0;
-  P(idx, idx) = sigma0 / m_x0_stddev;
+  P(idx, idx) = m_x0_stddev * m_x0_stddev;
   ++idx;
-  P(idx, idx) = sigma0 / m_vx_stddev;
+  P(idx, idx) = m_vx_stddev * m_x0_stddev;
   ++idx;
   for (auto &jit : m_jumps) {
-    P(idx, idx) = sigma0 / jit.stddev();
+    P(idx, idx) = jit.stddev() * jit.stddev();
     ++idx;
   }
-  return P;
+#ifdef TS_DEBUG
+  assert(idx == num_parameters);
+#endif
+  return (sigma0*sigma0)*P;
 }
 
 Eigen::VectorXd ngpt::ts_model::state_vector() const noexcept {
   auto num_parameters = this->num_parameters();
-  auto x0 = Eigen::VectorXd(num_parameters);
+  Eigen::VectorXd x0(num_parameters);
   std::size_t idx = 0;
   x0(idx++) = m_x0;
   x0(idx++) = m_vx;
   for (auto &jit : m_jumps) {
     x0(idx++) = jit.value();
   }
+#ifdef TS_DEBUG
+  assert(idx == num_parameters);
+#endif
   return x0;
 }

@@ -2,6 +2,7 @@
 #include "ggdatetime/datetime_read.hpp"
 #include "ggeodesy/units.hpp"
 #include <exception>
+#include <iostream>
 
 /// @brief Constructor using a filename.
 ngpt::earthquake_catalogue::earthquake_catalogue(const std::string &filename)

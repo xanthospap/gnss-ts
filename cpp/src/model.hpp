@@ -2,10 +2,6 @@
 #define __NGPT_TS_MODEL_HPP__
 
 #include <iostream>
-#ifdef DEBUG
-#include <cfenv>
-#include <cstdlib>
-#endif
 #include "data_point.hpp"
 #include "eigen3/Eigen/Core"
 #include "event_list.hpp"
@@ -33,7 +29,7 @@ class ts_model {
 public:
   /// Constructor; this default to a linear model.
   ts_model() noexcept
-      : m_x0{0e0}, m_vx{0e0}, m_x0_stddev{10e0}, m_vx_stddev{10e0},
+      : m_x0{0e0}, m_vx{0e0}, m_x0_stddev{1e0}, m_vx_stddev{1e0},
         m_reference_epoch{ngpt::datetime<ngpt::milliseconds>::min()} {};
 
   /// Constructor using an event_list instance.
@@ -107,7 +103,7 @@ public:
 
   const std::vector<md_jump> &jumps_vec() const noexcept { return m_jumps; }
 
-  Eigen::MatrixXd weight_matrix(double sigma0) const noexcept;
+  Eigen::MatrixXd covariance_matrix(double sigma0) const noexcept;
   Eigen::VectorXd state_vector() const noexcept;
 
   std::size_t
