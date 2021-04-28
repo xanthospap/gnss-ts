@@ -10,14 +10,17 @@ Eigen::VectorXd ngpt::kalman(const ngpt::timeseries &ts,
                              const ngpt::ts_model &mdl, double sigma0) {
   auto num_parameters = mdl.num_parameters();
   Eigen::MatrixXd F = Eigen::RowVectorXd(num_parameters);
-  Eigen::VectorXd x = /*Eigen::VectorXd::Zero(num_parameters);*/mdl.state_vector();
+  Eigen::VectorXd x =
+      /*Eigen::VectorXd::Zero(num_parameters);*/ mdl.state_vector();
   Eigen::MatrixXd S = Eigen::MatrixXd(1, 1);
   Eigen::MatrixXd V = Eigen::MatrixXd(1, 1);
   V(0, 0) = 1e-2;
   Eigen::MatrixXd z = Eigen::MatrixXd(1, 1);
   Eigen::MatrixXd K = Eigen::MatrixXd(num_parameters, 1);
   Eigen::MatrixXd I = Eigen::MatrixXd::Identity(num_parameters, num_parameters);
-  Eigen::MatrixXd P = /*Eigen::MatrixXd::Identity(num_parameters, num_parameters);*/mdl.covariance_matrix(sigma0);
+  Eigen::MatrixXd P =
+      /*Eigen::MatrixXd::Identity(num_parameters, num_parameters);*/ mdl
+          .covariance_matrix(sigma0);
 
   double t0 = mdl.reference_epoch().as_mjd();
   ngpt::data_point dtp;
@@ -32,10 +35,10 @@ Eigen::VectorXd ngpt::kalman(const ngpt::timeseries &ts,
       for (const auto &jit : mdl.jumps_vec()) {
         F(iparam++) = (*t >= jit.start()) ? 1e0 : 0e0;
       }
-      z(0,0) = dtp.value();
-      z = z - F * x; // forecast
-      S = F * P * F.transpose() + V;        // residual covariance
-      K = P * F.transpose() * S.inverse();  // kalman gain
+      z(0, 0) = dtp.value();
+      z = z - F * x;                       // forecast
+      S = F * P * F.transpose() + V;       // residual covariance
+      K = P * F.transpose() * S.inverse(); // kalman gain
       x = x + K * z;
       P = (I - K * F) * P;
       assert(iparam <= num_parameters);

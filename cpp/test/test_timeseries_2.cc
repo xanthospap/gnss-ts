@@ -1,5 +1,5 @@
-#include "eigen3/Eigen/Dense"
 #include "eigen3/Eigen/Core"
+#include "eigen3/Eigen/Dense"
 #include "kalman.hpp"
 #include "timeseries.hpp"
 #include <ggdatetime/datetime_write.hpp>
@@ -52,13 +52,16 @@ int main() {
 
   // make a model estimation (we want to start with a zero state vector)
   ngpt::ts_model estimated(model);
-  std::vector<double> deviations = {1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1e0, 10e0, 100e0, 1e3};
+  std::vector<double> deviations = {1e-5, 1e-4, 1e-3,  1e-2, 1e-1,
+                                    1e0,  10e0, 100e0, 1e3};
   Eigen::VectorXd x = model.state_vector();
   for (auto dev : deviations) {
-      auto state = ngpt::kalman(ts, estimated, dev);
-      std::cout<<"\nSigma0 = "<<dev;
-      for (int i=0; i<x.rows(); i++) std::cout<<"\n"<<std::abs(x(i)-state(i));
-      std::cout<<"\n\tRMS for sigma0="<<dev<<" is: "<<std::sqrt(x.dot(state));
+    auto state = ngpt::kalman(ts, estimated, dev);
+    std::cout << "\nSigma0 = " << dev;
+    for (int i = 0; i < x.rows(); i++)
+      std::cout << "\n" << std::abs(x(i) - state(i));
+    std::cout << "\n\tRMS for sigma0=" << dev
+              << " is: " << std::sqrt(x.dot(state));
   }
 
   // print

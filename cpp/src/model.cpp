@@ -1,7 +1,7 @@
 #include "model.hpp"
 #ifdef TS_DEBUG
-#include <ggdatetime/datetime_write.hpp>
 #include <cassert>
+#include <ggdatetime/datetime_write.hpp>
 #include <iostream>
 #endif
 
@@ -40,9 +40,10 @@ void ngpt::ts_model::zero_out_params() noexcept {
   return;
 }
 
-Eigen::MatrixXd ngpt::ts_model::covariance_matrix(double sigma0) const noexcept {
+Eigen::MatrixXd
+ngpt::ts_model::covariance_matrix(double sigma0) const noexcept {
   auto num_parameters = this->num_parameters();
-  assert(num_parameters==4);
+  assert(num_parameters == 4);
   Eigen::MatrixXd P = Eigen::MatrixXd::Identity(num_parameters, num_parameters);
   std::size_t idx = 0;
   P(idx, idx) = m_x0_stddev * m_x0_stddev;
@@ -56,7 +57,7 @@ Eigen::MatrixXd ngpt::ts_model::covariance_matrix(double sigma0) const noexcept 
 #ifdef TS_DEBUG
   assert(idx == num_parameters);
 #endif
-  return (sigma0*sigma0)*P;
+  return (sigma0 * sigma0) * P;
 }
 
 Eigen::VectorXd ngpt::ts_model::state_vector() const noexcept {

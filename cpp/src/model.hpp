@@ -1,7 +1,6 @@
 #ifndef __NGPT_TS_MODEL_HPP__
 #define __NGPT_TS_MODEL_HPP__
 
-#include <iostream>
 #include "data_point.hpp"
 #include "eigen3/Eigen/Core"
 #include "event_list.hpp"
@@ -9,6 +8,7 @@
 #include "md_harmonics.hpp"
 #include "md_jump.hpp"
 #include "md_velocity_change.hpp"
+#include <iostream>
 // #include "psd.hpp"
 
 namespace ngpt {
