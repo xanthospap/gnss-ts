@@ -31,7 +31,8 @@ dist_include_HEADERS = \
         md_harmonics.hpp \
         md_velocity_change.hpp \
         model.hpp \
-	kalman.hpp
+	kalman.hpp \
+	cts_read.hpp
 
 dist_libgtms_la_SOURCES = \
 	earthquake.cpp \

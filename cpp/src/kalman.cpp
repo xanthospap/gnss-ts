@@ -1,13 +1,13 @@
 #include "kalman.hpp"
 #include "eigen3/Eigen/Core"
 #include "eigen3/Eigen/Dense"
-#include "ggdatetime/dtcalendar.hpp"
+#include "datetime/dtcalendar.hpp"
 #ifdef DEBUG
 #include <cassert>
 #endif
 
-Eigen::VectorXd ngpt::kalman(const ngpt::timeseries &ts,
-                             const ngpt::ts_model &mdl, double sigma0) {
+Eigen::VectorXd dso::kalman(const dso::timeseries &ts,
+                             const dso::ts_model &mdl, double sigma0) {
   auto num_parameters = mdl.num_parameters();
   Eigen::MatrixXd F = Eigen::RowVectorXd(num_parameters);
   Eigen::VectorXd x =
@@ -23,7 +23,7 @@ Eigen::VectorXd ngpt::kalman(const ngpt::timeseries &ts,
           .covariance_matrix(sigma0);
 
   double t0 = mdl.reference_epoch().as_mjd();
-  ngpt::data_point dtp;
+  dso::data_point dtp;
   std::size_t idx = 0, iparam = 0;
   for (auto t = ts.epochs_vec().cbegin(); t != ts.epochs_vec().cend(); ++t) {
     assert(idx < ts.data_points_vec().size());
@@ -49,8 +49,8 @@ Eigen::VectorXd ngpt::kalman(const ngpt::timeseries &ts,
 }
 
 /*
-Eigen::VectorXd ngpt::kalman2(const ngpt::timeseries &ts,
-                             const ngpt::ts_model &mdl, double sigma0) {
+Eigen::VectorXd dso::kalman2(const dso::timeseries &ts,
+                             const dso::ts_model &mdl, double sigma0) {
   auto num_parameters = mdl.num_parameters();
   typedef Eigen::Matrix<double, 1, 1> Matrix1d;
   Matrix1d z;
@@ -66,7 +66,7 @@ Eigen::VectorXd ngpt::kalman2(const ngpt::timeseries &ts,
   // std::cout << "\nInitial P is: \n" << P;
 
   double t0 = mdl.reference_epoch().as_mjd();
-  ngpt::data_point dtp;
+  dso::data_point dtp;
   std::size_t idx = 0, iparam = 0;
   for (auto t = ts.epochs_vec().cbegin(); t != ts.epochs_vec().cend(); ++t) {
     assert(idx < ts.data_points_vec().size());

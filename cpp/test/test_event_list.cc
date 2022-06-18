@@ -2,7 +2,7 @@
 #include <cassert>
 #include <iostream>
 
-bool validate_event_list(const ngpt::event_list &e) {
+bool validate_event_list(const dso::event_list &e) {
   auto it_prev = e.it_cbegin(), it_next = e.it_cbegin() + 1;
   while (it_next != e.it_cend()) {
     assert(it_prev->epoch() <= it_next->epoch());
@@ -22,7 +22,7 @@ int main(int argc, char *argv[]) {
   }
 
   // create an event_list instance
-  ngpt::event_list list;
+  dso::event_list list;
 
   // parse and apply events recorded in the event list file
   list.apply_event_list_file(argv[1]);

@@ -152,8 +152,8 @@ int main(int argc, char *argv[]) {
   //  Read in the time-series from the cts file; time-resolution is
   //+ milliseconds.
   //  Compute average coordinates
-  ngpt::crdts<ngpt::milliseconds> ts =
-      ngpt::cts_read<ngpt::milliseconds>(ctsf, sname);
+  dso::crdts<dso::milliseconds> ts =
+      dso::cts_read<dso::milliseconds>(ctsf, sname);
   auto mean_crd_xyz = ts.mean_coordinates();
 
   // Transform to topocentric rf (asumming input ts was geocentric cartesian).
@@ -162,8 +162,8 @@ int main(int argc, char *argv[]) {
   // Print a short report
   std::cout << "\nShort report on time-series:";
   std::cout << "\n\tTime interval (span) from "
-            << ngpt::strftime_ymd_hms(ts.first_epoch()) << " to "
-            << ngpt::strftime_ymd_hms(ts.last_epoch());
+            << dso::strftime_ymd_hms(ts.first_epoch()) << " to "
+            << dso::strftime_ymd_hms(ts.last_epoch());
   std::cout << "\n\tNumber of epochs in time-series: " << ts.size();
 
   // Apply any external jump information (event/log file).
@@ -183,13 +183,13 @@ int main(int argc, char *argv[]) {
               << "\'.";
     std::cout << "\nRelevant Options: MIN_MAG: " << MIN_ERTHQ_MAG
               << ", C1=" << C1 << " and C2=" << C2;
-    ngpt::earthquake_catalogue<ngpt::milliseconds> eq_cat{erthq_file};
+    dso::earthquake_catalogue<dso::milliseconds> eq_cat{erthq_file};
     ts.apply_earthquake_catalogue(eq_cat, MIN_ERTHQ_MAG, C1, C2);
   }
 
   // Filter the event list; two events must be at least N days apart apart
-  ngpt::datetime_interval<ngpt::milliseconds> eq_apart{
-      ngpt::modified_julian_day{DAYS_APART}, ngpt::milliseconds{0}};
+  dso::datetime_interval<dso::milliseconds> eq_apart{
+      dso::modified_julian_day{DAYS_APART}, dso::milliseconds{0}};
   auto initial_events = ts.events().size();
   ts.events().filter_earthquake_sequences(eq_apart);
   std::cout << "\nEarthquake sequences removed; Number of events: "
@@ -209,8 +209,8 @@ int main(int argc, char *argv[]) {
   auto big_events = ts.events().filter_earthquakes(xsta, ysta, zsta);
   std::cout << "\nSmall earthquake sequences removed; Number of events: "
             << big_events.size();
-  // ngpt::ts_model<ngpt::milliseconds> xmodel { ts.events() };
-  ngpt::ts_model<ngpt::milliseconds> xmodel{big_events};
+  // dso::ts_model<dso::milliseconds> xmodel { ts.events() };
+  dso::ts_model<dso::milliseconds> xmodel{big_events};
   xmodel.mean_epoch() = ts.mean_epoch();
   auto ymodel{xmodel}, zmodel{xmodel};
   auto res_ts = ts.qr_fit(xmodel, ymodel, zmodel);
@@ -226,7 +226,7 @@ int main(int argc, char *argv[]) {
 
   // Treat each component individualy (for harmonic analysis). Make a vector
   // of components so we can easily iterate through.
-  std::vector<ngpt::timeseries<ngpt::milliseconds, ngpt::pt_marker> *>
+  std::vector<dso::timeseries<dso::milliseconds, dso::pt_marker> *>
       components;
   components.push_back(&res_ts.x_component());
   components.push_back(&res_ts.y_component());
@@ -236,9 +236,9 @@ int main(int argc, char *argv[]) {
 
   // Re-apply the models, now containing (maybe) harmonic signals.
   ts.qr_fit(xmodel, ymodel, zmodel);
-  auto mdl_n = ngpt::filter_earthquakes(ts.x_component(), xmodel, 1e-3);
-  auto mdl_e = ngpt::filter_earthquakes(ts.y_component(), ymodel, 1e-3);
-  auto mdl_u = ngpt::filter_earthquakes(ts.z_component(), zmodel, 1e-3);
+  auto mdl_n = dso::filter_earthquakes(ts.x_component(), xmodel, 1e-3);
+  auto mdl_e = dso::filter_earthquakes(ts.y_component(), ymodel, 1e-3);
+  auto mdl_u = dso::filter_earthquakes(ts.z_component(), zmodel, 1e-3);
 
   xmodel = mdl_n;
   ymodel = mdl_e;
@@ -247,11 +247,11 @@ int main(int argc, char *argv[]) {
     double Ut = 1e-2;
     double min_ampl = 1e-3;
     xmodel =
-        ngpt::identify_harmonics(res_ts.x_component(), xmodel, Ut, min_ampl);
+        dso::identify_harmonics(res_ts.x_component(), xmodel, Ut, min_ampl);
     ymodel =
-        ngpt::identify_harmonics(res_ts.y_component(), ymodel, Ut, min_ampl);
+        dso::identify_harmonics(res_ts.y_component(), ymodel, Ut, min_ampl);
     zmodel =
-        ngpt::identify_harmonics(res_ts.z_component(), zmodel, Ut, min_ampl);
+        dso::identify_harmonics(res_ts.z_component(), zmodel, Ut, min_ampl);
   } else {
     // Time-span of the time-series in days and years.
     auto tdif = res_ts.last_epoch().delta_date(res_ts.first_epoch());
@@ -263,7 +263,7 @@ int main(int argc, char *argv[]) {
     // Iterate through the components and perform harmonic analysis (via the
     // Lomb-Scargle periodogram).
     for (; it != components.end(); ++it) {
-      ngpt::timeseries<ngpt::milliseconds, ngpt::pt_marker> tts{**it};
+      dso::timeseries<dso::milliseconds, dso::pt_marker> tts{**it};
       answr = 'y';
       std::cout << "\nHarmonic Analysis of Component: " << (*cit);
       std::cout << "\n-------------------------------------------------------";
@@ -286,10 +286,10 @@ int main(int argc, char *argv[]) {
         px = mempool;
         py = mempool + nout;
         if (!dfreq)
-          ngpt::lomb_scargle_period(tts, ofac, hifac, px, py, nout, nout, jmax,
+          dso::lomb_scargle_period(tts, ofac, hifac, px, py, nout, nout, jmax,
                                     prob);
         else
-          ngpt::lomb_scargle_period(tts, minfreq, maxfreq, dfreq, px, py, nout,
+          dso::lomb_scargle_period(tts, minfreq, maxfreq, dfreq, px, py, nout,
                                     nout, jmax, prob);
         std::cout << "\n\tDominant frequency in time-series: " << px[jmax]
                   << " (at: " << jmax << ")"
@@ -301,7 +301,7 @@ int main(int argc, char *argv[]) {
         std::cout << "\nDo you want to apply the frequency to the model (y/n)?";
         std::cin >> answr;
         if (answr == 'y' || answr == 'Y') {
-          ngpt::ts_model<ngpt::milliseconds> *tmp_model;
+          dso::ts_model<dso::milliseconds> *tmp_model;
           if (*cit == "North")
             tmp_model = &xmodel;
           else if (*cit == "East")
@@ -324,11 +324,11 @@ int main(int argc, char *argv[]) {
   mdl_u.harmonics() = zmodel.harmonics();
 
   if (test_earthquake_psd) {
-    mdl_n = ngpt::try_earthquakes(ts.x_component(), xmodel, 5.1e0,
+    mdl_n = dso::try_earthquakes(ts.x_component(), xmodel, 5.1e0,
                                   /*&ts.events(),*/ 1e-3);
-    mdl_e = ngpt::try_earthquakes(ts.y_component(), ymodel, 5.1e0,
+    mdl_e = dso::try_earthquakes(ts.y_component(), ymodel, 5.1e0,
                                   /*&ts.events(),*/ 1e-3);
-    mdl_u = ngpt::try_earthquakes(ts.z_component(), zmodel, 5.1e0,
+    mdl_u = dso::try_earthquakes(ts.z_component(), zmodel, 5.1e0,
                                   /*&ts.events(),*/ 1e-3);
   }
 
@@ -338,10 +338,10 @@ int main(int argc, char *argv[]) {
   std::ofstream fout{sname + std::string(".mod")};
   fout << "Approximate Station Coordinates: ";
   double lat, lon, hgt;
-  ngpt::car2ell<ngpt::ellipsoid::grs80>(
+  dso::car2ell<dso::ellipsoid::grs80>(
       std::get<0>(mean_crd_xyz), std::get<1>(mean_crd_xyz),
       std::get<2>(mean_crd_xyz), lat, lon, hgt);
-  fout << ngpt::rad2deg(lat) << " " << ngpt::rad2deg(lon) << " " << hgt << "\n";
+  fout << dso::rad2deg(lat) << " " << dso::rad2deg(lon) << " " << hgt << "\n";
   mdl_n.dump(fout);
   fout << "\n";
   mdl_e.dump(fout);

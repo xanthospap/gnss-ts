@@ -3,8 +3,8 @@
 #include "eigen3/Eigen/Core"
 #include "model.hpp"
 #include "timeseries.hpp"
-namespace ngpt {
-Eigen::VectorXd kalman(const ngpt::timeseries &ts, const ngpt::ts_model &mdl,
+namespace dso {
+Eigen::VectorXd kalman(const dso::timeseries &ts, const dso::ts_model &mdl,
                        double sigma0);
-} // namespace ngpt
+} // namespace dso
 #endif

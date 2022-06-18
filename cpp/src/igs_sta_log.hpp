@@ -2,11 +2,11 @@
 #define __NGPT_IGS_LOG_FILE_HPP__
 
 #include <fstream>
-#include <ggdatetime/dtcalendar.hpp>
+#include "datetime/dtcalendar.hpp"
 #include <string>
 #include <vector>
 
-namespace ngpt {
+namespace dso {
 
 class igs_log {
 public:
@@ -31,9 +31,9 @@ public:
     return *this;
   }
 
-  std::vector<ngpt::datetime<ngpt::milliseconds>> receiver_changes();
+  std::vector<dso::datetime<dso::milliseconds>> receiver_changes();
 
-  std::vector<ngpt::datetime<ngpt::milliseconds>> antenna_changes();
+  std::vector<dso::datetime<dso::milliseconds>> antenna_changes();
 
 private:
   /// The name of the log file.
@@ -48,14 +48,14 @@ private:
   }
 
   int read_receiver_block(std::string &receiver_type,
-                          ngpt::datetime<ngpt::milliseconds> &start,
-                          ngpt::datetime<ngpt::milliseconds> &stop);
+                          dso::datetime<dso::milliseconds> &start,
+                          dso::datetime<dso::milliseconds> &stop);
 
   int read_antenna_block(std::string &antenna_type,
-                         ngpt::datetime<ngpt::milliseconds> &start,
-                         ngpt::datetime<ngpt::milliseconds> &stop);
+                         dso::datetime<dso::milliseconds> &start,
+                         dso::datetime<dso::milliseconds> &stop);
 }; // igs_log
 
-} // namespace ngpt
+} // namespace dso
 
 #endif

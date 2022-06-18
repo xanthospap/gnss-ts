@@ -6,9 +6,9 @@
 #include <cstdlib>
 #endif
 #include "event_list.hpp"
-#include "ggdatetime/dtcalendar.hpp"
+#include "datetime/dtcalendar.hpp"
 
-namespace ngpt {
+namespace dso {
 
 enum class psd_model : int {
   pwl,    ///< Piece-Wise Linear
@@ -37,7 +37,7 @@ int _psd2int_(psd_model x) noexcept {
 
 class md_earthquake {
 public:
-  explicit md_earthquake(ngpt::datetime<ngpt::milliseconds> t, psd_model md,
+  explicit md_earthquake(dso::datetime<dso::milliseconds> t, psd_model md,
                          double a1 = 0e0, double t1 = 1.0e0, double a2 = 0e0,
                          double t2 = 1.0e0) noexcept
       : m_model{md}, m_start{t}, m_a1{a1}, m_t1{t1}, m_a2{a2}, m_t2{t2} {}
@@ -54,7 +54,7 @@ public:
 
   double &t2() noexcept { return m_t2; }
 
-  ngpt::datetime<ngpt::milliseconds> &start() noexcept { return m_start; }
+  dso::datetime<dso::milliseconds> &start() noexcept { return m_start; }
 
   double a1() const noexcept { return m_a1; }
 
@@ -64,7 +64,7 @@ public:
 
   double t2() const noexcept { return m_t2; }
 
-  ngpt::datetime<ngpt::milliseconds> start() const noexcept { return m_start; }
+  dso::datetime<dso::milliseconds> start() const noexcept { return m_start; }
 
   std::size_t parameters() const noexcept {
     switch (m_model) {
@@ -114,11 +114,11 @@ public:
     return 0;
   }
 
-  double value_at(const ngpt::datetime<ngpt::milliseconds> &t) const {
+  double value_at(const dso::datetime<dso::milliseconds> &t) const {
     if (t <= this->start())
       return 0e0;
 
-    auto dt_intvr = ngpt::delta_date(t, start());
+    auto dt_intvr = dso::delta_date(t, start());
     double dtq = dt_intvr.as_mjd() / 365.25e0;
 #ifdef DEBUG
     double dtq_conf = (t.as_mjd() - start().as_mjd()) / 365.25e0;
@@ -151,9 +151,9 @@ public:
     return d;
   }
 
-  void diriv_at(const ngpt::datetime<ngpt::milliseconds> &t, double &da1,
+  void diriv_at(const dso::datetime<dso::milliseconds> &t, double &da1,
                 double &dt1, double &da2, double &dt2) const {
-    auto dt_intvr = ngpt::delta_date(t, this->start());
+    auto dt_intvr = dso::delta_date(t, this->start());
     double dtq = dt_intvr.as_mjd() / 365.25e0;
 #ifdef DEBUG
     assert(dtq >= 0e0);
@@ -198,24 +198,24 @@ public:
     return;
   }
 
-  auto to_earthquake(const ngpt::event_list<T> &lst) const {
+  auto to_earthquake(const dso::event_list<T> &lst) const {
     auto evn = lst.event_at(m_start);
-    assert(evn.event_type() == ngpt::ts_event::earthquake);
+    assert(evn.event_type() == dso::ts_event::earthquake);
     // return event_string2earthquake<T>(evn.info_str());
     return resolve_noa_earthquake_line<T>(evn.info_str().c_str());
   }
 
-  double magnitude(const ngpt::event_list<T> &lst) const {
+  double magnitude(const dso::event_list<T> &lst) const {
     auto ethq{to_earthquake(lst)};
     return ethq.magnitude();
   }
 
 private:
   psd_model m_model;
-  ngpt::datetime<ngpt::milliseconds> m_start;
+  dso::datetime<dso::milliseconds> m_start;
   double m_a1, m_t1, m_a2, m_t2;
 }; // md_earthquake
 
-} // namespace ngpt
+} // namespace dso
 
 #endif

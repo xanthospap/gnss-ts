@@ -6,12 +6,11 @@
 ///
 
 #include "earthquake.hpp"
-#include "ggdatetime/dtcalendar.hpp"
-#include "ggdatetime/dtfund.hpp"
+#include "datetime/dtcalendar.hpp"
 #include <cstring>
 #include <fstream>
 
-namespace ngpt {
+namespace dso {
 
 namespace earthquake_catalogue_detail {
 /// Max line length (in chars) for an earthquake catalogue file.
@@ -84,7 +83,7 @@ public:
   /// @return         0 if the (next) line was read successefuly and the
   ///                 earthquake was resolved. +1 if EOF was encountered.
   ///                 In case something went wrong -1 is returned.
-  int read_next_earthquake(ngpt::earthquake &eq) noexcept;
+  int read_next_earthquake(dso::earthquake &eq) noexcept;
 
   /// Navigate to a position in the catalogue file, such that the next
   /// earthquake to be read in will be at an epoch >= to the given epoch
@@ -94,7 +93,7 @@ public:
   /// @return The file will set the ifstream buffer to the correct position
   ///         (if found) and return false. +1 will be returned if we reach EOF
   ///         before finding a date >= eph. In case of error, -1 is returned.
-  int goto_epoch(ngpt::datetime<ngpt::milliseconds> eph) noexcept;
+  int goto_epoch(dso::datetime<dso::milliseconds> eph) noexcept;
 
   void clear_stream_state() { m_ifs.clear(); }
 
@@ -121,6 +120,6 @@ private:
 
 }; // earthquake_catalogue
 
-} // namespace ngpt
+} // namespace dso
 
 #endif

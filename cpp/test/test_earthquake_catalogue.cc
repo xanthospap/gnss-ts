@@ -2,7 +2,7 @@
 #include <iostream>
 #include <string>
 
-using namespace ngpt;
+using namespace dso;
 
 int main(int argc, char *argv[]) {
   if (argc != 2) {

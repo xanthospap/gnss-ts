@@ -1,7 +1,7 @@
 #include "earthquake.hpp"
-#include "ggdatetime/datetime_read.hpp"
-#include "ggdatetime/datetime_write.hpp"
-#include "ggeodesy/units.hpp"
+#include "datetime/datetime_read.hpp"
+#include "datetime/datetime_write.hpp"
+#include "geodesy/units.hpp"
 #include <cstring>
 #include <fstream>
 #include <stdexcept>
@@ -15,15 +15,15 @@
 /// @param[in] t  datetime<T> instance to be transformed to string
 /// @return       string; the input datetime instance formated as:
 ///               'YYYY OOO DD HH MM SS.S'
-std::string strfdt_as_noa(const ngpt::datetime<ngpt::milliseconds> &t) {
-  using ngpt::_d2s_;
-  using ngpt::_i2s_;
+std::string strfdt_as_noa(const dso::datetime<dso::milliseconds> &t) {
+  using dso::_d2s_;
+  using dso::_i2s_;
 
   auto ymd = t.as_ymd();
   auto hmsf = t.as_hmsf();
 
   double secs = std::get<2>(hmsf).as_underlying_type() +
-                std::get<3>(hmsf) / ngpt::milliseconds::sec_factor<double>();
+                std::get<3>(hmsf) / dso::milliseconds::sec_factor<double>();
 
   const std::string wspace_str(1, ' ');
 
@@ -35,13 +35,13 @@ std::string strfdt_as_noa(const ngpt::datetime<ngpt::milliseconds> &t) {
          _d2s_(secs, 1);
 }
 
-std::string ngpt::earthquake::to_string() const noexcept {
-  using ngpt::_d2s_;
-  using ngpt::_i2s_;
+std::string dso::earthquake::to_string() const noexcept {
+  using dso::_d2s_;
+  using dso::_i2s_;
 
   std::string evnt_str = strfdt_as_noa(m_epoch);
-  evnt_str += "   " + _d2s_(ngpt::rad2deg<double>(m_lat), 2);
-  evnt_str += "   " + _d2s_(ngpt::rad2deg<double>(m_lon), 2);
+  evnt_str += "   " + _d2s_(dso::rad2deg<double>(m_lat), 2);
+  evnt_str += "   " + _d2s_(dso::rad2deg<double>(m_lon), 2);
   evnt_str += "   " + _i2s_((static_cast<int>(m_depth / 1e3)), 3);
   evnt_str += "   " + _d2s_(m_magnitude, 1);
   return evnt_str;
@@ -56,15 +56,15 @@ std::string ngpt::earthquake::to_string() const noexcept {
 /// @param[in] t  datetime<T> instance to be transformed to string
 /// @return       string; the input datetime instance formated as:
 ///               'YYYY OOO DD HH MM SS.S'
-std::string ngpt::strfdt_as_noa(const ngpt::datetime<ngpt::milliseconds> &t) {
-  using ngpt::_d2s_;
-  using ngpt::_i2s_;
+std::string dso::strfdt_as_noa(const dso::datetime<dso::milliseconds> &t) {
+  using dso::_d2s_;
+  using dso::_i2s_;
 
   auto ymd = t.as_ymd();
   auto hmsf = t.as_hmsf();
 
   double secs = std::get<2>(hmsf).as_underlying_type() +
-                std::get<3>(hmsf) / ngpt::milliseconds::sec_factor<double>();
+                std::get<3>(hmsf) / dso::milliseconds::sec_factor<double>();
 
   const std::string wspace_str(1, ' ');
 

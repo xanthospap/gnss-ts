@@ -1,8 +1,8 @@
-#include "ggdatetime/datetime_write.hpp"
+#include "datetime/datetime_write.hpp"
 #include "igs_sta_log.hpp"
 #include <iostream>
 
-using namespace ngpt;
+using namespace dso;
 
 int main(int argc, char *argv[]) {
   if (argc != 2) {

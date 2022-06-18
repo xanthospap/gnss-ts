@@ -21,7 +21,7 @@ MCXXFLAGS = \
 	-Wdisabled-optimization \
 	-DTS_DEBUG
 
-AM_LDFLAGS = -lggeodesy -lggdatetime
+AM_LDFLAGS = -lgeodesy -ldatetime
 
 #test_ts_SOURCES   = test_ts.cpp
 #test_ts_CXXFLAGS  = $(MCXXFLAGS) -I$(top_srcdir)/src -L$(top_srcdir)/src

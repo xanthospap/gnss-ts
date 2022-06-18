@@ -1,9 +1,9 @@
 #ifndef __NGPT_HARMONICS_MODEL_HPP__
 #define __NGPT_HARMONICS_MODEL_HPP__
 
-#include "ggeodesy/geoconst.hpp"
+#include "geodesy/geoconst.hpp"
 
-namespace ngpt {
+namespace dso {
 
 /// A class to represent a harmonic signal (in a time-series). The harmonic
 /// signal is described by in and out-of-phase amplitudes, a period/frequency,
@@ -24,28 +24,28 @@ public:
   /// @param[in] out_phase_stddev Std. deviation of the amplitude value/estimate
   ///                      of the out-of-phase component.
   md_harmonics(double period,
-               ngpt::datetime<ngpt::milliseconds> start =
-                   ngpt::datetime<ngpt::milliseconds>::min(),
-               ngpt::datetime<ngpt::milliseconds> stop =
-                   ngpt::datetime<ngpt::milliseconds>::max(),
+               dso::datetime<dso::milliseconds> start =
+                   dso::datetime<dso::milliseconds>::min(),
+               dso::datetime<dso::milliseconds> stop =
+                   dso::datetime<dso::milliseconds>::max(),
                double in_phase = 0e0, double out_phase = 0e0,
                double in_phase_stddev = 0e0,
                double out_phase_stddev = 0e0) noexcept
-      : m_start{start}, m_stop{stop}, m_afreq{ngpt::D2PI / period},
+      : m_start{start}, m_stop{stop}, m_afreq{dso::D2PI / period},
         m_in_phase{in_phase}, m_in_stddev{in_phase_stddev},
         m_out_phase{out_phase}, m_out_stddev{out_phase_stddev} {};
 
   /// Get the starting epoch (of the validity interval).
-  ngpt::datetime<ngpt::milliseconds> start() const noexcept { return m_start; }
+  dso::datetime<dso::milliseconds> start() const noexcept { return m_start; }
 
   /// Get the ending epoch (of the validity interval).
-  ngpt::datetime<ngpt::milliseconds> stop() const noexcept { return m_stop; }
+  dso::datetime<dso::milliseconds> stop() const noexcept { return m_stop; }
 
   /// Get the angular frequency (ω = 2πf).
   double angular_frequency() const noexcept { return m_afreq; }
 
   /// Get the period (i.e. T = 2π/ω).
-  double period() const noexcept { return ngpt::D2PI / m_afreq; }
+  double period() const noexcept { return dso::D2PI / m_afreq; }
 
   /// Get the in-phase component amplitude (const version).
   double in_phase() const noexcept { return m_in_phase; }
@@ -78,7 +78,7 @@ public:
   }
 
 private:
-  ngpt::datetime<ngpt::milliseconds>
+  dso::datetime<dso::milliseconds>
       m_start,      ///< Starting epoch of the harmonic
       m_stop;       ///< Ending epoch of the harmonic
   double m_afreq,   ///< Angular frequency (i.e. ω)
@@ -89,5 +89,5 @@ private:
 
 }; // md_harmonics
 
-} // namespace ngpt
+} // namespace dso
 #endif

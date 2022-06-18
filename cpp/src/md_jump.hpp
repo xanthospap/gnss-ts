@@ -1,7 +1,7 @@
 #ifndef __NGPT_JUMP_MODEL_HPP__
 #define __NGPT_JUMP_MODEL_HPP__
 
-namespace ngpt {
+namespace dso {
 /// A class to represent a "jump" (i.e. offset) of a time-series. A 'jump' is
 /// determined by the value of the offset, the epoch (time tag) at which it
 /// occured and a possible value for its std. deviation.
@@ -11,12 +11,12 @@ public:
   /// @param[in] start  The epoch the jump happened.
   /// @param[in] offset The value of the offset (default is 0)
   /// @param[in] stdd   The std. deviation of the offset value/estimate
-  md_jump(ngpt::datetime<ngpt::milliseconds> start, double offset = 0e0,
+  md_jump(dso::datetime<dso::milliseconds> start, double offset = 0e0,
           double stdd = 1e0) noexcept
       : m_start{start}, m_offset{offset}, m_stddev{stdd} {};
 
   /// Get the epoch the jump happened at (const).
-  datetime<ngpt::milliseconds> start() const noexcept { return m_start; }
+  datetime<dso::milliseconds> start() const noexcept { return m_start; }
 
   /// Get the value of the offset (const).
   double value() const noexcept { return m_offset; }
@@ -31,11 +31,11 @@ public:
   double &stddev() noexcept { return m_stddev; }
 
 private:
-  ngpt::datetime<ngpt::milliseconds> m_start; ///< When the "jump" occured.
+  dso::datetime<dso::milliseconds> m_start; ///< When the "jump" occured.
   double m_offset; ///< Value (i.e. offset amplitude).
   double m_stddev; ///< Std. deviation of the estimated value.
 
 }; // md_jump
 
-} // namespace ngpt
+} // namespace dso
 #endif

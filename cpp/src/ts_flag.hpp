@@ -9,7 +9,7 @@
 
 #include <cstdint>
 
-namespace ngpt {
+namespace dso {
 
 /// @enum pt_marker
 ///
@@ -36,6 +36,6 @@ enum class ts_event : uint_fast8_t {
   velocity_change = 4 ///< A velocity change
 };
 
-} // namespace ngpt
+} // namespace dso
 
 #endif

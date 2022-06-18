@@ -4,33 +4,33 @@
 #include "genflags.hpp"
 #include "ts_flag.hpp"
 
-namespace ngpt {
+namespace dso {
 /// @class data_point
 ///
 /// A time-series is a series of data points. This data_point class is designed
 /// to assist the handling of timeseries. The class itself does very little
 /// and is pretty generic. The only limitation is that the F template parameter
-/// is an enumeration class that can act as a flag, i.e. ngpt::flag<F> makes
+/// is an enumeration class that can act as a flag, i.e. dso::flag<F> makes
 /// sense and has a default constructor.
-/// For example, coordinate time-series, could use: ngpt::pt_marker (as the F
+/// For example, coordinate time-series, could use: dso::pt_marker (as the F
 /// parameter).
 /// Each instance of the data_point class, has:
 ///     - a value
 ///     - a sigma (i.e. std. deviation) and
-///     - a flag (of type ngpt::flag<F>)
+///     - a flag (of type dso::flag<F>)
 ///
-/// @see ngpt::flag template class
+/// @see dso::flag template class
 ///
 /// @todo there should be a restriction on F that the function:
-///       'bool skip(ngpt::flag<F>) noexcept' exists.
+///       'bool skip(dso::flag<F>) noexcept' exists.
 ///
 /// @tparam F An enumeration class to act as flag; F must have:
 ///           - a default constructor
-///           - a function with signature 'bool skip(ngpt::flag<F>) noexcept'
+///           - a function with signature 'bool skip(dso::flag<F>) noexcept'
 ///
 struct data_point {
   /// Simplify the flag type.
-  using dp_flag = ngpt::flag<ngpt::pt_marker>;
+  using dp_flag = dso::flag<dso::pt_marker>;
 
   /// Constructor.
   data_point(double val = 0e0, double sigma = 1e-3,
@@ -48,7 +48,7 @@ struct data_point {
 
   /// Should the data point be skipped/ignored ?
   /// @todo what the fuck is this? see also the detailed class description.
-  /*bool skip() const noexcept { return ngpt::__skip__(this->m_flag); }*/
+  /*bool skip() const noexcept { return dso::__skip__(this->m_flag); }*/
 
   /// equality operator
   bool operator==(const data_point &other) const noexcept {
@@ -67,5 +67,5 @@ struct data_point {
 
 }; // data_point
 
-} // namespace ngpt
+} // namespace dso
 #endif

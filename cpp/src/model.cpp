@@ -1,11 +1,11 @@
 #include "model.hpp"
 #ifdef TS_DEBUG
 #include <cassert>
-#include <ggdatetime/datetime_write.hpp>
+#include "datetime/datetime_write.hpp"
 #include <iostream>
 #endif
 
-std::size_t ngpt::ts_model::num_parameters() const noexcept {
+std::size_t dso::ts_model::num_parameters() const noexcept {
   std::size_t parameters = 2;
   parameters += m_jumps.size();
   parameters += m_harmonics.size() * 2;
@@ -13,9 +13,9 @@ std::size_t ngpt::ts_model::num_parameters() const noexcept {
   return parameters;
 }
 
-std::size_t ngpt::ts_model::fill_data_vec(
-    const std::vector<ngpt::datetime<ngpt::milliseconds>> *epochs,
-    std::vector<ngpt::data_point> &data_vec) const noexcept {
+std::size_t dso::ts_model::fill_data_vec(
+    const std::vector<dso::datetime<dso::milliseconds>> *epochs,
+    std::vector<dso::data_point> &data_vec) const noexcept {
   double t0 = m_reference_epoch.as_mjd();
   for (const auto &eph : *epochs) {
     double v = m_x0, t = (eph.as_mjd() - t0) / 365.25e0;
@@ -28,7 +28,7 @@ std::size_t ngpt::ts_model::fill_data_vec(
   return data_vec.size();
 }
 
-void ngpt::ts_model::zero_out_params() noexcept {
+void dso::ts_model::zero_out_params() noexcept {
   m_x0 = m_vx = 0e0;
   for (auto &jump : m_jumps)
     jump.value() = 0e0;
@@ -41,7 +41,7 @@ void ngpt::ts_model::zero_out_params() noexcept {
 }
 
 Eigen::MatrixXd
-ngpt::ts_model::covariance_matrix(double sigma0) const noexcept {
+dso::ts_model::covariance_matrix(double sigma0) const noexcept {
   auto num_parameters = this->num_parameters();
   assert(num_parameters == 4);
   Eigen::MatrixXd P = Eigen::MatrixXd::Identity(num_parameters, num_parameters);
@@ -60,7 +60,7 @@ ngpt::ts_model::covariance_matrix(double sigma0) const noexcept {
   return (sigma0 * sigma0) * P;
 }
 
-Eigen::VectorXd ngpt::ts_model::state_vector() const noexcept {
+Eigen::VectorXd dso::ts_model::state_vector() const noexcept {
   auto num_parameters = this->num_parameters();
   Eigen::VectorXd x0(num_parameters);
   std::size_t idx = 0;

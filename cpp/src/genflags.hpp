@@ -11,7 +11,7 @@
 #include <type_traits>
 #include <vector>
 
-namespace ngpt {
+namespace dso {
 
 /// @class flag
 ///
@@ -100,6 +100,6 @@ public:
 
 }; // flag<FlagEnum>
 
-} // namespace ngpt
+} // namespace dso
 
 #endif

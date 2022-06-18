@@ -4,14 +4,14 @@
 #include "data_point.hpp"
 #include "eigen3/Eigen/Core"
 #include "event_list.hpp"
-#include "ggdatetime/dtcalendar.hpp"
+#include "datetime/dtcalendar.hpp"
 #include "md_harmonics.hpp"
 #include "md_jump.hpp"
 #include "md_velocity_change.hpp"
 #include <iostream>
 // #include "psd.hpp"
 
-namespace ngpt {
+namespace dso {
 
 /// This class represents a (time-series) model.
 ///
@@ -23,14 +23,14 @@ namespace ngpt {
 /// md_velocity_change, plus a simple linear model (i.e. x0 and Vx0 parameters);
 /// so if no md_jump, md_harmonics or md_velocity_change are added, then the
 /// model defaults to a linear one.
-/// Every instance also hold am epoch (i.e. datetime<ngpt::milliseconds>) member
+/// Every instance also hold am epoch (i.e. datetime<dso::milliseconds>) member
 /// variable, which is the central epoch of computation/estimation.
 class ts_model {
 public:
   /// Constructor; this default to a linear model.
   ts_model() noexcept
       : m_x0{0e0}, m_vx{0e0}, m_x0_stddev{1e0}, m_vx_stddev{1e0},
-        m_reference_epoch{ngpt::datetime<ngpt::milliseconds>::min()} {};
+        m_reference_epoch{dso::datetime<dso::milliseconds>::min()} {};
 
   /// Constructor using an event_list instance.
   /// @param[in] events An instance of type event_list; all events recorded
@@ -62,15 +62,15 @@ public:
   /// @param[in] in_phase  Amplitude of the in-phase component.
   /// @param[in] out_phase Amplitude of the out-of-phase component.
   /// @param[in] start     Start of the validity interval (default value
-  ///                      datetime<ngpt::milliseconds>::min()).
+  ///                      datetime<dso::milliseconds>::min()).
   /// @param[in] stop      End of the validity interval (default value
-  ///                      datetime<ngpt::milliseconds>::max()).
+  ///                      datetime<dso::milliseconds>::max()).
   /*
   void add_period(
       double period, double in_phase = 0e0, double out_of_phase = 0e0,
-      datetime<ngpt::milliseconds> start = datetime<ngpt::milliseconds>::min(),
-      datetime<ngpt::milliseconds> stop =
-          datetime<ngpt::milliseconds>::max()) noexcept {
+      datetime<dso::milliseconds> start = datetime<dso::milliseconds>::min(),
+      datetime<dso::milliseconds> stop =
+          datetime<dso::milliseconds>::max()) noexcept {
     m_harmonics.emplace_back(period, start, stop, in_phase, out_of_phase);
   }
   */
@@ -80,7 +80,7 @@ public:
   /// to this md_model.
   /// @param[in] at  The epoch the jump happened.
   /// @param[in] val The value of the offset (default is 0).
-  void add_jump(datetime<ngpt::milliseconds> at, double val = 0e0) noexcept {
+  void add_jump(datetime<dso::milliseconds> at, double val = 0e0) noexcept {
     m_jumps.emplace_back(at, val);
   }
 
@@ -90,12 +90,12 @@ public:
   /// @param[in] start   The starting epoch of this velocity change.
   /// @param[in] val     The magnitude of the velocity change.
   /// @param[in] stop    The end epoch of this velocity change; default is
-  ///                    ngpt::datetime<ngpt::milliseconds>::max(), i.e. this
+  ///                    dso::datetime<dso::milliseconds>::max(), i.e. this
   ///                    velocity change starts at epoch start and never stops.
   void
-  add_velocity_change(datetime<ngpt::milliseconds> start, double val = 0e0,
-                      ngpt::datetime<ngpt::milliseconds> stop =
-                          ngpt::datetime<ngpt::milliseconds>::max()) noexcept {
+  add_velocity_change(datetime<dso::milliseconds> start, double val = 0e0,
+                      dso::datetime<dso::milliseconds> stop =
+                          dso::datetime<dso::milliseconds>::max()) noexcept {
     m_vel_changes.emplace_back(start, stop, val);
   }
 
@@ -107,8 +107,8 @@ public:
   Eigen::VectorXd state_vector() const noexcept;
 
   std::size_t
-  fill_data_vec(const std::vector<ngpt::datetime<ngpt::milliseconds>> *epochs,
-                std::vector<ngpt::data_point> &data_vec) const noexcept;
+  fill_data_vec(const std::vector<dso::datetime<dso::milliseconds>> *epochs,
+                std::vector<dso::data_point> &data_vec) const noexcept;
 
   void zero_out_params() noexcept;
 
@@ -116,10 +116,10 @@ public:
   double &x0() noexcept { return m_x0; }
   double vx() const noexcept { return m_vx; }
   double &vx() noexcept { return m_vx; }
-  datetime<ngpt::milliseconds> reference_epoch() const noexcept {
+  datetime<dso::milliseconds> reference_epoch() const noexcept {
     return m_reference_epoch;
   }
-  datetime<ngpt::milliseconds> &reference_epoch() noexcept {
+  datetime<dso::milliseconds> &reference_epoch() noexcept {
     return m_reference_epoch;
   }
 
@@ -130,11 +130,11 @@ private:
   std::vector<md_jump> m_jumps;                  ///< vector of jumps
   std::vector<md_harmonics> m_harmonics;         ///< vector of harmonics
   std::vector<md_velocity_change> m_vel_changes; ///< vector of velocity changes
-  datetime<ngpt::milliseconds>
+  datetime<dso::milliseconds>
       m_reference_epoch; ///< mean epoch (aka central computation epoch)
 
 }; // ts_model
 
-} // namespace ngpt
+} // namespace dso
 
 #endif

@@ -5,10 +5,9 @@
 #include "event_list.hpp"
 #include "earthquake.hpp"
 #include "genflags.hpp"
-#include "ggdatetime/datetime_read.hpp"
-#include "ggdatetime/datetime_write.hpp"
-#include "ggdatetime/dtcalendar.hpp"
-#include "ggdatetime/dtfund.hpp"
+#include "datetime/datetime_read.hpp"
+#include "datetime/datetime_write.hpp"
+#include "datetime/dtcalendar.hpp"
 #include "igs_sta_log.hpp"
 #include "ts_flag.hpp"
 #include <algorithm>
@@ -17,8 +16,8 @@
 #include <stdexcept>
 
 // YYYY MM DD HH MM SS EVENT COMMENT
-std::string ngpt::event::to_string() const noexcept {
-  std::string str = ngpt::strftime_ymd_hms(m_epoch, ' ');
+std::string dso::event::to_string() const noexcept {
+  std::string str = dso::strftime_ymd_hms(m_epoch, ' ');
   switch (m_event_type) {
   case ts_event::jump:
     str += std::string("   j   ");
@@ -38,9 +37,9 @@ std::string ngpt::event::to_string() const noexcept {
 
 /// Return a new event_list, which is a copy of the calling instance, but
 /// does not contain events that fall outside the interval [start, stop].
-ngpt::event_list ngpt::event_list::limit_copy(
-    ngpt::datetime<ngpt::milliseconds> start,
-    ngpt::datetime<ngpt::milliseconds> stop) const noexcept {
+dso::event_list dso::event_list::limit_copy(
+    dso::datetime<dso::milliseconds> start,
+    dso::datetime<dso::milliseconds> stop) const noexcept {
   event_list new_events;
   auto sz = m_events.size();
   if (!sz) {
@@ -67,16 +66,16 @@ ngpt::event_list ngpt::event_list::limit_copy(
 ///                   (inclusive). Any receiver/antenna change that has
 ///                   happened prior to this date, will **NOT** be
 ///                   considered. Default value is
-///                   ngpt::datetime<ngpt::milliseconds>::min()
+///                   dso::datetime<dso::milliseconds>::min()
 /// @param[in] stop   Stop of the time interval for considering events
 ///                   (inclusive). Any receiver/antenna change that has
 ///                   happened after this date, will **NOT** be
 ///                   considered. Default value is
-///                   ngpt::datetime<ngpt::milliseconds>::max()
-void ngpt::event_list::apply_stalog_file(
-    const char *igsfl, ngpt::datetime<ngpt::milliseconds> start,
-    ngpt::datetime<ngpt::milliseconds> stop, bool apply_rec_changes) {
-  ngpt::igs_log log{std::string(igsfl)};
+///                   dso::datetime<dso::milliseconds>::max()
+void dso::event_list::apply_stalog_file(
+    const char *igsfl, dso::datetime<dso::milliseconds> start,
+    dso::datetime<dso::milliseconds> stop, bool apply_rec_changes) {
+  dso::igs_log log{std::string(igsfl)};
 
   if (apply_rec_changes) {
     std::string rec_chng{"Receiver Change"};
@@ -106,7 +105,7 @@ void ngpt::event_list::apply_stalog_file(
 /// - Each line must have a maximum of 256 characters
 /// - Lines starting with (i.e. the first character is) '#' are skipped
 /// - The first field in each (non-skipped) line, must be a date, with the
-///   format YMD-HMS (see the function ngpt::strptime_ymd_hms<T> for more)
+///   format YMD-HMS (see the function dso::strptime_ymd_hms<T> for more)
 /// - After the date, and within the next 7 places, the event flag must be
 ///   written, either in upper or in lower case.
 /// Only events within the range [start, stop] are added to the instance.
@@ -123,9 +122,9 @@ void ngpt::event_list::apply_stalog_file(
 ///
 /// This is how an evn file is formated:
 /// YYYY MM DD HH MM SS EVENT COMMENT
-void ngpt::event_list::apply_event_list_file(
-    const char *evn_file, ngpt::datetime<ngpt::milliseconds> start,
-    ngpt::datetime<ngpt::milliseconds> stop) {
+void dso::event_list::apply_event_list_file(
+    const char *evn_file, dso::datetime<dso::milliseconds> start,
+    dso::datetime<dso::milliseconds> stop) {
   std::ifstream fin(evn_file, std::ifstream::in);
   if (!fin.is_open()) {
     throw std::invalid_argument("[ERROR] apply_event_list_file() :: Could "
@@ -148,7 +147,7 @@ void ngpt::event_list::apply_event_list_file(
     if (*line != '#') {
       cbegin = line;
       try {
-        t = ngpt::strptime_ymd_hms<milliseconds>(line, &cbegin);
+        t = dso::strptime_ymd_hms<milliseconds>(line, &cbegin);
       } catch (std::invalid_argument &e) {
         std::cerr << "\n[ERROR]@apply_event_list_file() :" << e.what();
         std::cerr << "\n[ERROR] Failed to resolve event list file line: \""
@@ -232,10 +231,10 @@ void ngpt::event_list::apply_event_list_file(
 /// @note The input vectors are cleared of all entries, before they are
 ///       filled with the events. If they do hold something at input, it
 ///       will be removed at output.
-void ngpt::event_list::split_event_list(
-    std::vector<ngpt::datetime<ngpt::milliseconds>> &jumps,
-    std::vector<ngpt::datetime<ngpt::milliseconds>> &vel_changes,
-    std::vector<ngpt::datetime<ngpt::milliseconds>> &earthquakes)
+void dso::event_list::split_event_list(
+    std::vector<dso::datetime<dso::milliseconds>> &jumps,
+    std::vector<dso::datetime<dso::milliseconds>> &vel_changes,
+    std::vector<dso::datetime<dso::milliseconds>> &earthquakes)
     const noexcept {
   jumps.clear();
   vel_changes.clear();
@@ -254,7 +253,7 @@ void ngpt::event_list::split_event_list(
 }
 
 /// Write the event list instance to an output stream.
-std::ostream &ngpt::event_list::dump_event_list(std::ostream &os) const {
+std::ostream &dso::event_list::dump_event_list(std::ostream &os) const {
   os << "YYYY MM DD HH MM SS EVENT COMMENT\n";
   for (auto it = m_events.cbegin(); it != m_events.cend(); ++it) {
     os << it->to_string() << "\n";
@@ -341,7 +340,7 @@ event_list filter_earthquakes(double stax, double stay, double staz,
 
   std::vector<event> vec = this->m_events;
   double slat, slon, shgt, distance, faz, baz;
-  ngpt::car2ell<ngpt::ellipsoid::grs80>(stax, stay, staz, slat, slon, shgt);
+  dso::car2ell<dso::ellipsoid::grs80>(stax, stay, staz, slat, slon, shgt);
 
   vec.erase(
       std::remove_if(
@@ -378,8 +377,8 @@ event_list filter_earthquakes(double stax, double stay, double staz,
 ///                   occur within dt, then they are replaced with a single
 ///                   earthquake, the one with the maximum magnitude.
 /*
-void ngpt::event_list::filter_earthquake_sequences(
-    ngpt::datetime_interval<ngpt::milliseconds> dt) {
+void dso::event_list::filter_earthquake_sequences(
+    dso::datetime_interval<dso::milliseconds> dt) {
   if (!m_events.size())
     return;
 
@@ -430,7 +429,7 @@ void ngpt::event_list::filter_earthquake_sequences(
 
 /// Insert an event into the m_events vector in sorted (i.e. chronologically)
 // order. If the event is a duplicate, it will not be added.
-bool ngpt::event_list::sorted_insert(const event &new_event) noexcept {
+bool dso::event_list::sorted_insert(const event &new_event) noexcept {
   // easy ... vec is empty, just add the event
   if (!m_events.size()) {
     m_events.emplace_back(new_event);

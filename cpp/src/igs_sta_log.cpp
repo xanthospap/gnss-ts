@@ -1,6 +1,6 @@
 #include "igs_sta_log.hpp"
-#include "ggdatetime/datetime_read.hpp"
-#include "ggdatetime/datetime_write.hpp"
+#include "datetime/datetime_read.hpp"
+#include "datetime/datetime_write.hpp"
 #include <cassert>
 #include <exception>
 
@@ -23,7 +23,7 @@ bool str_is_empty(const char *str) noexcept {
 /// @param[in] str A c-string containing a date of type 'CCYY-MM-DDThh:mmZ' or
 ///                'CCYY-MM-DD'.
 /// @return The datetime represented by the input string.
-ngpt::datetime<ngpt::milliseconds> strptime_log(const char *str,
+dso::datetime<dso::milliseconds> strptime_log(const char *str,
                                                 char **stop = nullptr) {
   errno = 0;
   char *end;
@@ -48,12 +48,12 @@ ngpt::datetime<ngpt::milliseconds> strptime_log(const char *str,
 
   if (stop)
     *stop = end - 1;
-  return ngpt::datetime<ngpt::milliseconds>{
-      ngpt::year{ints[0]},  ngpt::month{ints[1]},   ngpt::day_of_month{ints[2]},
-      ngpt::hours{ints[3]}, ngpt::minutes{ints[4]}, ngpt::milliseconds{0}};
+  return dso::datetime<dso::milliseconds>{
+      dso::year{ints[0]},  dso::month{ints[1]},   dso::day_of_month{ints[2]},
+      dso::hours{ints[3]}, dso::minutes{ints[4]}, dso::milliseconds{0}};
 }
 
-ngpt::igs_log::igs_log(const std::string &filename)
+dso::igs_log::igs_log(const std::string &filename)
     : m_filename{filename}, m_ifs{filename.c_str(), std::ifstream::in} {
   if (!m_ifs.is_open()) {
     throw std::invalid_argument("igs_log: Could not open log file: \"" +
@@ -61,19 +61,19 @@ ngpt::igs_log::igs_log(const std::string &filename)
   }
 }
 
-std::vector<ngpt::datetime<ngpt::milliseconds>>
-ngpt::igs_log::receiver_changes() {
+std::vector<dso::datetime<dso::milliseconds>>
+dso::igs_log::receiver_changes() {
   std::size_t dummy{0};
   constexpr std::size_t MAX_CHARS{256}, MAX_LINES{10000};
   const char *receiver_info_block = "3.   GNSS Receiver Information";
 
   char line[MAX_CHARS];
-  ngpt::datetime<ngpt::milliseconds> from,
+  dso::datetime<dso::milliseconds> from,
       to /*,
-prev_from = ngpt::datetime<ngpt::milliseconds>::max()*/
+prev_from = dso::datetime<dso::milliseconds>::max()*/
       ;
   std::string rectype;
-  std::vector<datetime<ngpt::milliseconds>> vdt;
+  std::vector<datetime<dso::milliseconds>> vdt;
 
   // go to the begining of the file.
   this->rewind();
@@ -96,7 +96,7 @@ prev_from = ngpt::datetime<ngpt::milliseconds>::max()*/
   while (!(answer = this->read_receiver_block(rectype, from, to))) {
     assert(to > from /*&& to <= prev_from*/);
     // prev_from = from;
-    if (to != ngpt::datetime<ngpt::milliseconds>::max()) {
+    if (to != dso::datetime<dso::milliseconds>::max()) {
       vdt.push_back(to);
     }
   }
@@ -109,16 +109,16 @@ prev_from = ngpt::datetime<ngpt::milliseconds>::max()*/
   return vdt;
 }
 
-std::vector<ngpt::datetime<ngpt::milliseconds>>
-ngpt::igs_log::antenna_changes() {
+std::vector<dso::datetime<dso::milliseconds>>
+dso::igs_log::antenna_changes() {
   std::size_t dummy{0};
   constexpr std::size_t MAX_CHARS{256}, MAX_LINES{10000};
   const char *antenna_info_block = "4.   GNSS Antenna Information";
 
   char line[MAX_CHARS];
-  ngpt::datetime<ngpt::milliseconds> from, to;
+  dso::datetime<dso::milliseconds> from, to;
   std::string anttype;
-  std::vector<datetime<ngpt::milliseconds>> vdt;
+  std::vector<datetime<dso::milliseconds>> vdt;
 
   // go to the begining of the file.
   this->rewind();
@@ -139,7 +139,7 @@ ngpt::igs_log::antenna_changes() {
   int answer;
   while (!(answer = this->read_antenna_block(anttype, from, to))) {
     assert(to > from /*&& to <= prev_from*/);
-    if (to != ngpt::datetime<ngpt::milliseconds>::max()) {
+    if (to != dso::datetime<dso::milliseconds>::max()) {
       vdt.push_back(to);
     }
   }
@@ -171,21 +171,21 @@ ngpt::igs_log::antenna_changes() {
 ///                           'Date Installed'). If this is set to the string
 ///                           'CCYY-MM-DDThh:mmZ' inside the block, then
 ///                           start is set to the min
-///                           datetime<ngpt::milliseconds>. The same goes for an
+///                           datetime<dso::milliseconds>. The same goes for an
 ///                           empty string.
 /// @param[out] stop          Stop time of this block's validity (line
 ///                           'Date Removed). If this is set to the string
 ///                           'CCYY-MM-DDThh:mmZ' inside the block, then
 ///                           stop is set to the max
-///                           datetime<ngpt::milliseconds>. The same goes for an
+///                           datetime<dso::milliseconds>. The same goes for an
 ///                           empty string.
 /// @return  The function returns an integer, signaling the following:
 ///           - int < 0 error
 ///           - int = 0 all ok
 ///           - int > 0 block 3.x (skipped; no more blocks to read)
-int ngpt::igs_log::read_receiver_block(
-    std::string &receiver_type, ngpt::datetime<ngpt::milliseconds> &start,
-    ngpt::datetime<ngpt::milliseconds> &stop) {
+int dso::igs_log::read_receiver_block(
+    std::string &receiver_type, dso::datetime<dso::milliseconds> &start,
+    dso::datetime<dso::milliseconds> &stop) {
   constexpr std::size_t MAX_CHARS{256}, MAX_LINES{1000};
   char line[MAX_CHARS];
 
@@ -218,7 +218,7 @@ int ngpt::igs_log::read_receiver_block(
     if (str_is_empty(line + 31)) {
       std::cerr << "\n[DEBUG] read_receiver_block: \'Date Installed\' record "
                    "is empty; setting to min date.";
-      start = ngpt::datetime<ngpt::milliseconds>::min();
+      start = dso::datetime<dso::milliseconds>::min();
     } else {
       int pos = 31;
       // go to the start of the datetime string
@@ -226,7 +226,7 @@ int ngpt::igs_log::read_receiver_block(
         ++pos;
       if (!strncmp(line + pos, "(CCYY-MM-DDThh:mmZ)", 19) ||
           !strncmp(line + pos, "CCYY-MM-DDThh:mmZ", 17)) {
-        start = ngpt::datetime<ngpt::milliseconds>::min();
+        start = dso::datetime<dso::milliseconds>::min();
       } else {
         start = strptime_log(line + 31);
       }
@@ -239,7 +239,7 @@ int ngpt::igs_log::read_receiver_block(
     if (str_is_empty(line + 31)) {
       std::cerr << "\n[DEBUG] read_receiver_block: \'Date Removed\' record "
                    "is empty; setting to max date.";
-      stop = ngpt::datetime<ngpt::milliseconds>::max();
+      stop = dso::datetime<dso::milliseconds>::max();
     } else {
       int pos = 31;
       // go to the start of the datetime string
@@ -247,7 +247,7 @@ int ngpt::igs_log::read_receiver_block(
         ++pos;
       if (!strncmp(line + pos, "(CCYY-MM-DDThh:mmZ)", 19) ||
           !strncmp(line + pos, "CCYY-MM-DDThh:mmZ", 17)) {
-        stop = ngpt::datetime<ngpt::milliseconds>::max();
+        stop = dso::datetime<dso::milliseconds>::max();
       } else {
         stop = strptime_log(line + 31);
       }
@@ -298,21 +298,21 @@ int ngpt::igs_log::read_receiver_block(
 ///                           'Date Installed'). If this is set to the string
 ///                           'CCYY-MM-DDThh:mmZ' inside the block, then
 ///                           start is set to the min
-///                           datetime<ngpt::milliseconds>. The same goes for an
+///                           datetime<dso::milliseconds>. The same goes for an
 ///                           empty string.
 /// @param[out] stop          Stop time of this block's validity (line
 ///                           'Date Removed). If this is set to the string
 ///                           'CCYY-MM-DDThh:mmZ' inside the block, then
 ///                           stop is set to the max
-///                           datetime<ngpt::milliseconds>. The same goes for an
+///                           datetime<dso::milliseconds>. The same goes for an
 ///                           empty string.
 /// @return  The function returns an integer, signaling the following:
 ///           - int < 0 error
 ///           - int = 0 all ok
 ///           - int > 0 block 4.x (skipped; no more blocks to read)
-int ngpt::igs_log::read_antenna_block(
-    std::string &antenna_type, ngpt::datetime<ngpt::milliseconds> &start,
-    ngpt::datetime<ngpt::milliseconds> &stop) {
+int dso::igs_log::read_antenna_block(
+    std::string &antenna_type, dso::datetime<dso::milliseconds> &start,
+    dso::datetime<dso::milliseconds> &stop) {
   constexpr std::size_t MAX_CHARS{256}, MAX_LINES{1000};
   char line[MAX_CHARS];
 
@@ -363,7 +363,7 @@ int ngpt::igs_log::read_antenna_block(
     if (str_is_empty(line + 31)) {
       std::cerr << "\n[DEBUG] read_antenna_block: \'Date Installed\' record "
                    "is empty; setting to min date.";
-      start = ngpt::datetime<ngpt::milliseconds>::min();
+      start = dso::datetime<dso::milliseconds>::min();
     } else {
       int pos = 31;
       // go to the start of the datetime string
@@ -371,7 +371,7 @@ int ngpt::igs_log::read_antenna_block(
         ++pos;
       if (!strncmp(line + pos, "(CCYY-MM-DDThh:mmZ)", 19) ||
           !strncmp(line + pos, "CCYY-MM-DDThh:mmZ", 17)) {
-        start = ngpt::datetime<ngpt::milliseconds>::min();
+        start = dso::datetime<dso::milliseconds>::min();
       } else {
         start = strptime_log(line + 31);
       }
@@ -384,7 +384,7 @@ int ngpt::igs_log::read_antenna_block(
     if (str_is_empty(line + 31)) {
       std::cerr << "\n[DEBUG] read_antenna_block: \'Date Removed\' record is "
                    "empty; setting to max date.";
-      stop = ngpt::datetime<ngpt::milliseconds>::max();
+      stop = dso::datetime<dso::milliseconds>::max();
     } else {
       int pos = 31;
       // go to the start of the datetime string
@@ -392,7 +392,7 @@ int ngpt::igs_log::read_antenna_block(
         ++pos;
       if (!strncmp(line + pos, "(CCYY-MM-DDThh:mmZ)", 19) ||
           !strncmp(line + pos, "CCYY-MM-DDThh:mmZ", 17)) {
-        stop = ngpt::datetime<ngpt::milliseconds>::max();
+        stop = dso::datetime<dso::milliseconds>::max();
       } else {
         stop = strptime_log(line + 31);
       }

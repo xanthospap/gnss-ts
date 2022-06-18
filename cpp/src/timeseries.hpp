@@ -8,10 +8,10 @@
 #include <iostream>
 #endif
 #include "data_point.hpp"
-#include "ggdatetime/dtcalendar.hpp"
+#include "datetime/dtcalendar.hpp"
 #include "model.hpp"
 
-namespace ngpt {
+namespace dso {
 
 /// @class timeseries
 ///
@@ -36,21 +36,22 @@ namespace ngpt {
 ///
 class timeseries {
 public:
-  using dp_flag = ngpt::flag<ngpt::pt_marker>;
+  using dp_flag = dso::flag<dso::pt_marker>;
 
   /// Constructor. If a vector of epochs is passed in, then we know we have
   /// our epochs. In this case, reserve space (memory) for the data points.
   ///
-  /// @param[in] epochs A pointer to a vector of ngpt::datetime<T> instances.
+  /// @param[in] epochs A pointer to a vector of dso::datetime<T> instances.
   ///
   /// @note Even though no data points are added to the time-series, enough
   ///       space is allocated to hold them (only allocated **not**
   ///       initialized!
-  explicit timeseries(std::vector<ngpt::datetime<ngpt::milliseconds>> *epochs =
-                          nullptr) noexcept
+  explicit timeseries(
+      std::vector<dso::datetime<dso::milliseconds>> *epochs = nullptr) noexcept
       : m_epochs(epochs) {
-    if (m_epochs)
+    if (m_epochs) {
       m_data.reserve(m_epochs->size());
+    }
   }
 
   /// Constructor. Use this constructor if you don't know exactly how many
@@ -67,8 +68,8 @@ public:
     m_data.reserve(size_hint);
   }
 
-  timeseries(const ngpt::ts_model &m,
-             std::vector<ngpt::datetime<ngpt::milliseconds>> *epochs,
+  timeseries(const dso::ts_model &m,
+             std::vector<dso::datetime<dso::milliseconds>> *epochs,
              double white_noise_std_dev = -1e0) noexcept;
 
   /// Copy constructor.
@@ -87,13 +88,14 @@ public:
   /// timeseries<...> ts2{ts1, 10, 100} will copy to ts2 all ts2 values
   /// between indexes [10,...,99]
   timeseries(const timeseries &ts) noexcept
-      : m_epochs(ts.m_epochs), m_data(ts.m_data){};
+      : m_epochs(ts.m_epochs), m_data(ts.m_data), m_tstamps(ts.m_tstamps){};
 
   /// Move constructor.
   /// @note The resluting time-serie's epoch vector (pointer), will be set to
   /// (point to) the original (i.e. ts).
   timeseries(timeseries &&ts) noexcept
-      : m_epochs(ts.m_epochs), m_data{std::move(ts.m_data)} {}
+      : m_epochs(ts.m_epochs), m_data{std::move(ts.m_data)},
+        m_tstamps{ts.m_tstamps} {}
 
   /// Assignment operator.
   /// @warning Note that the epoch vector is not (deep) copied; it is only
@@ -103,6 +105,7 @@ public:
     if (this != &ts) {
       m_epochs = ts.m_epochs;
       m_data = ts.m_data;
+      m_tstamps = ts.m_tstamps;
     }
     return *this;
   }
@@ -112,12 +115,14 @@ public:
     if (this != &ts) {
       m_epochs = ts.m_epochs;
       m_data = std::move(ts.m_data);
+      m_tstamps = ts.m_tstamps;
     }
     return *this;
   }
 
   bool operator==(const timeseries &other) const noexcept {
-    return m_epochs == other.m_epochs && m_data == other.m_data;
+    return m_epochs == other.m_epochs && m_data == other.m_data &&
+           m_tstamps == other.m_tstamps;
   }
   bool operator!=(const timeseries &other) const noexcept {
     return !this->operator==(other);
@@ -130,12 +135,12 @@ public:
   ///
   /// @todo   What the fuck should i do with the epochs of each sub-timeseries??
   /*
-  auto split(std::size_t idx) const {
-    timeseries left(*this, 0, idx);
-    timeseries right(*this, idx);
-    return std::make_tuple(std::move(left), std::move(right));
-  }
-  */
+     auto split(std::size_t idx) const {
+     timeseries left(*this, 0, idx);
+     timeseries right(*this, idx);
+     return std::make_tuple(std::move(left), std::move(right));
+     }
+     */
 
   /// Add a data point; returns the new mean value.
   /// @note   The instance's mean value is updated; so is the number of
@@ -150,28 +155,28 @@ public:
   /// [start, end).
   /// parameter[in] start Start of data range (inclusive)
   /// parameter[in] end   Stop marking at this date (non-inclusive)
-  /// parameter[in] type  ngpt::pt_marker to set for the data points in the
+  /// parameter[in] type  dso::pt_marker to set for the data points in the
   ///                     range
   /// @return Number of data points that were marked
-  std::size_t mark(ngpt::pt_marker type,
-                   ngpt::datetime<ngpt::milliseconds> start =
-                       ngpt::datetime<ngpt::milliseconds>::min(),
-                   ngpt::datetime<ngpt::milliseconds> end =
-                       ngpt::datetime<ngpt::milliseconds>::max()) noexcept;
+  std::size_t mark(dso::pt_marker type,
+                   dso::datetime<dso::milliseconds> start =
+                       dso::datetime<dso::milliseconds>::min(),
+                   dso::datetime<dso::milliseconds> end =
+                       dso::datetime<dso::milliseconds>::max()) noexcept;
 
   /// Compute the mean (i.e. central epoch). This version uses the very
   /// first and last epochs to compute the mean, regardless if they are
   /// marked as unused. The mean epoch is obviously half the distance
   /// between the first and last epochs.
-  ngpt::datetime<ngpt::milliseconds> central_epoch() const noexcept;
+  dso::datetime<dso::milliseconds> central_epoch() const noexcept;
 
   /// Cut (in-place) the m_data vector to fit the interval [start, end). The
   /// m_epochs vector WILL NOT BE AFFECTED!. If you want to also cut the epochs
   /// vector, make a copy and pass it in via the epoch_vec parameter.
   /// Example usage:
   /// timeseries ts1( ... ); // some timeseries instance
-  /// auto t1 = ngpt::datetime( ... );
-  /// auto t2 = ngpt::datetime( ... );
+  /// auto t1 = dso::datetime( ... );
+  /// auto t2 = dso::datetime( ... );
   /// auto ts2 = ts1; // deep copy m_data and shallow copy m_epochs
   /// vector<data_point> copy = ts1.epochs_vec(); // copy the ts1 m_epochs
   /// vector auto sz = ts2.cut(t1, t2, &copy); ts2.set_epoch_vec(&copy); //
@@ -186,15 +191,24 @@ public:
   ///                  the [start, end) range.
   /// @return The size of the new m_data vector; if something goes wrong a
   ///         negative integer is returned.
-  long cut(ngpt::datetime<ngpt::milliseconds> start,
-           ngpt::datetime<ngpt::milliseconds> end,
-           std::vector<ngpt::datetime<ngpt::milliseconds>> *epoch_vec =
+  long cut(dso::datetime<dso::milliseconds> start,
+           dso::datetime<dso::milliseconds> end,
+           std::vector<dso::datetime<dso::milliseconds>> *epoch_vec = nullptr,
+           std::vector<dso::datetime<dso::milliseconds>> *stamps_vec =
                nullptr) noexcept;
 
   void
-  set_epoch_vec(std::vector<ngpt::datetime<ngpt::milliseconds>> *e) noexcept {
+  set_epoch_vec(std::vector<dso::datetime<dso::milliseconds>> *e) noexcept {
     m_epochs = e;
   }
+
+  void
+  set_stamp_vec(std::vector<dso::datetime<dso::milliseconds>> *e) noexcept {
+    m_tstamps = e;
+  }
+
+ const  std::vector<dso::datetime<dso::milliseconds>> *epoch_ptr() const noexcept{return m_epochs;}
+ const  std::vector<dso::datetime<dso::milliseconds>> *tstamps_ptr() const noexcept{return m_tstamps;}
 
 #ifdef TS_DEBUG
   std::size_t size() const noexcept { return m_data.size(); }
@@ -202,20 +216,22 @@ public:
     return m_data;
   }
   std::vector<data_point> &data_points_vec() noexcept { return m_data; }
-  const std::vector<ngpt::datetime<ngpt::milliseconds>> &
+  const std::vector<dso::datetime<dso::milliseconds>> &
   epochs_vec() const noexcept {
     return *m_epochs;
   }
 #endif
 
 private:
-  /// A pointer to a vector of datetime<T> instances.
-  std::vector<ngpt::datetime<ngpt::milliseconds>> *m_epochs;
+  /// A pointer to a vector of datetime<T> instances (data points epochs).
+  std::vector<dso::datetime<dso::milliseconds>> *m_epochs;
+  /// A pointer to a vector of datetime<T> instances (data points time-stamps).
+  std::vector<dso::datetime<dso::milliseconds>> *m_tstamps;
   /// The vector of data points.
   std::vector<data_point> m_data;
 
 }; // timeseries
 
-} // namespace ngpt
+} // namespace dso
 
 #endif

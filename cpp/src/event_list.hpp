@@ -5,12 +5,12 @@
 /// @file event_list.hpp
 ///
 
-#include "ggdatetime/dtcalendar.hpp"
+#include "datetime/dtcalendar.hpp"
 #include "ts_flag.hpp"
 #include <fstream>
 #include <vector>
 
-namespace ngpt {
+namespace dso {
 
 /// @class event
 ///
@@ -19,7 +19,7 @@ namespace ngpt {
 /// place in the vicinity of a site, is an event.
 /// Such events are examined and taken into account when analyzing times-series.
 /// An event is characterized by:
-/// * the epoch it happened (as ngpt::datetime<T>)
+/// * the epoch it happened (as dso::datetime<T>)
 /// * the event type (as ts_event), and
 /// * an optional string containing relevant information
 ///
@@ -38,13 +38,13 @@ public:
   /// @param[in] evn  The type of the event (type ts_event)
   /// @param[in] info Information string (optional). If not gven set to ""
   ///                 (type string)
-  event(const ngpt::datetime<ngpt::milliseconds> &t, ts_event evn,
+  event(const dso::datetime<dso::milliseconds> &t, ts_event evn,
         std::string info = std::string{""}) noexcept
       : m_epoch(t), m_event_type(evn), m_info(info){};
 
   /// Instance of the event
-  /// @return The epoch the event took place (type datetime<ngpt::milliseconds>)
-  ngpt::datetime<ngpt::milliseconds> epoch() const noexcept { return m_epoch; }
+  /// @return The epoch the event took place (type datetime<dso::milliseconds>)
+  dso::datetime<dso::milliseconds> epoch() const noexcept { return m_epoch; }
 
   /// Event type
   /// @return The event type (type ts_event)
@@ -82,7 +82,7 @@ public:
   std::string to_string() const noexcept;
 
 private:
-  ngpt::datetime<ngpt::milliseconds>
+  dso::datetime<dso::milliseconds>
       m_epoch;           ///< Instance (epoch) the event took place
   ts_event m_event_type; ///< Event type
   std::string m_info;    ///< Information string (optional)
@@ -104,10 +104,10 @@ private:
 ///
 class event_list {
 public:
-  /// An epoch is just a short name for ngpt::datetime<ngpt::milliseconds>
-  // using epoch = ngpt::datetime<ngpt::milliseconds>;
-  // using tflag = ngpt::flag<ts_event>;
-  // using earthq = ngpt::earthquake<T>;
+  /// An epoch is just a short name for dso::datetime<dso::milliseconds>
+  // using epoch = dso::datetime<dso::milliseconds>;
+  // using tflag = dso::flag<ts_event>;
+  // using earthq = dso::earthquake<T>;
 
   /// Null constructor.
   event_list() noexcept {};
@@ -117,20 +117,20 @@ public:
   /// Return a new event_list, which is a copy of the calling instance, but
   /// does not contain events that fall outside the interval [start, stop].
   /// @param[in] start The epoch to start copying from (inclusive). If
-  ///                  datetime<ngpt::milliseconds>::min() is passed in (which
+  ///                  datetime<dso::milliseconds>::min() is passed in (which
   ///                  is the default value), the copying will start from the
   ///                  begining of the calling instance's events vector.
   /// @param[in] stop  The epoch to stop copying at (inclusive). If
-  ///                  datetime<ngpt::milliseconds>::max() is passed in (which
+  ///                  datetime<dso::milliseconds>::max() is passed in (which
   ///                  is the default value), the copying will stop at the end
   ///                  of the the calling instance's events vector.
   /// @return          An event_list<T>, containing all events of the calling
   ///                  instance that have a time-stamp between [start, stop].
   event_list
-  limit_copy(ngpt::datetime<ngpt::milliseconds> start =
-                 ngpt::datetime<ngpt::milliseconds>::min(),
-             ngpt::datetime<ngpt::milliseconds> stop =
-                 ngpt::datetime<ngpt::milliseconds>::max()) const noexcept;
+  limit_copy(dso::datetime<dso::milliseconds> start =
+                 dso::datetime<dso::milliseconds>::min(),
+             dso::datetime<dso::milliseconds> stop =
+                 dso::datetime<dso::milliseconds>::max()) const noexcept;
 
   /// Given an IGS station log file, read through the receiver and antenna
   /// changes blocks, and apply all subsequent changes.
@@ -144,17 +144,17 @@ public:
   ///                   (inclusive). Any receiver/antenna change that has
   ///                   happened prior to this date, will **NOT** be
   ///                   considered. Default value is
-  ///                   ngpt::datetime<ngpt::milliseconds>::min()
+  ///                   dso::datetime<dso::milliseconds>::min()
   /// @param[in] stop   Stop of the time interval for considering events
   ///                   (inclusive). Any receiver/antenna change that has
   ///                   happened after this date, will **NOT** be
   ///                   considered. Default value is
-  ///                   ngpt::datetime<ngpt::milliseconds>::max()
+  ///                   dso::datetime<dso::milliseconds>::max()
   void apply_stalog_file(const char *igsfl,
-                         ngpt::datetime<ngpt::milliseconds> start =
-                             ngpt::datetime<ngpt::milliseconds>::min(),
-                         ngpt::datetime<ngpt::milliseconds> stop =
-                             ngpt::datetime<ngpt::milliseconds>::max(),
+                         dso::datetime<dso::milliseconds> start =
+                             dso::datetime<dso::milliseconds>::min(),
+                         dso::datetime<dso::milliseconds> stop =
+                             dso::datetime<dso::milliseconds>::max(),
                          bool apply_rec_changes = true);
 
   /// Given an event list file, read it through and apply it, i.e. add all
@@ -164,7 +164,7 @@ public:
   /// - Lines starting with (i.e. the first character is) '#', 'Y' and ' '
   ///   are skipped
   /// - The first field in each (non-skipped) line, must be a date, with the
-  ///   format YMD-HMS (see the function ngpt::strptime_ymd_hms<T> for more)
+  ///   format YMD-HMS (see the function dso::strptime_ymd_hms<T> for more)
   /// - After the date, and within the next 14 places, the event flag must be
   ///   written, either in upper or in lower case.
   /// Only events within the range [start, stop] are added to the instance.
@@ -181,10 +181,10 @@ public:
   ///
   /// @todo add a part of an evn file here !!
   void apply_event_list_file(const char *evn_file,
-                             ngpt::datetime<ngpt::milliseconds> start =
-                                 ngpt::datetime<ngpt::milliseconds>::min(),
-                             ngpt::datetime<ngpt::milliseconds> stop =
-                                 ngpt::datetime<ngpt::milliseconds>::max());
+                             dso::datetime<dso::milliseconds> start =
+                                 dso::datetime<dso::milliseconds>::min(),
+                             dso::datetime<dso::milliseconds> stop =
+                                 dso::datetime<dso::milliseconds>::max());
 
   /// Split the vector of events (aka m_events) to individual vectors per
   /// event (i.e. one vector for jumps, one for velocity changes and one for
@@ -199,9 +199,9 @@ public:
   ///       filled with the events. If they do hold something at input, it
   ///       will be removed at output.
   void
-  split_event_list(std::vector<ngpt::datetime<ngpt::milliseconds>> &jumps,
-                   std::vector<ngpt::datetime<ngpt::milliseconds>> &vel_changes,
-                   std::vector<ngpt::datetime<ngpt::milliseconds>> &earthquakes)
+  split_event_list(std::vector<dso::datetime<dso::milliseconds>> &jumps,
+                   std::vector<dso::datetime<dso::milliseconds>> &vel_changes,
+                   std::vector<dso::datetime<dso::milliseconds>> &earthquakes)
       const noexcept;
 
   /// Write the event list instance to an output stream.
@@ -269,7 +269,7 @@ public:
   /// @parameter[in] dt A (date)time interval; if two or more earthquakes
   ///                   occur within dt, then they are replaced with a single
   ///                   earthquake, the one with the maximum magnitude.
-  /*void filter_earthquake_sequences(ngpt::datetime_interval<ngpt::milliseconds>
+  /*void filter_earthquake_sequences(dso::datetime_interval<dso::milliseconds>
    * dt);*/
 
   std::vector<event> &get_the_vector() noexcept { return this->m_events; }
@@ -289,7 +289,7 @@ private:
   ///
   bool sorted_insert(const event &new_event) noexcept;
 
-  /// Insert an event (aka std::pair<datetime<ngpt::milliseconds>, ts_event>)
+  /// Insert an event (aka std::pair<datetime<dso::milliseconds>, ts_event>)
   /// into the m_events vector in sorted (i.e. chronologically) order. If the
   /// event is a duplicate, it will not be added.
   ///
@@ -310,6 +310,6 @@ private:
   std::vector<event> m_events; ///< Vector of events, sorted by epoch.
 };                             // class event_list
 
-} // end namespace ngpt
+} // end namespace dso
 
 #endif

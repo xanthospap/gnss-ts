@@ -1,13 +1,14 @@
 #include "timeseries.hpp"
-#include "ggdatetime/dtfund.hpp"
+#include "datetime/dtfund.hpp"
 #include <algorithm>
 #include <random>
 
-ngpt::timeseries::timeseries(
-    const ngpt::ts_model &md,
-    std::vector<ngpt::datetime<ngpt::milliseconds>> *epoch_vec,
+dso::timeseries::timeseries(
+    const dso::ts_model &md,
+    std::vector<dso::datetime<dso::milliseconds>> *epoch_vec,
     double wn_stddev) noexcept
-    : m_epochs(epoch_vec) {
+    : m_epochs(epoch_vec),
+    m_tstamps(nullptr) {
   m_data.reserve(epoch_vec->size());
   md.fill_data_vec(epoch_vec, m_data);
   // add white noise with mean=0 and std_dev = wn_stddev
@@ -24,21 +25,21 @@ ngpt::timeseries::timeseries(
 }
 
 std::size_t
-ngpt::timeseries::mark(ngpt::pt_marker type,
-                       ngpt::datetime<ngpt::milliseconds> start,
-                       ngpt::datetime<ngpt::milliseconds> end) noexcept {
+dso::timeseries::mark(dso::pt_marker type,
+                      dso::datetime<dso::milliseconds> start,
+                      dso::datetime<dso::milliseconds> end) noexcept {
   if (!m_epochs)
     return -1;
 
   std::size_t start_idx, stop_idx;
-  if (start == ngpt::datetime<ngpt::milliseconds>::min()) {
+  if (start == dso::datetime<dso::milliseconds>::min()) {
     start_idx = 0;
   } else {
     auto it = std::lower_bound(m_epochs->cbegin(), m_epochs->cend(), start);
     start_idx = std::distance(m_epochs->cbegin(), it);
   }
 
-  if (end == ngpt::datetime<ngpt::milliseconds>::max()) {
+  if (end == dso::datetime<dso::milliseconds>::max()) {
     stop_idx = m_epochs->size();
   } else {
     auto it = std::lower_bound(m_epochs->cbegin(), m_epochs->cend(), end);
@@ -54,10 +55,11 @@ ngpt::timeseries::mark(ngpt::pt_marker type,
   return stop_idx - start_idx;
 }
 
-long ngpt::timeseries::cut(
-    ngpt::datetime<ngpt::milliseconds> start,
-    ngpt::datetime<ngpt::milliseconds> end,
-    std::vector<ngpt::datetime<ngpt::milliseconds>> *epoch_vec) noexcept {
+long dso::timeseries::cut(
+    dso::datetime<dso::milliseconds> start,
+    dso::datetime<dso::milliseconds> end,
+    std::vector<dso::datetime<dso::milliseconds>> *epoch_vec,
+    std::vector<dso::datetime<dso::milliseconds>> *tstamps_vec) noexcept {
 
   if (!m_epochs || m_epochs->size() != m_data.size()) {
     return -1;
@@ -79,14 +81,21 @@ long ngpt::timeseries::cut(
     epoch_vec->erase(epoch_vec->begin() + end_idx - start_idx,
                      epoch_vec->end());
   }
+  if (tstamps_vec) {
+    std::rotate(tstamps_vec->begin(), tstamps_vec->begin() + start_idx,
+                tstamps_vec->end());
+    tstamps_vec->erase(tstamps_vec->begin() + end_idx - start_idx,
+                     tstamps_vec->end());
+  }
+
   return (long)(end_idx - start_idx);
 }
 
-ngpt::datetime<ngpt::milliseconds>
-ngpt::timeseries::central_epoch() const noexcept {
+dso::datetime<dso::milliseconds>
+dso::timeseries::central_epoch() const noexcept {
   auto first_epoch = (*m_epochs)[0],
        last_epoch = (*m_epochs)[m_epochs->size() - 1];
-  auto delta_dt = ngpt::delta_date(last_epoch, first_epoch);
+  auto delta_dt = dso::delta_date(last_epoch, first_epoch);
   auto central_epoch{first_epoch};
   central_epoch += (delta_dt / 2);
   return central_epoch;

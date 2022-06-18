@@ -5,18 +5,18 @@
 /// @brief This file defines classes and functions to treat earthquake events
 ///
 
-#include "ggdatetime/dtcalendar.hpp"
-#include "ggeodesy/ellipsoid.hpp"
-#include "ggeodesy/vincenty.hpp"
+#include "datetime/dtcalendar.hpp"
+#include "geodesy/ellipsoid.hpp"
+#include "geodesy/vincenty.hpp"
 #include <fstream>
 
-namespace ngpt {
+namespace dso {
 
 /// @struct earthquake
 ///
 /// @brief A simple class to hold an earthquake event.
 struct earthquake {
-  ngpt::datetime<ngpt::milliseconds> m_epoch; ///< The datetime it happened
+  dso::datetime<dso::milliseconds> m_epoch; ///< The datetime it happened
   double m_lon;       ///< Epicenter longtitude (radians)
   double m_lat;       ///< Epicenter latitude (radians)
   double m_depth;     ///< Depth (meters)
@@ -31,7 +31,7 @@ struct earthquake {
   /// and returned (as parameters frw_az and bkw_az).
   ///
   /// @tparam     E       The reference ellipsoid (default is
-  ///                     ngpt::ellipsoid::wgs84)
+  ///                     dso::ellipsoid::wgs84)
   /// @param[in]  lat     The latitide of the point P (radians)
   /// @param[in]  lon     The longtitude of the point P (radians)
   /// @param[out] frw_az  Forward azimouth (i.e. epicenter to P)
@@ -67,8 +67,8 @@ struct earthquake {
 /// @param[in] t  datetime<T> instance to be transformed to string
 /// @return       string; the input datetime instance formated as:
 ///               'YYYY OOO DD HH MM SS.S'
-std::string strfdt_as_noa(const ngpt::datetime<ngpt::milliseconds> &t);
+std::string strfdt_as_noa(const dso::datetime<dso::milliseconds> &t);
 
-} // namespace ngpt
+} // namespace dso
 
 #endif
