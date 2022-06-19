@@ -1,7 +1,6 @@
 import math
-import numpy as np
 
-def topoecentric_matrix(lon, lat):
+def topocentric_matrix(lon, lat):
     cf = math.cos(lat)
     sf = math.sin(lat)
     cl = math.cos(lon)
@@ -20,4 +19,4 @@ def topoecentric_matrix(lon, lat):
     d21 = cf*sl
     d22 = sf
 
-    return 
+    return  [[d00,d01,d02],[d10,d11,d12],[d20,d21,d22]]
