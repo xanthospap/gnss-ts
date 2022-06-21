@@ -1,6 +1,7 @@
 from car2ell import cartesian2ellipsoidal
 from topocentric_matrix import topocentric_matrix
 from enum import Enum
+import datetime
 import numpy as np
 import json
 
@@ -33,10 +34,32 @@ class TimeSeries:
     def get(self, key):
         return [ entry[key] for entry in self._data ]
 
+    def cut(self, tstart, tend=datetime.datetime.max):
+        """ cut on time, aka tstart and tend are datetime.datetime 
+        """
+        entries = []
+        for entry in self._data:
+            if entry[t] >= tstart and entry[t] < tend:
+                entries.append(entry)
+            if entry[t] > tend:
+                break
+        return TimeSeries(self._site, entries)
+    
+    def icut(self, istart, iend=None):
+        """ cut on index
+        """
+        if iend is None:
+            iend = len(self._data)
+        assert(istart >= 0 and iend <= len(self._data) and istart < iend)
+        return TimeSeries(self._site, self._data[istart:iend])
+
     def includes_coordinate_type(self, ct):
         cnames = coordinate_type_keys(ct)
         #return all([self._data[0].has_key(k) for k in cnames])
         return all([ p3_has_key(self._data[0],k) for k in cnames ])
+
+    def includes_key(self, key):
+        return p3_has_key(self._data[0], key)
     
     def drop_coordinate_type(self,ct):
         if not self.includes_coordinate_type(ct):
@@ -84,6 +107,7 @@ class TimeSeries:
     def size(self): return len(self._data)
 
     def time_span(self):
+        assert len(self._data) > 1
         return self._data[0]['t'], self._data[-1]['t']
 
     def dump(self):
@@ -118,5 +142,3 @@ class TimeSeries:
             last_e = entry
         
         return last_i,last_e['t']
-
-    # def check_jump_at(self,t,ct,max_days):
