@@ -68,11 +68,11 @@ gs = fig.add_gridspec(3, hspace=0)
 axs = gs.subplots(sharex=True, sharey=True)
 fig.suptitle('Time-Series for Station')
 
-axs[0].plot(ts.get('t'), ts.get('east'))
+axs[0].scatter(ts.get('t'), ts.get('east'), s=50, facecolors='black', edgecolors='r')
 axs[0].set(ylabel='East [m]')
-axs[1].plot(ts.get('t'), ts.get('north'), 'o')
+axs[1].scatter(ts.get('t'), ts.get('north'), s=50, facecolors='black', edgecolors='r')
 axs[1].set(ylabel='North [m]')
-axs[2].plot(ts.get('t'), ts.get('up'), '+')
+axs[2].scatter(ts.get('t'), ts.get('up'), s=50, facecolors='black', edgecolors='r')
 axs[2].set(ylabel='Up [m]')
 
 # Hide x labels and tick labels for all but bottom plot.
