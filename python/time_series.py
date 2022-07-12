@@ -40,8 +40,13 @@ class TimeSeries:
     def get(self, key):
         return [entry[key] for entry in self._data]
 
+    def drop_ignored(self):
+        site = self._site
+        data = [d for d in self._data if not d['ignore']]
+        return TimeSeries(site, data)
+
     def cut(self, tstart, tend=datetime.datetime.max):
-        """ cut on time, aka tstart and tend are datetime.datetime 
+        """ cut on time, aka tstart and tend are datetime.datetime
         """
         entries = []
         for entry in self._data:
@@ -155,10 +160,10 @@ class TimeSeries:
     ##      To compute residuals for a single coordinate component, provide
     ##      the component name, that is:
     ##      kwargs = { coordinate_key='east')
-    ##      To compute the periodogram for all three coordinates of a 
+    ##      To compute the periodogram for all three coordinates of a
     ##      CoordinateType, provide the CoordinateType name, e.g.
     ##      kwargs = {coordinate_type = CoordinateType.Topocentric. Note that
-    ##      in this case, the model parameter must be a list of three 
+    ##      in this case, the model parameter must be a list of three
     ##      TsModel, one for each component
     def residuals(self, model, **kwargs):
         # parameter check

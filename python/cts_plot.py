@@ -2,6 +2,7 @@
 
 import parsers as tparse
 import time_series as tsp
+import outlier_detection as tod
 import os
 import sys
 import datetime
@@ -52,6 +53,19 @@ parser.add_argument('-q', '--quiet',
                     help='Do not display the produced figure.',
                     action='store_true'
 )
+parser.add_argument('-s', '--site-name',
+                    action='store',
+                    required=False,
+                    help='Site name to be added to the plot title',
+                    metavar='SITE_NAME',
+                    dest='site_name',
+                    default=''
+)
+parser.add_argument('--no-outliers',
+                    dest='remove_outliers',
+                    help='Find and remove outliers before ploting.',
+                    action='store_true'
+)
 
 args = parser.parse_args()
 
@@ -63,16 +77,19 @@ ts = tparse.parse_cts(args.cts)
 ts = ts.topocentric().drop_coordinate_type(
     tsp.CoordinateType.Cartesian).drop_coordinate_type(tsp.CoordinateType.Ellipsoidal)
 
+if args.remove_outliers:
+    ts = tod.threeSigma(ts, tsp.CoordinateType.Topocentric, True)
+
 fig = plt.figure()
 gs = fig.add_gridspec(3, hspace=0)
 axs = gs.subplots(sharex=True, sharey=True)
-fig.suptitle('Time-Series for Station')
+fig.suptitle('Time-Series for Station ' + args.site_name)
 
-axs[0].scatter(ts.get('t'), ts.get('east'), s=50, facecolors='black', edgecolors='r')
+axs[0].scatter(ts.get('t'), ts.get('east'), s=10, facecolors='black', edgecolors='r')
 axs[0].set(ylabel='East [m]')
-axs[1].scatter(ts.get('t'), ts.get('north'), s=50, facecolors='black', edgecolors='r')
+axs[1].scatter(ts.get('t'), ts.get('north'), s=10, facecolors='black', edgecolors='r')
 axs[1].set(ylabel='North [m]')
-axs[2].scatter(ts.get('t'), ts.get('up'), s=50, facecolors='black', edgecolors='r')
+axs[2].scatter(ts.get('t'), ts.get('up'), s=10, facecolors='black', edgecolors='r')
 axs[2].set(ylabel='Up [m]')
 
 # Hide x labels and tick labels for all but bottom plot.

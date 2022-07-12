@@ -16,7 +16,7 @@ def resolve_line(line):
     t = datetime.datetime.strptime(' '.join(l[0:2]), '%Y-%m-%d %H:%M:%S')
     x, sx, y, sy, z, sz, lat, slat, lon, slon, hgt, shgt = [
         float(c) for c in l[2:14]]
-    
+
     ## time-stamp may have fractional seconds or not ...
     try :
         tstamp = datetime.datetime.strptime(
@@ -29,7 +29,7 @@ def resolve_line(line):
 
     return {'t': t, 'tstamp': tstamp, 'x': x, 'y': y, 'z': z, 'sx': sx, 'sy': sy, 'sz': sz, 'lat': lat, 'lon': lon, 'hgt': hgt, 'slat': slat, 'slon': slon, 'shgt': shgt, 'comments': comments}
 
-## append line parsed from cts (for a single epoch) to a dictionary with 
+## append line parsed from cts (for a single epoch) to a dictionary with
 ## elements cts-lines (stored in dictionary) and keys their respective epochs
 def dappend(dct, dentry):
     t = dentry['t']
@@ -70,7 +70,7 @@ def parse_cts(filename, **kwargs):
             if dct:
                 if dct['t'] >= tstart and dct['t'] < tstop and comment_is_valid(allowed_comments, dct):
                     dct['ignore'] = False
-                    if not unique: 
+                    if not unique:
                         ret.append(dct)
                     else:
                         ret = dappend(ret, dct)
