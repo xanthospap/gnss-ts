@@ -6,19 +6,24 @@ def fractional_days(startt, endt):
     difference = endt - startt
     return difference.total_seconds() / datetime.timedelta(days=1).total_seconds()
 
+YEAR_DAYS = 365.25e0
 
 class TsModel:
 
     def __init__(self, t0=None, include_linear_terms=True):
-        self.t0 = t0
+        self.t0 = t0 ## datetime.datetime
         ## [{'t':datetime.datetime, 'comment': 'receiver change'}, {...}]
         self.jumps = None 
         ## [{'dy': float , 'sdy': float (std-deviation)}, {...}]
         self.jump_estimates = None
 
         if include_linear_terms:
-            self.intercept = None
-            self.slope = None
+            self.intercept = None ## [m]
+            self.slope = None     ## [m/year]
+
+    def dump(self):
+        print("Least Squares Model:")
+        print("  Velocity={:+.4f}[m/year] Intercept={:+.6f}[m], t0={:}".format(self.slope, self.intercept, self.t0))
 
     def append_jumps(self, jump_dict_list):
         if self.jumps is None:
@@ -27,7 +32,7 @@ class TsModel:
         self.jumps = sorted(self.jumps, key=lambda d: d['t'])
 
     def value(self, t):
-        linear = self.intercept + self.slope * fractional_days(self.t0, t)
+        linear = self.intercept + self.slope * fractional_days(self.t0, t) / YEAR_DAYS
 
         jump = 0e0;
         if self.jumps is not None:
@@ -56,7 +61,7 @@ class TsModel:
         assert(numobs == len(y))
 
         # least squares matrices
-        dt = [fractional_days(t0, ti) for ti in t]
+        dt = [fractional_days(t0, ti)/YEAR_DAYS for ti in t]
         A = np.vstack([dt, np.ones(numobs)]).T
 
         # least squares fit
@@ -65,8 +70,8 @@ class TsModel:
         # make new (copy) model
         # mdl = TsModel()
         mdl = copy.deepcopy(self)
-        mdl.intercept = coefs[0]
-        mdl.slope = coefs[1]
+        mdl.intercept = coefs[1]
+        mdl.slope = coefs[0]
         mdl.t0 = t0
 
         return mdl, res
@@ -76,6 +81,7 @@ class TsModel:
         t = tstart
         while t < tend:
             data.append({'t': t, 'x': self.intercept +
-                         self.slope * fractional_days(self.t0, t)})
+                         self.slope * fractional_days(self.t0, t)/YEAR_DAYS})
             t += tstep
-        return TimeSeries('', data)
+        # return TimeSeries('', data)
+        return data

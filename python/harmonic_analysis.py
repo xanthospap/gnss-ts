@@ -7,6 +7,7 @@ import parsers as tp
 import time_series as ts
 import model_fit as tm
 import periodogram as th
+import outlier_detection as td
 import matplotlib.pyplot as plt
 
 parser = argparse.ArgumentParser(
@@ -64,22 +65,40 @@ s = tp.parse_cts(args.cts)
 s = s.topocentric().drop_coordinate_type(
     ts.CoordinateType.Cartesian).drop_coordinate_type(ts.CoordinateType.Ellipsoidal)
 
-## simple, linear model
+## simple, linear model for each component
 lmodels = []
 for ct in ts.coordinate_type_keys(ts.CoordinateType.Topocentric):
-    mdl = tm.TsModel()
-    lmodels.append(mdl.fit(s.get('t'), s.get(ct))[0])
+    ## copy original ts
+    lts = ts.TimeSeries(s._site, s._data)
+    for i in range(3):
+        ## summy model (empty)
+        mdl = tm.TsModel()
+        ## fit, create model via ls fit, ommiting ignored
+        mdl,_  = mdl.fit(lts.get('t', False), lts.get(ct, False))
+        ## get residuals
+        lts = lts.residuals(mdl, coordinate_key=ct)
+        ## mark outliers
+        lts = td.threeSigma(lts, coordinate_key=ct, delete=False)
+    lmodels.append(mdl)
+    mdl.dump()
 
 ## de-trended    
-residuals = s.residuals(model=lmodels, coordinate_type=ts.CoordinateType.Topocentric)
+res = s.residuals(model=lmodels, coordinate_type=ts.CoordinateType.Topocentric)
 
-lslist = th.lomb_scargle(residuals, coordinate_type=ts.CoordinateType.Topocentric, model=lmodels)
+## remove outliers
+res = td.threeSigma(res, coordinate_type=ts.CoordinateType.Topocentric, delete=True)
+
+lslist = th.lomb_scargle(res, coordinate_type=ts.CoordinateType.Topocentric, model=lmodels)
 
 ## plot (try north)
 component = 'north'
 m = lslist[0]
 periods, power = m.periodogram_auto(nyquist_factor=100)
+m.optimizer.period_range=(100, 400)
+period = m.best_period
+print("period = {0}".format(period))
+
 fig, ax = plt.subplots()
 ax.plot(periods, power)
-ax.set(xlim=(0.2, 2.0), ylim=(0, 0.99), xlabel='period (days)', ylabel='Lomb-Scargle Power')
+ax.set(xlim=(20, 370), ylim=(0, 0.99), xlabel='period (days)', ylabel='Lomb-Scargle Power')
 plt.show()

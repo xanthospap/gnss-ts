@@ -37,8 +37,11 @@ class TimeSeries:
         # list of dictionaries ...
         self._data = entries
 
-    def get(self, key):
-        return [entry[key] for entry in self._data]
+    def get(self, key, includeIgnored=True):
+        if includeIgnored:
+            return [entry[key] for entry in self._data]
+        else:
+            return [ entry[key] for entry in self._data if entry['ignore']==False ]
 
     def drop_ignored(self):
         site = self._site
@@ -117,7 +120,8 @@ class TimeSeries:
 
         return TimeSeries(self._site, newentries)
 
-    def size(self): return len(self._data)
+    def size(self, includeIgnored=True): 
+        return len(self._data) if includeIgnored else len([ t for t in self._data if t['ignore']==False])
 
     def time_span(self):
         assert len(self._data) > 1

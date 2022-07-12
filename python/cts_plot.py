@@ -3,6 +3,7 @@
 import parsers as tparse
 import time_series as tsp
 import outlier_detection as tod
+import model_fit as tm
 import os
 import sys
 import datetime
@@ -66,6 +67,11 @@ parser.add_argument('--no-outliers',
                     help='Find and remove outliers before ploting.',
                     action='store_true'
 )
+parser.add_argument('--lsfit',
+                    dest='fit',
+                    help='Perform linear fit and plot residuals. If set, the program will plot the residuals of the time series w.r.t. the estimated model',
+                    action='store_true'
+)
 
 args = parser.parse_args()
 
@@ -77,8 +83,29 @@ ts = tparse.parse_cts(args.cts)
 ts = ts.topocentric().drop_coordinate_type(
     tsp.CoordinateType.Cartesian).drop_coordinate_type(tsp.CoordinateType.Ellipsoidal)
 
+if args.fit:
+    ## simple, linear model for each component
+    lmodels = []
+    for ct in tsp.coordinate_type_keys(tsp.CoordinateType.Topocentric):
+        ## copy original ts
+        lts = tsp.TimeSeries(ts._site, ts._data)
+        for i in range(3):
+            ## summy model (empty)
+            mdl = tm.TsModel()
+            ## fit, create model via ls fit, ommiting ignored
+            mdl,_  = mdl.fit(lts.get('t', False), lts.get(ct, False))
+            ## get residuals
+            lts = lts.residuals(mdl, coordinate_key=ct)
+            ## mark outliers
+            lts = tod.threeSigma(lts, coordinate_key=ct, delete=False)
+        lmodels.append(mdl)
+        mdl.dump()
+
+    ## de-trended    
+    ts = ts.residuals(model=lmodels, coordinate_type=tsp.CoordinateType.Topocentric)
+
 if args.remove_outliers:
-    ts = tod.threeSigma(ts, tsp.CoordinateType.Topocentric, True)
+    ts = tod.threeSigma(ts, coordinate_type=tsp.CoordinateType.Topocentric, delete=True)
 
 fig = plt.figure()
 gs = fig.add_gridspec(3, hspace=0)
