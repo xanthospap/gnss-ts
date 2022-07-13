@@ -32,10 +32,19 @@ class TimeSeries:
 
     last = -999
 
-    def __init__(self, site, entries=[]):
+    ## if keep_keys is set, then only the keys specified in there will be 
+    ## copied. Note that 't' and 'ignore' are automatically appended if not
+    ## specified (in keep_keys).
+    def __init__(self, site, entries=[], keep_keys=[]):
         self._site = site
         # list of dictionaries ...
-        self._data = entries
+        if keep_keys == []:
+            self._data = entries
+        else:
+            for key in ['t', 'ignore']:
+                if key not in keep_keys: keep_keys.append(key)
+            new_data = [{ k: ls[k] for k in keep_keys } for ls in entries ]
+            self._data = new_data
 
     def get(self, key, includeIgnored=True):
         if includeIgnored:

@@ -87,10 +87,11 @@ if args.fit:
     ## simple, linear model for each component
     lmodels = []
     for ct in tsp.coordinate_type_keys(tsp.CoordinateType.Topocentric):
-        ## copy original ts
-        lts = tsp.TimeSeries(ts._site, ts._data)
+        vel0 = 0e0
         for i in range(3):
-            ## summy model (empty)
+            ## copy original ts (keeping only the component we examine)
+            lts = tsp.TimeSeries(ts._site, ts._data, [ct])
+            ## dummy model (empty)
             mdl = tm.TsModel()
             ## fit, create model via ls fit, ommiting ignored
             mdl,_  = mdl.fit(lts.get('t', False), lts.get(ct, False))
@@ -98,6 +99,8 @@ if args.fit:
             lts = lts.residuals(mdl, coordinate_key=ct)
             ## mark outliers
             lts = tod.threeSigma(lts, coordinate_key=ct, delete=False)
+            if abs(mdl.slope - vel0) < 1e-9: break
+            vel0 = mdl.slope
         lmodels.append(mdl)
         mdl.dump()
 
