@@ -47,7 +47,7 @@ def comment_is_valid(allowed_comments, dct):
 
 ##
 ## kwargs allowed arguments:
-##           from=t1 : datetime.datetime, default = datetime.datetime.min
+##           start=t1 : datetime.datetime, default = datetime.datetime.min
 ##           to=t2   : datetime.datetime, default = datetime.datetime.max
 ##           unique  : bool, default = True
 ##  allowed_comments : list of strings, default=['all']
@@ -56,10 +56,12 @@ def parse_cts(filename, **kwargs):
         ermsg = 'ERROR Failed to locate cts file {:}'.format(filename)
         raise RuntimeError(ermsg)
 
-    tstart = kwargs['from'] if 'from' in kwargs else datetime.datetime.min
+    tstart = kwargs['start'] if 'start' in kwargs else datetime.datetime.min
     tstop  = kwargs['to'] if 'to' in kwargs else datetime.datetime.max
     unique = kwargs['unique'] if 'unique' in kwargs else True
     allowed_comments = kwargs['allowed_comments'] if 'allowed_comments' in kwargs else ['all']
+
+    print('Start parsing from {:}'.format(tstart))
 
     ret = {} if unique else []
 

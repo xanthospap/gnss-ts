@@ -79,7 +79,13 @@ if not os.path.isfile(args.cts):
     print('ERROR Failed to locate cts file {:}'.format(args.cts))
     sys.exit(1)
 
-ts = tparse.parse_cts(args.cts)
+try:
+    args.tstart < datetime.datetime.max
+except:
+    tstart = datetime.datetime.strptime(args.tstart, "%Y-%m-%d")
+    args.tstart = tstart
+
+ts = tparse.parse_cts(args.cts, start=args.tstart)
 ts = ts.topocentric().drop_coordinate_type(
     tsp.CoordinateType.Cartesian).drop_coordinate_type(tsp.CoordinateType.Ellipsoidal)
 

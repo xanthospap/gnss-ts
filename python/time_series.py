@@ -46,6 +46,11 @@ class TimeSeries:
             new_data = [{ k: ls[k] for k in keep_keys } for ls in entries ]
             self._data = new_data
 
+    def csv_dump(self):
+        print('date,nvalue,nsigma,nflag,evalue,esigma,eflag,uvalue,usigma,uflag,')
+        for entry in self._data:
+            print()
+
     def get(self, key, includeIgnored=True):
         if includeIgnored:
             return [entry[key] for entry in self._data]
