@@ -46,6 +46,23 @@ class TimeSeries:
             new_data = [{ k: ls[k] for k in keep_keys } for ls in entries ]
             self._data = new_data
 
+    def entry_at(self, t):
+        for count, lentry in enumerate(self._data):
+            if lentry['t'] == t:
+                return count, lentry
+        return None, None
+
+    def append_if_missing(self, ts2):
+        newts = TimeSeries(self._site, self._data)
+        for entry2 in ts2._data:
+            idx, entry1 = self.entry_at(entry2['t'])
+            if idx:
+                pass
+            else:
+                newts._data.append(entry2)
+                # print('appending {:}'.format(entry2))
+        return newts
+
     def csv_dump(self):
         print('date,nvalue,nsigma,nflag,evalue,esigma,eflag,uvalue,usigma,uflag,')
         for entry in self._data:
@@ -143,6 +160,10 @@ class TimeSeries:
 
     def dump(self):
         return json.dumps(self._data, indent=4, sort_keys=True, default=str)
+
+    def dump_as_cts(self):
+        for entry in self._data:
+            print('{:} {:} {:+.5f} {:.5f} {:+.5f} {:.5f} {:+.5f} {:.5f} {:+.8f} {:.5f} {:+.8f} {:.5f} {:+.5f} {:.5f} {:} {:}'.format(entry['t'].strftime('%Y-%m-%d'), entry['t'].strftime('%H:%M:%S'), entry['x'], entry['sx'], entry['y'], entry['sy'], entry['z'], entry['sz'], entry['lat'], entry['slat'], entry['lon'], entry['slon'], entry['hgt'], entry['shgt'], entry['tstamp'], entry['comments']))
 
     def print(self, ct_2print=None):
 

@@ -1,0 +1,4 @@
+for i in egi2 egio eypa ite2 ite3 kalv kiat kori koun kryo lido liva pat0 pat1 psar ; do scp bpe@147.102.106.113:~/data/time-series/${i}/${i}.cts* . ; done
+for i in egi2 egio eypa ite2 ite3 kalv kiat kori koun kryo lido liva pat0 pat1 psar; do ./merge_cts.py -i cts/${i}.cts  -r cts/  ST 8   clean {i}.dcts ; done
+## remove two top lines from resulting cts files ...
+for i in cts/*.dcts ; do j=${i:4:4}; ./cts_plot.py -i cts/${j}.dcts -s ${j} --from 2022-01-01 --add-vertical-at 2022-10-08T22:00:00 --output-file=${j}.png ; done

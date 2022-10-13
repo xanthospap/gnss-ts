@@ -72,6 +72,15 @@ parser.add_argument('--lsfit',
                     help='Perform linear fit and plot residuals. If set, the program will plot the residuals of the time series w.r.t. the estimated model',
                     action='store_true'
 )
+parser.add_argument('--add-vertical-at',
+                    action='store',
+                    required=False,
+                    help='Add a vertical line on this datetime',
+                    metavar='VERTICAL_AT',
+                    dest='vertical',
+                    default=None
+)
+
 
 args = parser.parse_args()
 
@@ -127,6 +136,13 @@ axs[1].scatter(ts.get('t'), ts.get('north'), s=10, facecolors='black', edgecolor
 axs[1].set(ylabel='North [m]')
 axs[2].scatter(ts.get('t'), ts.get('up'), s=10, facecolors='black', edgecolors='r')
 axs[2].set(ylabel='Up [m]')
+
+# add vertical line
+if args.vertical:
+    vt = datetime.datetime.strptime(args.vertical, "%Y-%m-%dT%H:%M:%S")
+    axs[0].axvline(x = vt, color = 'b', label = 'axvline - full height')
+    axs[1].axvline(x = vt, color = 'b', label = 'axvline - full height')
+    axs[2].axvline(x = vt, color = 'b', label = 'axvline - full height')
 
 # Hide x labels and tick labels for all but bottom plot.
 for ax in axs: ax.label_outer()
